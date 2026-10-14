@@ -69,3 +69,8 @@ Shared source is copied initially for deploy independence. Track updates against
 the recorded upstream SHA and move stable auth, permissions, catalogue and UI into
 reviewed versioned packages with contract tests before further products diverge.
 See `docs/EXTRACTION.md` for verification and release gates.
+
+Incoming remote migration groundwork (`aa672aa`) has been merged with unrelated
+local extraction ancestry preserved. Its auth allowlist contract is retained in
+[docs/SUPABASE_AUTH_REDIRECTS.md](docs/SUPABASE_AUTH_REDIRECTS.md). Hosted settings
+remain unverified and must preserve the existing Site URL/redirect entries.

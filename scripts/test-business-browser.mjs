@@ -4,8 +4,7 @@ import { mkdir } from "node:fs/promises";
 
 const base = process.env.BUSINESS_TEST_URL || "http://127.0.0.1:3013";
 const browser = await chromium.launch({
-  executablePath:
-    process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH || "/usr/bin/chromium",
+  executablePath: process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH,
   args: ["--no-sandbox", "--disable-dev-shm-usage"],
 });
 await mkdir("test-results/business", { recursive: true });
@@ -18,6 +17,11 @@ try {
           viewport: { width, height: 900 },
           colorScheme: theme,
         });
+        await context.route("**/*", (route) =>
+          new URL(route.request().url()).origin === new URL(base).origin
+            ? route.continue()
+            : route.abort(),
+        );
         const page = await context.newPage();
         const response = await page.goto(`${base}/${locale}/business`, {
           waitUntil: "networkidle",
@@ -37,6 +41,12 @@ try {
           ),
           true,
         );
+        await page
+          .getByRole("button", {
+            name: locale === "es" ? "Rechazar opcionales" : "Reject optional",
+            exact: true,
+          })
+          .click();
         const recovery = await page.goto(
           `${base}/${locale}/auth?mode=recover&next=/${locale}/business/venue/123`,
           { waitUntil: "networkidle" },
@@ -57,6 +67,22 @@ try {
           { data: {} },
         );
         assert.equal(blocked.status(), 404);
+        const external = await context.request.get(
+          `${base}/${locale}/account/subscription?from=akibusiness&code=fixture-code&access_token=fixture-token`,
+          { maxRedirects: 0 },
+        );
+        assert.equal(external.status(), 307);
+        const target = new URL(external.headers().location);
+        assert.equal(target.origin, "https://akipasa.com");
+        assert.equal(target.searchParams.get("from"), "akibusiness");
+        assert.equal(target.searchParams.has("code"), false);
+        assert.equal(target.searchParams.has("access_token"), false);
+        assert.equal(target.hash, "#redirected");
+        const untrusted = await context.request.get(`${base}/api/health`, {
+          headers: { host: "attacker.test" },
+          maxRedirects: 0,
+        });
+        assert.equal(untrusted.status(), 421);
         await page.screenshot({
           path: `test-results/business/${locale}-${width}-${theme}.png`,
           fullPage: true,

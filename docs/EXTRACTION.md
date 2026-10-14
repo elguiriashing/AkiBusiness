@@ -37,3 +37,11 @@ health and rejected webhook mutation. Screenshots remain ignored test artifacts.
 These cases use build-only public placeholders and perform no live customer writes.
 Initial OpenNext skip-build attempt failed because ordinary Next build omitted
 standalone output; full supported OpenNext build is required and tracked separately.
+
+The full supported OpenNext Cloudflare build subsequently passed for implementation
+commit `5686c900d1a7b939ce6435e2c7fe47bfb95ad9db`, with verified standalone output.
+Remote main's concurrent groundwork/auth allowlist document is retained through a
+merge, without replacing its history. Final follow-up changes only contributor,
+environment documentation, browser harness and independent CI; runtime sources
+remain identical to that compiled implementation. Final adapter repackaging uses
+that valid standalone build and stamps the final source commit.
