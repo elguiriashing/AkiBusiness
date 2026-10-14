@@ -1,0 +1,45 @@
+name: AkiBusiness
+on:
+  pull_request:
+  push:
+    branches: [main, "migration/**"]
+permissions:
+  contents: read
+concurrency:
+  group: business-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    env:
+      NEXT_TELEMETRY_DISABLED: "1"
+      NEXT_PUBLIC_SUPABASE_URL: https://example.supabase.co
+      NEXT_PUBLIC_SUPABASE_ANON_KEY: ci-public-placeholder
+      NEXT_PUBLIC_PRODUCT_NAME: AkiBusiness
+      NEXT_PUBLIC_SITE_URL: https://akibusiness.com
+      NEXT_PUBLIC_BUSINESS_URL: https://akibusiness.com
+      NEXT_PUBLIC_CRM_URL: https://akihq.app
+      CIRCLE_NODE_TOTAL: "3"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+      - run: npm ci --no-audit --no-fund
+      - uses: actions/cache@v4
+        with:
+          path: .next/cache
+          key: next-business-${{ runner.os }}-${{ hashFiles('package-lock.json') }}-${{ github.sha }}
+          restore-keys: next-business-${{ runner.os }}-${{ hashFiles('package-lock.json') }}-
+      - run: npm run format:check
+      - run: npm run lint
+      - run: npm run typecheck
+      - run: npm test
+      - run: npm run build:cloudflare
+      - run: npx wrangler deploy --dry-run --outdir .wrangler/dry-run
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: business-verification
+          path: .wrangler/dry-run

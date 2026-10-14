@@ -1,0 +1,13 @@
+.next
+.open-next
+node_modules
+playwright-report
+test-results
+coverage
+public/sw.js
+package-lock.json
+Android/.gradle
+Android/.tooling
+Android/build
+Android/app/build
+supabase/.temp
