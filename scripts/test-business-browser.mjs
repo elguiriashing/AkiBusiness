@@ -27,6 +27,11 @@ try {
           waitUntil: "networkidle",
         });
         assert.equal(response.status(), 200);
+        const csp = response.headers()["content-security-policy"];
+        assert.ok(csp.includes("https://akipasa.supabase.co"));
+        assert.ok(csp.includes("https://vhpbvcfkcteswlsdjrfl.supabase.co"));
+        assert.ok(csp.includes("wss://vhpbvcfkcteswlsdjrfl.supabase.co"));
+        assert.equal(csp.includes("*.supabase.co"), false);
         assert.match(page.url(), new RegExp(`/${locale}/auth\\?next=`));
         assert.equal(await page.title(), "AkiBusiness");
         assert.equal(await page.locator("html").getAttribute("lang"), locale);

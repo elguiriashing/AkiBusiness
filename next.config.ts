@@ -26,6 +26,11 @@ const nextConfig: NextConfig = {
         hostname: "akipasa.supabase.co",
         pathname: "/storage/v1/object/sign/event-media/**",
       },
+      {
+        protocol: "https",
+        hostname: "vhpbvcfkcteswlsdjrfl.supabase.co",
+        pathname: "/storage/v1/object/sign/event-media/**",
+      },
     ],
   },
   async headers() {
@@ -56,9 +61,9 @@ const nextConfig: NextConfig = {
                 isDevelopment ? " 'unsafe-eval'" : ""
               }`,
               "style-src 'self' 'unsafe-inline'",
-              "img-src 'self' data: blob: https://akipasa.supabase.co https://tiles.openfreemap.org https://tile.openstreetmap.org https://*.google-analytics.com https://*.analytics.google.com https://pagead2.googlesyndication.com https://www.googleadservices.com https://www.google.com https://www.google.es",
+              "img-src 'self' data: blob: https://akipasa.supabase.co https://vhpbvcfkcteswlsdjrfl.supabase.co https://tiles.openfreemap.org https://tile.openstreetmap.org https://*.google-analytics.com https://*.analytics.google.com https://pagead2.googlesyndication.com https://www.googleadservices.com https://www.google.com https://www.google.es",
               "font-src 'self' data:",
-              "connect-src 'self' https://akipasa.supabase.co wss://akipasa.supabase.co https://tiles.openfreemap.org https://tile.openstreetmap.org https://*.google-analytics.com https://*.analytics.google.com https://pagead2.googlesyndication.com https://www.googleadservices.com https://www.google.com https://www.google.es",
+              "connect-src 'self' https://akipasa.supabase.co wss://akipasa.supabase.co https://vhpbvcfkcteswlsdjrfl.supabase.co wss://vhpbvcfkcteswlsdjrfl.supabase.co https://tiles.openfreemap.org https://tile.openstreetmap.org https://*.google-analytics.com https://*.analytics.google.com https://pagead2.googlesyndication.com https://www.googleadservices.com https://www.google.com https://www.google.es",
               "manifest-src 'self'",
               "worker-src 'self' blob:",
               "upgrade-insecure-requests",

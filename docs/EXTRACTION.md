@@ -45,3 +45,9 @@ merge, without replacing its history. Final follow-up changes only contributor,
 environment documentation, browser harness and independent CI; runtime sources
 remain identical to that compiled implementation. Final adapter repackaging uses
 that valid standalone build and stamps the final source commit.
+
+The final candidate permits HTTPS media/connect and WSS only for the two exact
+known Supabase hosts (`akipasa.supabase.co` and the retained project reference).
+Their provider alias equivalence remains a live verification gate. Next config
+changed for this boundary, so the earlier standalone artifact is invalidated and
+a full clean-commit OpenNext rebuild is required before final packaging.
