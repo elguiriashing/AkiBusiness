@@ -1,6 +1,7 @@
 "use client";
 
 import Image from "next/image";
+import { RentalBookingsDashboard } from "./RentalBookingsDashboard";
 import Link from "next/link";
 import { useState, type ReactNode } from "react";
 import { useFormStatus } from "react-dom";
@@ -19,7 +20,7 @@ export type DeskVehicle = {
   luggage: number;
   daily_price_cents: number;
   deposit_cents: number;
-  cover_media_id?: string | null;
+  rental_media_id?: string | null;
   image_url?: string | null;
   active: boolean;
 };
@@ -45,6 +46,8 @@ export type DeskBlock = {
 type Props = {
   locale: "en" | "es";
   venueId?: string;
+  initialTab?: string;
+  branches?: { id: string; name: string }[];
   company: {
     id: string;
     name: string;
@@ -81,6 +84,8 @@ function SaveButton({ children }: { children: ReactNode }) {
 export function RentalOperatorDesk({
   locale,
   venueId,
+  initialTab,
+  branches = [],
   company,
   vehicles,
   bookings,
@@ -94,8 +99,22 @@ export function RentalOperatorDesk({
 }: Props) {
   const es = locale === "es";
   const [tab, setTab] = useState<
-    "fleet" | "availability" | "requests" | "media" | "company"
-  >("fleet");
+    | "overview"
+    | "bookings"
+    | "fleet"
+    | "availability"
+    | "requests"
+    | "media"
+    | "company"
+  >(
+    initialTab === "company" ||
+      initialTab === "media" ||
+      initialTab === "bookings"
+      ? initialTab
+      : branches.length
+        ? "overview"
+        : "fleet",
+  );
   const [selectedId, setSelectedId] = useState(vehicles[0]?.id || "");
   const [adding, setAdding] = useState(false);
   const [mobileEditor, setMobileEditor] = useState(false);
@@ -120,7 +139,7 @@ export function RentalOperatorDesk({
   const today = new Date().toISOString().slice(0, 10);
   const carImage =
     selected &&
-    (media.find((i) => i.id === selected.cover_media_id)?.url ||
+    (media.find((i) => i.id === selected.rental_media_id)?.url ||
       selected.image_url);
   const money = (cents: number) =>
     new Intl.NumberFormat(locale, {
@@ -271,12 +290,12 @@ export function RentalOperatorDesk({
           />
         </label>
       </div>
-      {venueId && (
+      {
         <label>
           {es ? "Portada del vehículo" : "Vehicle cover"}
           <select
-            name="mediaId"
-            defaultValue={create ? "" : selected?.cover_media_id || ""}
+            name="coverMediaId"
+            defaultValue={create ? "" : selected?.rental_media_id || ""}
           >
             <option value="">{es ? "Sin foto" : "No photo"}</option>
             {media.map((i) => (
@@ -286,7 +305,7 @@ export function RentalOperatorDesk({
             ))}
           </select>
         </label>
-      )}
+      }
       {!create && (
         <label>
           {es ? "Visibilidad" : "Visibility"}
@@ -322,14 +341,7 @@ export function RentalOperatorDesk({
       aria-label={es ? "Panel de alquiler" : "Rental desk"}
     >
       <header className={s.header}>
-        <Link
-          className={s.back}
-          href={
-            venueId
-              ? `/${locale}/business/venue/${venueId}`
-              : `/${locale}/business`
-          }
-        >
+        <Link className={s.back} href={`/${locale}/business`}>
           ← AkiBusiness
         </Link>
         <div className={s.brand}>
@@ -370,6 +382,24 @@ export function RentalOperatorDesk({
           <span className={s.eyebrow}>{company.city || "AKIBUSINESS"}</span>
           <h1>{company.name}</h1>
         </div>
+        {branches.length > 0 && (
+          <select
+            className={s.branchSelect}
+            aria-label={es ? "Cambiar sucursal" : "Switch branch"}
+            value={company.id}
+            onChange={(e) =>
+              location.assign(
+                `/${locale}/business/mobility?company=${e.target.value}`,
+              )
+            }
+          >
+            {branches.map((b) => (
+              <option value={b.id} key={b.id}>
+                {b.name}
+              </option>
+            ))}
+          </select>
+        )}
         <span className={s.status}>
           {company.status === "published"
             ? es
@@ -398,6 +428,8 @@ export function RentalOperatorDesk({
       >
         {(
           [
+            ["overview", es ? "Resumen" : "Overview"],
+            ["bookings", es ? "Reservas" : "Bookings"],
             ["fleet", es ? "Flota" : "Fleet"],
             ["availability", es ? "Disponibilidad" : "Availability"],
             ["requests", es ? "Solicitudes" : "Requests"],
@@ -437,6 +469,13 @@ export function RentalOperatorDesk({
         </p>
       )}
       <fieldset className={s.content} disabled={readError}>
+        {(tab === "overview" || tab === "bookings") && (
+          <RentalBookingsDashboard
+            locale={locale}
+            companyId={company.id}
+            overview={tab === "overview"}
+          />
+        )}
         {tab === "fleet" && (
           <div className={s.split} data-editor={adding || mobileEditor}>
             <section className={s.fleet}>
@@ -467,7 +506,7 @@ export function RentalOperatorDesk({
                   .slice(currentPage * 4, currentPage * 4 + 4)
                   .map((v) => {
                     const image =
-                      media.find((i) => i.id === v.cover_media_id)?.url ||
+                      media.find((i) => i.id === v.rental_media_id)?.url ||
                       v.image_url;
                     return (
                       <button
@@ -896,55 +935,31 @@ export function RentalOperatorDesk({
               </div>
             </div>
             {mediaStudio || (
-              <div className={s.empty}>
-                <h3>
-                  {es
-                    ? "Conecta tu local para añadir fotos"
-                    : "Connect your venue to add photos"}
-                </h3>
-                <p>
-                  {es
-                    ? "Las portadas de AkiCoches usan la biblioteca multimedia de tu local."
-                    : "AkiCoches covers use your venue's shared media library."}
-                </p>
-                <button className={s.primary} onClick={() => setTab("company")}>
-                  {es ? "Gestionar empresa" : "Manage company"} →
-                </button>
-              </div>
+              <p>
+                {es
+                  ? "La biblioteca de esta sucursal está vacía."
+                  : "This branch library is empty."}
+              </p>
             )}
           </section>
         )}
         {tab === "company" && (
           <section className={s.company}>
-            <span className={s.eyebrow}>AKIFAMILY · RENTAL PARTNER</span>
-            <h2>{company.name}</h2>
-            <p>{company.address}</p>
-            <p>{company.city}</p>
-            <div className={s.companyStats}>
-              <span>
-                <strong>{vehicles.filter((v) => v.active).length}</strong>
-                {es ? "coches visibles" : "visible cars"}
-              </span>
-              <span>
-                <strong>{media.length}</strong>
-                {es ? "imágenes" : "images"}
-              </span>
-            </div>
+            <span className={s.eyebrow}>AKIFAMILY · RENTAL BRANCH</span>
+            <h2>{es ? "Perfil de la sucursal" : "Branch profile"}</h2>
             {companyTools || (
               <p>
                 {es
-                  ? "Gestiona la dirección, el perfil y el equipo desde tu local de AkiBusiness."
-                  : "Manage address, profile and team in your AkiBusiness venue."}
+                  ? "Esta sucursal tiene su propio perfil, ubicación y biblioteca."
+                  : "This branch has its own profile, location and library."}
               </p>
             )}
-            {venueId && (
-              <Link
-                className={s.primary}
-                href={`/${locale}/business/venue/${venueId}?section=profile`}
-              >
-                {es ? "Editar perfil del local" : "Edit venue profile"} ↗
-              </Link>
-            )}
+            <Link
+              href={`/${locale}/business/mobility?new=1`}
+              className={s.secondary}
+            >
+              {es ? "Añadir otra sucursal" : "Add another branch"} ↗
+            </Link>
           </section>
         )}
       </fieldset>

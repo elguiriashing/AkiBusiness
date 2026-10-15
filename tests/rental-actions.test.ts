@@ -82,7 +82,10 @@ describe("rental manager mutations", () => {
       maybeSingle: vi.fn().mockResolvedValue({ data: null }),
     };
     mocks.requireUser.mockResolvedValue({
-      supabase: { from: vi.fn(() => ({ ...q, delete: remove })) },
+      supabase: {
+        rpc: vi.fn().mockResolvedValue({ data: false }),
+        from: vi.fn(() => ({ ...q, delete: remove })),
+      },
       user: { id: "unrelated" },
     });
     await expect(
@@ -91,7 +94,7 @@ describe("rental manager mutations", () => {
       ),
     ).rejects.toThrow("error=availability");
     expect(remove).not.toHaveBeenCalled();
-    expect(q.eq).toHaveBeenCalledWith("submitted_by", "unrelated");
+    expect(q.eq).not.toHaveBeenCalled();
   });
   it("reopens only maintenance blocks for the owned vehicle", async () => {
     const eq = vi.fn().mockReturnThis();
@@ -104,7 +107,10 @@ describe("rental manager mutations", () => {
         .mockResolvedValue({ data: { id: vehicle }, error: null }),
     };
     mocks.requireUser.mockResolvedValue({
-      supabase: { from: vi.fn(() => q) },
+      supabase: {
+        rpc: vi.fn().mockResolvedValue({ data: true }),
+        from: vi.fn(() => q),
+      },
       user: { id: "owner" },
     });
     await expect(

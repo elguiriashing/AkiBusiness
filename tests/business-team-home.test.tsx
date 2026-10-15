@@ -85,6 +85,21 @@ describe("team member's real business page loader", () => {
       ];
       const reads: Array<[string, string, unknown]> = [];
       const supabase = {
+        rpc: async (name: string) => ({
+          data:
+            name === "managed_rental_branches"
+              ? [
+                  {
+                    id: "rental",
+                    name: "AkiCoches",
+                    slug: "akicoches",
+                    status: "published",
+                    submitted_by: "team-user",
+                  },
+                ]
+              : [],
+          error: null,
+        }),
         from: (table: string) => {
           const query = {
             select: () => query,
@@ -161,7 +176,6 @@ describe("team member's real business page loader", () => {
           status: "published",
           role: "owner",
           product: "rental",
-          venueId: null,
         },
       ]);
       expect(reads).toContainEqual([
@@ -169,7 +183,7 @@ describe("team member's real business page loader", () => {
         "profile_id",
         "team-user",
       ]);
-      expect(reads).toContainEqual([
+      expect(reads).not.toContainEqual([
         "car_rental_companies",
         "submitted_by",
         "team-user",

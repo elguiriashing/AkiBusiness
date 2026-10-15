@@ -80,3 +80,27 @@ describe("rental desk", () => {
     expect(screen.getByLabelText("Seats")).toBeTruthy();
   });
 });
+
+it("shows every supplied contact field in the pending request view", () => {
+  render(
+    <RentalOperatorDesk
+      {...props}
+      bookings={[
+        {
+          ...props.bookings[0],
+          contact_email: "renter@example.test",
+          contact_phone: "+34 600 123 456",
+          note: "Child seat please",
+        },
+      ]}
+    />,
+  );
+  fireEvent.click(screen.getByRole("button", { name: /Requests/ }));
+  expect(
+    screen
+      .getByRole("link", { name: "renter@example.test" })
+      .getAttribute("href"),
+  ).toBe("mailto:renter@example.test");
+  expect(screen.getByText("+34 600 123 456")).toBeTruthy();
+  expect(screen.getByText("Child seat please")).toBeTruthy();
+});

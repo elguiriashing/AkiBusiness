@@ -834,3 +834,52 @@
 .desk {
   padding-bottom: calc(46px + env(safe-area-inset-bottom, 0px));
 }
+
+.branchSelect {
+  max-width: 180px;
+  background: var(--desk-panel);
+  color: inherit;
+  border: 1px solid var(--desk-border);
+  padding: 8px;
+  border-radius: 9px;
+  font-size: 11px;
+}
+.company:has(form) {
+  max-width: none;
+  width: 100%;
+  padding: 18px;
+  gap: 14px;
+}
+.company:has(form) > .companyStats {
+  display: none;
+}
+.nav {
+  overflow-x: auto;
+  flex-shrink: 0;
+  scrollbar-width: none;
+}
+.nav button {
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+@media (max-width: 760px) {
+  .branchSelect {
+    display: none;
+  }
+  .company:has(form) {
+    padding: 12px;
+  }
+  .nav {
+    gap: 2px;
+  }
+  .nav button {
+    padding-inline: 12px;
+    font-size: 11px;
+  }
+}
+
+.content:has(> [aria-label="Booking overview"]),
+.content:has(> [aria-label="Resumen de reservas"]) {
+  display: flex;
+  overflow: hidden;
+}

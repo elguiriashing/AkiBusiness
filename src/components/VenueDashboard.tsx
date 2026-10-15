@@ -33,7 +33,6 @@ export function VenueDashboard({
   sections,
   overview,
   product = "venue",
-  mobility = false,
 }: {
   locale: "en" | "es";
   name: string;
@@ -204,7 +203,7 @@ export function VenueDashboard({
   ];
   const availableTools = stay
     ? tools.filter((tool) => ["profile", "bookings", "team"].includes(tool.id))
-    : tools.filter((tool) => tool.id !== "fleet" || mobility);
+    : tools.filter((tool) => tool.id !== "fleet");
   const navigation = [
     {
       id: "overview" as const,

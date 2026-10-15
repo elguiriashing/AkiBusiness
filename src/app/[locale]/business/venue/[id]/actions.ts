@@ -24,7 +24,6 @@ import {
   translateVenueCatalogueDocument,
 } from "@/lib/localized-copy";
 import type { VenueCatalogueDocument } from "@/lib/venue-catalogue";
-import { parseDatabasePoint } from "@/lib/repository";
 
 const context = z.object({
   locale: z.enum(["es", "en"]),
@@ -50,58 +49,8 @@ async function requireFleetManager(locale: "en" | "es", venueId: string) {
 }
 
 export async function createVenueRentalCompany(formData: FormData) {
-  const parsed = z
-    .object({
-      locale: z.enum(["en", "es"]),
-      venueId: z.string().uuid(),
-      name: z.string().trim().min(2).max(120),
-    })
-    .safeParse(Object.fromEntries(formData));
   const locale = formData.get("locale") === "en" ? "en" : "es";
-  const venueId = String(formData.get("venueId") || "");
-  if (!parsed.success)
-    redirect(fleetDestination(locale, venueId, "error=fleet"));
-  const { supabase, user } = await requireFleetManager(
-    parsed.data.locale,
-    parsed.data.venueId,
-  );
-  const { data: venue } = await supabase
-    .from("venues")
-    .select("address,location,cities(name_es,name_en)")
-    .eq("id", parsed.data.venueId)
-    .maybeSingle();
-  const point = parseDatabasePoint(venue?.location || null);
-  const city = venue?.cities?.[0];
-  if (
-    !venue ||
-    point.latitude < 27 ||
-    point.latitude > 44 ||
-    point.longitude < -19 ||
-    point.longitude > 5
-  )
-    redirect(fleetDestination(locale, venueId, "error=fleet"));
-  const base =
-    parsed.data.name
-      .normalize("NFD")
-      .replace(/[\u0300-\u036f]/g, "")
-      .toLowerCase()
-      .replace(/[^a-z0-9]+/g, "-")
-      .replace(/^-|-$/g, "")
-      .slice(0, 54) || "rental-company";
-  const { error } = await supabase.from("car_rental_companies").insert({
-    venue_id: parsed.data.venueId,
-    submitted_by: user.id,
-    name: parsed.data.name,
-    slug: `${base}-${parsed.data.venueId.slice(0, 6)}`,
-    address: venue.address,
-    city: city?.name_es || city?.name_en || "España",
-    latitude: point.latitude,
-    longitude: point.longitude,
-  });
-  revalidatePath(`/${locale}/business/venue/${venueId}`);
-  redirect(
-    fleetDestination(locale, venueId, error ? "error=fleet" : "updated=fleet"),
-  );
+  redirect(`/${locale}/business/mobility?new=1`);
 }
 
 export async function createVenueRentalVehicle(formData: FormData) {

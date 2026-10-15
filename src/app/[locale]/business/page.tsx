@@ -165,11 +165,7 @@ export default async function BusinessPage({
   ];
   const { data: rentalCompanies, error: rentalCompaniesError } =
     view === "venues"
-      ? await supabase
-          .from("car_rental_companies")
-          .select("id,name,slug,status,venue_id")
-          .eq("submitted_by", user.id)
-          .order("created_at", { ascending: true })
+      ? await supabase.rpc("managed_rental_branches")
       : { data: [], error: null };
   const managedVenueIds = managed.flatMap((item) =>
     item.venues ? [item.venues.id] : [],
@@ -433,15 +429,22 @@ export default async function BusinessPage({
                     ]
                   : [],
               ),
-              ...(rentalCompanies || []).map((company) => ({
-                id: company.id,
-                name: company.name,
-                slug: company.slug,
-                status: company.status,
-                role: "owner",
-                product: "rental" as const,
-                venueId: company.venue_id,
-              })),
+              ...(rentalCompanies || []).map(
+                (company: {
+                  id: string;
+                  name: string;
+                  slug: string;
+                  status: string;
+                  submitted_by: string;
+                }) => ({
+                  id: company.id,
+                  name: company.name,
+                  slug: company.slug,
+                  status: company.status,
+                  role: company.submitted_by === user.id ? "owner" : "manager",
+                  product: "rental" as const,
+                }),
+              ),
             ]}
             deleteAction={deleteManagedVenue}
           />

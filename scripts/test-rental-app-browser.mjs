@@ -54,9 +54,9 @@ const props=${
   operator
     ? `{
 locale, company:{id:'company-1',name:'Coastal Drive',slug:'fixture-rentals',city:'Fuengirola',status:'published'},
-vehicles:listings.map(v=>({...v,id:v.vehicle_id,name:v.vehicle_name,active:true,cover_media_id:'cover'})),
+vehicles:listings.map(v=>({...v,id:v.vehicle_id,name:v.vehicle_name,active:true,rental_media_id:'cover'})),
 media:[{id:'cover',alt:'Disposable vehicle illustration',url:listings[0].image_url}],
-bookings:[{id:'request-1',vehicle_id:'vehicle-0',start_date:'2099-01-01',end_date:'2099-01-03',status:'requested',contact_name:'Disposable renter',quoted_total_cents:22000}],
+bookings:[{id:'request-1',vehicle_id:'vehicle-0',start_date:'2099-01-01',end_date:'2099-01-03',status:'requested',contact_name:'Disposable renter',contact_email:'fixture@example.test',contact_phone:'+34 600 123 456',note:'Child seat please',quoted_total_cents:22000}],
 blocks:[],actions:{create:async()=>{},update:async()=>{},block:async()=>{},booking:async()=>{}},mediaStudio:React.createElement('p',null,'Disposable media studio')
 }`
     : `{locale,slug:'fixture-rentals',listings,calendarReady:true,blocks:[]}`
@@ -74,6 +74,14 @@ await build({
     {
       name: "next-test-boundary",
       setup(builder) {
+        builder.onResolve({ filter: /business\/mobility\/actions$/ }, () => ({
+          path: "fixture-rental-actions",
+          namespace: "fixture-actions",
+        }));
+        builder.onLoad({ filter: /.*/, namespace: "fixture-actions" }, () => ({
+          contents: "export async function updateRentalBookingStatus() {}",
+          loader: "js",
+        }));
         builder.onResolve({ filter: /^next\/(image|link)$/ }, (args) => ({
           path: args.path,
           namespace: "fixture-next",
@@ -90,6 +98,38 @@ await build({
   ],
 });
 const server = createServer(async (req, res) => {
+  if (req.url?.startsWith("/api/business/rental-bookings")) {
+    res.setHeader("Content-Type", "application/json");
+    res.end(
+      JSON.stringify({
+        rows: [
+          {
+            id: "booking-1",
+            vehicle_id: "vehicle-0",
+            vehicle: { name: "Mustang GT" },
+            start_date: "2099-01-01",
+            end_date: "2099-01-03",
+            status: "confirmed",
+            contact_name: "Disposable renter",
+            contact_email: "fixture@example.test",
+            contact_phone: "+34 600 123 456",
+            note: "Child seat please",
+            quoted_total_cents: 22000,
+          },
+        ],
+        total: 1,
+        today: "2099-01-01",
+        summary: {
+          current: 1,
+          pending: 1,
+          pickups: 1,
+          returns: 0,
+          upcoming: 0,
+        },
+      }),
+    );
+    return;
+  }
   if (req.url?.startsWith("/api/car-rentals")) {
     res.setHeader("Content-Type", "application/json");
     res.end(JSON.stringify({ rows: listings, availabilityChecked: true }));
@@ -182,6 +222,30 @@ try {
             })
             .click();
           await page.getByText("Disposable renter").waitFor();
+          await page
+            .getByRole("link", { name: "fixture@example.test", exact: true })
+            .waitFor();
+          await page
+            .getByRole("button", {
+              name: locale === "es" ? "Resumen" : "Overview",
+              exact: true,
+            })
+            .click();
+          await page
+            .getByRole("button", { name: /Mustang GT.*Disposable renter/ })
+            .click();
+          await page
+            .getByRole("link", { name: "fixture@example.test", exact: true })
+            .waitFor();
+          await page.getByText("Child seat please", { exact: true }).waitFor();
+          await page.screenshot({
+            path: path.join(results, `${name}-bookings.png`),
+          });
+          if (locale === "en" && theme === "dark" && viewport.width === 1440)
+            console.log(
+              `RENTAL_DASHBOARD_PNG:${(await page.screenshot()).toString("base64")}`,
+            );
+
           await page
             .getByRole("button", {
               name: locale === "es" ? "Flota" : "Fleet",

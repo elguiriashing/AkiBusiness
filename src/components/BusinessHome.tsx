@@ -193,7 +193,7 @@ export function BusinessHome({
               ["all", es ? "Todos" : "All"],
               ["venue", es ? "Locales" : "Venues"],
               ["stay", es ? "Alojamientos" : "Stays"],
-              ["rental", es ? "Coches" : "Rentals"],
+              ["rental", es ? "Sucursales" : "Branches"],
             ] as const
           ).map(([value, label]) => (
             <button
@@ -277,9 +277,7 @@ export function BusinessHome({
                   <Link
                     href={
                       place.product === "rental"
-                        ? place.venueId
-                          ? `${base}/venue/${place.venueId}?section=fleet`
-                          : `${base}/mobility?company=${place.id}`
+                        ? `${base}/mobility?company=${place.id}`
                         : `${base}/venue/${place.id}`
                     }
                     aria-label={`${es ? "Gestionar" : "Manage"} ${place.name}`}
