@@ -1,5 +1,21 @@
 # Change Impact Register
 
+## 2026-10-15 | Host session logout isolation
+
+Before: both copied Business auth actions called `signOut()` without a scope,
+which defaults to invalidating all refresh sessions for the shared account.
+After: normal logout passes `{ scope: "local" }`, leaving other product sessions
+outside this action's scope. Successful password recovery passes explicit
+`{ scope: "global" }` to retain account-wide revocation after a password change.
+Existing locale-safe redirects and recovery failure paths remain. Regression
+coverage invokes the real server actions against an inert auth client and checks
+the requested scope for EN/ES and invalid-locale fallback; failed recovery does not
+call logout. No real account, cookie, database, entitlement, credential or provider
+setting is changed by verification. Redeployment at the final validated SHA is
+required; authenticated acceptance remains pending. Preserve any user-configured
+domain bindings during deployment. Source/Worker version revert is rollback, with
+no data restoration.
+
 ## 2026-10-15 | Independent Business claim and credential handoff repair
 
 The extracted claim picker referenced an absent consumer map route. Its new

@@ -1,5 +1,15 @@
 # AKIPASA MASTER SYSTEM CONTRACT
 
+## 2026-10-15 | Business session isolation
+
+Normal Business logout explicitly uses Supabase's local session scope, preserving
+other AkiSuite product refresh sessions sharing the same user identity. Successful
+password recovery deliberately uses explicit global scope to preserve account-wide
+security revocation after a password change. Existing localized redirects, recovery
+task continuity and password update checks remain unchanged. Action regressions
+cover both locales, invalid locale fallback and successful/failed recovery without
+using or signing out a real account; current-deployment acceptance remains required.
+
 ## 2026-10-15 | Independent Business claim deep links
 
 The extracted AkiBusiness claim picker reads its initial venue through the narrow

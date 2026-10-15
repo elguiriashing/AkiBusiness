@@ -217,6 +217,6 @@ export async function signOut(formData: FormData) {
   const locale = String(formData.get("locale"));
   const safeLocale = isLocale(locale) ? locale : "es";
   const supabase = await createSupabaseServerClient();
-  await supabase.auth.signOut();
+  await supabase.auth.signOut({ scope: "local" });
   redirect(`/${safeLocale}`);
 }

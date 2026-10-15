@@ -50,6 +50,7 @@ export async function updateRecoveredPassword(formData: FormData) {
     password: parsed.data.password,
   });
   if (error) redirect(`${recoveryUrl}&error=save`);
-  await supabase.auth.signOut();
+  // A completed password change deliberately revokes all account sessions.
+  await supabase.auth.signOut({ scope: "global" });
   redirect(`/${locale}/auth?${new URLSearchParams({ reset: "1", next })}`);
 }

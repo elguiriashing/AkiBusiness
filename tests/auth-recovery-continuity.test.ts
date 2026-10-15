@@ -20,6 +20,7 @@ vi.mock("@/lib/supabase/server", () => ({
 }));
 
 import { updateRecoveredPassword } from "../src/app/[locale]/auth/recover/actions";
+import { signOut } from "../src/app/[locale]/auth/actions";
 
 beforeEach(() => {
   vi.resetAllMocks();
@@ -60,6 +61,7 @@ it("returns a completed password reset to sign-in with the original task", async
     password: "SecureAccount42",
   });
   expect(mocks.signOut).toHaveBeenCalledOnce();
+  expect(mocks.signOut).toHaveBeenCalledWith({ scope: "global" });
   expect(result.href).not.toContain("SecureAccount42");
 });
 
@@ -75,7 +77,23 @@ it("preserves an business booking task after a provider save failure", async () 
   expect(result.searchParams.get("next")).toBe(
     "/en/business/venue/123?section=bookings",
   );
+  expect(mocks.signOut).not.toHaveBeenCalled();
 });
+
+it.each([
+  ["en", "/en"],
+  ["es", "/es"],
+  ["invalid", "/es"],
+])(
+  "signs out only the current Business session for %s",
+  async (locale, path) => {
+    const form = new FormData();
+    form.set("locale", locale);
+    await expect(signOut(form)).rejects.toMatchObject({ path });
+    expect(mocks.signOut).toHaveBeenCalledExactlyOnceWith({ scope: "local" });
+    expect(mocks.updateUser).not.toHaveBeenCalled();
+  },
+);
 
 it("rejects a tampered recovery destination and never serializes passwords", async () => {
   const result = await destination(
