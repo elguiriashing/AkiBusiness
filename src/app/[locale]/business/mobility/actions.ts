@@ -205,3 +205,31 @@ export async function updateRentalBookingStatus(formData: FormData) {
   revalidatePath(`/${locale}/business/mobility`);
   redirect(location(locale, "updated=booking"));
 }
+
+// Explicit opt-in: retain the existing company/fleet and attach only to a venue
+// the caller can manage. RLS remains authoritative; no service client is used.
+export async function linkRentalCompanyVenue(formData: FormData) {
+  const locale = formData.get("locale") === "en" ? "en" : "es";
+  const parsed = z
+    .object({ companyId: z.string().uuid(), venueId: z.string().uuid() })
+    .safeParse(Object.fromEntries(formData));
+  if (!parsed.success) redirect(location(locale, "error=company"));
+  const { supabase } = await requireUser(
+    locale,
+    `/${locale}/business/mobility`,
+  );
+  const { data: allowed, error: accessError } = await supabase.rpc(
+    "is_venue_member",
+    { target_venue: parsed.data.venueId, allowed_roles: ["owner", "manager"] },
+  );
+  if (accessError || !allowed) redirect(location(locale, "error=company"));
+  const { data: updated, error } = await supabase.rpc(
+    "link_owned_rental_company_venue",
+    { p_company: parsed.data.companyId, p_venue: parsed.data.venueId },
+  );
+  if (error || !updated) redirect(location(locale, "error=company"));
+  revalidatePath(`/${locale}/business`);
+  redirect(
+    `/${locale}/business/venue/${parsed.data.venueId}?section=fleet&updated=fleet`,
+  );
+}
