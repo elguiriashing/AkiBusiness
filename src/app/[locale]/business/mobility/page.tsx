@@ -8,6 +8,7 @@ import { SpainAddressAutocomplete } from "@/components/SpainAddressAutocomplete"
 import styles from "@/components/AkiConduzco.module.css";
 import {
   createRentalBlock,
+  removeRentalBlock,
   linkRentalCompanyVenue,
   createRentalCompany,
   createRentalVehicle,
@@ -110,15 +111,20 @@ export default async function MobilityWorkspace({
     if (vehicles.length) {
       const blockResult = await supabase
         .from("car_rental_calendar_blocks")
-        .select("id,vehicle_id,start_date,end_date,reason")
+        .select("id,vehicle_id,start_date,end_date,reason", { count: "exact" })
         .in(
           "vehicle_id",
           vehicles.map((item) => item.id),
         )
+        .gte("end_date", new Date().toISOString().slice(0, 10))
         .order("start_date")
-        .limit(200);
+        .limit(1000);
       blocks = (blockResult.data || []) as Block[];
-      blockError = Boolean(blockResult.error);
+      blockError = Boolean(
+        blockResult.error ||
+          blockResult.count === null ||
+          (blockResult.count || 0) > (blockResult.data?.length || 0),
+      );
     }
   }
   const { data: memberships } =
@@ -214,6 +220,7 @@ export default async function MobilityWorkspace({
           update: updateRentalVehicle,
           block: createRentalBlock,
           booking: updateRentalBookingStatus,
+          removeBlock: removeRentalBlock,
         }}
       />
     );
