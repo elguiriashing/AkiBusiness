@@ -22,7 +22,7 @@ https://akicoches.com/en/auth/callback
 https://akicoches.com/es/auth/callback
 ```
 
-These entries are **preparatory**: each new app must implement the exact route and PKCE exchange before sign-in will work. AkiHQ uses a separate standalone SPA: first inspect its *actual* OAuth/magic-link/recovery redirect target, then allowlist that precise URL under `https://akihq.app`. Do not guess the AkiHQ callback path or enable `https://*.com/**`.
+These entries are **preparatory**: each new app must implement the exact route and PKCE exchange before sign-in will work. AkiHQ uses a separate standalone SPA: first inspect its _actual_ OAuth/magic-link/recovery redirect target, then allowlist that precise URL under `https://akihq.app`. Do not guess the AkiHQ callback path or enable `https://*.com/**`.
 
 Keep all existing AkiPasa and legacy-domain callback URLs. In the future, add staging/preview callback hosts only if they are fixed and trusted; avoid blanket wildcards on production hosts.
 
