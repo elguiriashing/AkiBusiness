@@ -113,7 +113,9 @@
   border-radius: 10px;
   background: transparent;
   color: var(--desk-muted);
-  font: 750 12px inherit;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 750;
   cursor: pointer;
 }
 .nav button[aria-current] {
