@@ -11,7 +11,7 @@ reachable for existing unlinked companies. The fleet screen uses a wider canvas,
 scarlet accent and shared light/dark venue tokens.
 
 This depends on the mirrored AkiPasa migration
-`20261015124045_akicoches_venue_workspace`: venue/cover FKs, scoped RLS,
+`20261015135805_akicoches_venue_workspace`: venue/cover FKs, scoped RLS,
 legacy owner compatibility, protected cover/venue association and manager
 authorization in the booking status RPC. The independent AkiCoches catalogue
 uses the same shared records and signs only permitted published venue covers.
