@@ -1,5 +1,6 @@
+import { RentalOperatorDesk } from "@/components/RentalOperatorDesk";
 import Link from "next/link";
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { requireUser } from "@/lib/auth";
 import { isLocale } from "@/lib/config";
 import { rentalCategoryLabels } from "@/lib/akiconduzco";
@@ -7,6 +8,7 @@ import { SpainAddressAutocomplete } from "@/components/SpainAddressAutocomplete"
 import styles from "@/components/AkiConduzco.module.css";
 import {
   createRentalBlock,
+  linkRentalCompanyVenue,
   createRentalCompany,
   createRentalVehicle,
   updateRentalBookingStatus,
@@ -24,6 +26,7 @@ type Vehicle = {
   daily_price_cents: number;
   deposit_cents: number;
   active: boolean;
+  image_url?: string | null;
 };
 type Booking = {
   id: string;
@@ -61,15 +64,20 @@ export default async function MobilityWorkspace({
     locale,
     `/${locale}/business/mobility`,
   );
-  const { data: company, error: companyError } = await supabase
+  const companyQuery = supabase
     .from("car_rental_companies")
     .select(
-      "id,name,slug,city,address,latitude,longitude,phone,website_url,status,created_at",
+      "id,name,slug,city,address,latitude,longitude,phone,website_url,status,created_at,venue_id",
     )
     .eq("submitted_by", user.id)
     .order("created_at", { ascending: true })
-    .limit(1)
-    .maybeSingle();
+    .limit(1);
+  if (query.company && /^[0-9a-f-]{36}$/i.test(query.company))
+    companyQuery.eq("id", query.company);
+  const { data: company, error: companyError } =
+    await companyQuery.maybeSingle();
+  if (company?.venue_id)
+    redirect(`/${locale}/business/venue/${company.venue_id}?section=fleet`);
   let vehicles: Vehicle[] = [];
   let vehicleError = false;
   let bookings: Booking[] = [];
@@ -81,7 +89,7 @@ export default async function MobilityWorkspace({
       supabase
         .from("car_rental_vehicles")
         .select(
-          "id,name,category,transmission,fuel,seats,luggage,daily_price_cents,deposit_cents,active",
+          "id,name,category,transmission,fuel,seats,luggage,daily_price_cents,deposit_cents,active,image_url",
         )
         .eq("company_id", company.id)
         .order("created_at", { ascending: false })
@@ -113,6 +121,22 @@ export default async function MobilityWorkspace({
       blockError = Boolean(blockResult.error);
     }
   }
+  const { data: memberships } =
+    company && !company.venue_id
+      ? await supabase
+          .from("venue_members")
+          .select("role,venues(id,name,discovery_vertical)")
+          .eq("profile_id", user.id)
+          .in("role", ["owner", "manager"])
+      : { data: [] };
+  const linkableVenues = (memberships || []).flatMap((row) => {
+    const venue = row.venues as unknown as {
+      id: string;
+      name: string;
+      discovery_vertical: string | null;
+    } | null;
+    return venue && venue.discovery_vertical !== "accommodation" ? [venue] : [];
+  });
   const status =
     company?.status === "published"
       ? es
@@ -131,6 +155,68 @@ export default async function MobilityWorkspace({
               ? "Rechazado"
               : "Rejected"
             : "";
+  if (Boolean(company))
+    return (
+      <RentalOperatorDesk
+        locale={locale}
+        company={company!}
+        venueId={company?.venue_id || undefined}
+        companyTools={
+          company?.venue_id ? undefined : (
+            <form action={linkRentalCompanyVenue} className="stack">
+              <input type="hidden" name="locale" value={locale} />
+              <input type="hidden" name="companyId" value={company?.id || ""} />
+              <label>
+                {es
+                  ? "Conectar a un local que gestionas"
+                  : "Connect to a venue you manage"}
+                <select name="venueId" required defaultValue="">
+                  <option value="" disabled>
+                    {es ? "Elige un local" : "Choose a venue"}
+                  </option>
+                  {linkableVenues.map((v) => (
+                    <option key={v.id} value={v.id}>
+                      {v.name}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <p>
+                {es
+                  ? "Conserva tu empresa y tu flota. Conectarla habilita la biblioteca de fotos del local."
+                  : "Keeps your company and fleet. Connecting enables the venue's photo library."}
+              </p>
+              <button
+                className="button"
+                type="submit"
+                disabled={!linkableVenues.length}
+              >
+                {es ? "Conectar empresa y local" : "Connect company and venue"}
+              </button>
+            </form>
+          )
+        }
+        vehicles={vehicles}
+        bookings={bookings}
+        blocks={blocks}
+        readError={Boolean(
+          companyError || vehicleError || bookingError || blockError,
+        )}
+        feedback={
+          query.error
+            ? "error"
+            : query.created || query.updated
+              ? "success"
+              : undefined
+        }
+        actions={{
+          create: createRentalVehicle,
+          update: updateRentalVehicle,
+          block: createRentalBlock,
+          booking: updateRentalBookingStatus,
+        }}
+      />
+    );
   return (
     <div className={styles.business}>
       <main className={styles.businessMain}>
