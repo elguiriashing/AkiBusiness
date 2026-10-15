@@ -149,21 +149,19 @@ export async function createVenueRentalVehicle(formData: FormData) {
       .maybeSingle();
     if (!media) redirect(fleetDestination(locale, venueId, "error=fleet"));
   }
-  const { error } = await supabase
-    .from("car_rental_vehicles")
-    .insert({
-      company_id: parsed.data.companyId,
-      name: parsed.data.name,
-      category: parsed.data.category,
-      transmission: parsed.data.transmission,
-      fuel: parsed.data.fuel,
-      seats: parsed.data.seats,
-      luggage: parsed.data.luggage,
-      daily_price_cents: parsed.data.dailyPrice * 100,
-      deposit_cents: parsed.data.deposit * 100,
-      cover_media_id: parsed.data.mediaId || null,
-      active: true,
-    });
+  const { error } = await supabase.from("car_rental_vehicles").insert({
+    company_id: parsed.data.companyId,
+    name: parsed.data.name,
+    category: parsed.data.category,
+    transmission: parsed.data.transmission,
+    fuel: parsed.data.fuel,
+    seats: parsed.data.seats,
+    luggage: parsed.data.luggage,
+    daily_price_cents: parsed.data.dailyPrice * 100,
+    deposit_cents: parsed.data.deposit * 100,
+    cover_media_id: parsed.data.mediaId || null,
+    active: true,
+  });
   revalidatePath(`/${locale}/business/venue/${venueId}`);
   redirect(
     fleetDestination(locale, venueId, error ? "error=fleet" : "updated=fleet"),
