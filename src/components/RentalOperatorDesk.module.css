@@ -763,3 +763,18 @@
     font-size: 17px;
   }
 }
+
+@media (max-width: 760px) {
+  .detail .photo {
+    display: block;
+    min-height: 130px;
+    max-height: 180px;
+    flex-shrink: 0;
+  }
+  .detail .photo > div {
+    min-height: 130px;
+  }
+  .detail .specs {
+    display: block;
+  }
+}
