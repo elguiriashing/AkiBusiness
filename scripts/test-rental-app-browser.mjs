@@ -49,6 +49,7 @@ const componentPath = path.join(
   operator ? "RentalOperatorDesk.tsx" : "RentalCompanyApp.tsx",
 );
 const source = `import React from 'react'; import {createRoot} from 'react-dom/client'; import {${operator ? "RentalOperatorDesk" : "RentalCompanyApp"} as App} from ${JSON.stringify(componentPath)};
+${operator ? `import {RentalBranchProfile} from ${JSON.stringify(path.join(root, "src/components/RentalBranchProfile.tsx"))};` : ""}
 const locale = new URLSearchParams(location.search).get('lang') || 'en'; const listings=${JSON.stringify(listings)};
 const props=${
   operator
@@ -57,7 +58,7 @@ locale, company:{id:'company-1',name:'Coastal Drive',slug:'fixture-rentals',city
 vehicles:listings.map(v=>({...v,id:v.vehicle_id,name:v.vehicle_name,active:true,rental_media_id:'cover'})),
 media:[{id:'cover',alt:'Disposable vehicle illustration',url:listings[0].image_url}],
 bookings:[{id:'request-1',vehicle_id:'vehicle-0',start_date:'2099-01-01',end_date:'2099-01-03',status:'requested',contact_name:'Disposable renter',contact_email:'fixture@example.test',contact_phone:'+34 600 123 456',note:'Child seat please',quoted_total_cents:22000}],
-blocks:[],actions:{create:async()=>{},update:async()=>{},block:async()=>{},booking:async()=>{}},mediaStudio:React.createElement('p',null,'Disposable media studio')
+blocks:[],actions:{create:async()=>{},update:async()=>{},block:async()=>{},booking:async()=>{}},mediaStudio:React.createElement('p',null,'Disposable media studio'),companyTools:React.createElement(RentalBranchProfile,{locale,company:{id:'company-1',name:'Coastal Drive',city:'Fuengirola',address:'Disposable UI fixture',latitude:36.5,longitude:-4.6,phone:'+34 600 123 456'},media:[{id:'cover',alt:'Disposable car cover'}]})
 }`
     : `{locale,slug:'fixture-rentals',listings,calendarReady:true,blocks:[]}`
 };
@@ -79,7 +80,8 @@ await build({
           namespace: "fixture-actions",
         }));
         builder.onLoad({ filter: /.*/, namespace: "fixture-actions" }, () => ({
-          contents: "export async function updateRentalBookingStatus() {}",
+          contents:
+            "export async function updateRentalBookingStatus() {} export async function updateRentalCompany() {}",
           loader: "js",
         }));
         builder.onResolve({ filter: /^next\/(image|link)$/ }, (args) => ({
@@ -238,6 +240,15 @@ try {
             .getByRole("link", { name: "fixture@example.test", exact: true })
             .waitFor();
           await page.getByText("Child seat please", { exact: true }).waitFor();
+          const searchWidth = await page
+            .getByRole("searchbox", {
+              name: locale === "es" ? "Buscar cliente" : "Search customer",
+              exact: true,
+            })
+            .evaluate((input) => input.getBoundingClientRect().width);
+          if (searchWidth < 100)
+            throw new Error("Booking search field is too narrow");
+
           await page.screenshot({
             path: path.join(results, `${name}-bookings.png`),
           });
@@ -246,6 +257,32 @@ try {
               `RENTAL_DASHBOARD_PNG:${(await page.screenshot()).toString("base64")}`,
             );
 
+          await page
+            .getByRole("button", {
+              name: locale === "es" ? "Empresa" : "Company",
+              exact: true,
+            })
+            .click();
+          await page
+            .getByLabel(
+              locale === "es" ? "Nombre de la sucursal" : "Branch name",
+              { exact: true },
+            )
+            .waitFor();
+          await page
+            .getByLabel(locale === "es" ? "Dirección" : "Address", {
+              exact: true,
+            })
+            .waitFor();
+          await page
+            .getByRole("button", {
+              name: locale === "es" ? "Guardar sucursal" : "Save branch",
+              exact: true,
+            })
+            .waitFor();
+          await page.screenshot({
+            path: path.join(results, `${name}-profile.png`),
+          });
           await page
             .getByRole("button", {
               name: locale === "es" ? "Flota" : "Fleet",
