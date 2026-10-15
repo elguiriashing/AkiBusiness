@@ -279,7 +279,7 @@ export function BusinessHome({
                       place.product === "rental"
                         ? place.venueId
                           ? `${base}/venue/${place.venueId}?section=fleet`
-                          : `${base}/mobility`
+                          : `${base}/mobility?company=${place.id}`
                         : `${base}/venue/${place.id}`
                     }
                     aria-label={`${es ? "Gestionar" : "Manage"} ${place.name}`}
