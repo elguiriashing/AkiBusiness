@@ -27,7 +27,7 @@ import {
   catalogueTextForDisplay,
   seedCatalogueTranslationMetadata,
 } from "@/lib/venue-catalogue";
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { VenueQrCode } from "@/components/VenueQrCode";
 import { requireBusinessAccess } from "@/lib/entitlements";
 import { SpainAddressAutocomplete } from "@/components/SpainAddressAutocomplete";
@@ -97,6 +97,7 @@ export default async function VenueWorkspace({
   const { locale, id } = await params;
   if (!isLocale(locale) || !/^[0-9a-f-]{36}$/i.test(id)) notFound();
   const query = await searchParams;
+  if (query.section === "fleet") redirect(`/${locale}/business/mobility`);
   const es = locale === "es";
   const { supabase, user } = await requireBusinessAccess(
     locale,
@@ -250,7 +251,7 @@ export default async function VenueWorkspace({
         supabase
           .from("car_rental_bookings")
           .select(
-            "id,vehicle_id,start_date,end_date,status,contact_name,quoted_total_cents",
+            "id,vehicle_id,start_date,end_date,status,contact_name,contact_email,contact_phone,note,quoted_total_cents",
           )
           .in("vehicle_id", fleetVehicleIds)
           .order("created_at", { ascending: false })

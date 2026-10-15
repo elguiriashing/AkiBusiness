@@ -12,8 +12,9 @@ import { requireUser } from "@/lib/auth";
 import { isLocale } from "@/lib/config";
 import { rentalEurosToCents } from "@/lib/akiconduzco";
 
-function location(locale: "en" | "es", query: string) {
-  return `/${locale}/business/mobility?${query}`;
+function location(locale: "en" | "es", query: string, formData?: FormData) {
+  const company = String(formData?.get("companyId") || "");
+  return `/${locale}/business/mobility?${query}${/^[0-9a-f-]{36}$/i.test(company) ? "&company=" + company : ""}${formData?.get("tab") ? "&tab=" + encodeURIComponent(String(formData.get("tab"))) : ""}`;
 }
 
 export async function createRentalCompany(formData: FormData) {
@@ -35,11 +36,11 @@ export async function createRentalCompany(formData: FormData) {
             .refine((url) => new URL(url).protocol === "https:"),
         ])
         .default(""),
-      phone: z.string().trim().max(40).default(""),
+      phone: z.string().trim().min(7).max(40),
       addressSelection: z.literal("selected"),
     })
     .safeParse(Object.fromEntries(formData));
-  if (!parsed.success) redirect(location(locale, "error=company"));
+  if (!parsed.success) redirect(location(locale, "error=company", formData));
   const { supabase, user } = await requireUser(
     locale,
     `/${locale}/business/mobility`,
@@ -52,7 +53,7 @@ export async function createRentalCompany(formData: FormData) {
       .replace(/[^a-z0-9]+/g, "-")
       .replace(/^-|-$/g, "")
       .slice(0, 60) || "rental-company";
-  const slug = `${base}-${user.id.slice(0, 6)}`;
+  const slug = `${base}-${crypto.randomUUID().slice(0, 8)}`;
   const { error } = await supabase.from("car_rental_companies").insert({
     slug,
     name: parsed.data.name,
@@ -65,9 +66,9 @@ export async function createRentalCompany(formData: FormData) {
     submitted_by: user.id,
     status: "pending_review",
   });
-  if (error) redirect(location(locale, "error=company"));
+  if (error) redirect(location(locale, "error=company", formData));
   revalidatePath(`/${locale}/business/mobility`);
-  redirect(location(locale, "created=company"));
+  redirect(location(locale, "created=company", formData));
 }
 
 export async function createRentalVehicle(formData: FormData) {
@@ -76,6 +77,7 @@ export async function createRentalVehicle(formData: FormData) {
     .object({
       companyId: z.string().uuid(),
       name: z.string().trim().min(2).max(120),
+      coverMediaId: z.union([z.string().uuid(), z.literal("")]).optional(),
       category: z.enum([
         "mini",
         "economy",
@@ -94,13 +96,14 @@ export async function createRentalVehicle(formData: FormData) {
       deposit: z.coerce.number().int().min(0).max(50000),
     })
     .safeParse(Object.fromEntries(formData));
-  if (!parsed.success) redirect(location(locale, "error=vehicle"));
+  if (!parsed.success) redirect(location(locale, "error=vehicle", formData));
   const { supabase } = await requireUser(
     locale,
     `/${locale}/business/mobility`,
   );
   const { error } = await supabase.from("car_rental_vehicles").insert({
     company_id: parsed.data.companyId,
+    rental_media_id: parsed.data.coverMediaId || null,
     name: parsed.data.name,
     category: parsed.data.category,
     transmission: parsed.data.transmission,
@@ -111,9 +114,9 @@ export async function createRentalVehicle(formData: FormData) {
     deposit_cents: rentalEurosToCents(parsed.data.deposit),
     active: true,
   });
-  if (error) redirect(location(locale, "error=vehicle"));
+  if (error) redirect(location(locale, "error=vehicle", formData));
   revalidatePath(`/${locale}/business/mobility`);
-  redirect(location(locale, "created=vehicle"));
+  redirect(location(locale, "created=vehicle", formData));
 }
 
 export async function updateRentalVehicle(formData: FormData) {
@@ -126,9 +129,10 @@ export async function updateRentalVehicle(formData: FormData) {
       dailyPrice: z.coerce.number().int().min(1).max(10000),
       deposit: z.coerce.number().int().min(0).max(50000),
       active: z.enum(["true", "false"]),
+      coverMediaId: z.union([z.string().uuid(), z.literal("")]).optional(),
     })
     .safeParse(Object.fromEntries(formData));
-  if (!parsed.success) redirect(location(locale, "error=vehicle"));
+  if (!parsed.success) redirect(location(locale, "error=vehicle", formData));
   const { supabase } = await requireUser(
     locale,
     `/${locale}/business/mobility`,
@@ -140,12 +144,15 @@ export async function updateRentalVehicle(formData: FormData) {
       daily_price_cents: rentalEurosToCents(parsed.data.dailyPrice),
       deposit_cents: rentalEurosToCents(parsed.data.deposit),
       active: parsed.data.active === "true",
+      ...(parsed.data.coverMediaId !== undefined
+        ? { rental_media_id: parsed.data.coverMediaId || null }
+        : {}),
     })
     .eq("id", parsed.data.vehicleId)
     .eq("company_id", parsed.data.companyId);
-  if (error) redirect(location(locale, "error=vehicle"));
+  if (error) redirect(location(locale, "error=vehicle", formData));
   revalidatePath(`/${locale}/business/mobility`);
-  redirect(location(locale, "updated=vehicle"));
+  redirect(location(locale, "updated=vehicle", formData));
 }
 
 export async function createRentalBlock(formData: FormData) {
@@ -163,7 +170,8 @@ export async function createRentalBlock(formData: FormData) {
         value.start >= new Date().toISOString().slice(0, 10),
     )
     .safeParse(Object.fromEntries(formData));
-  if (!parsed.success) redirect(location(locale, "error=availability"));
+  if (!parsed.success)
+    redirect(location(locale, "error=availability", formData));
   const { supabase } = await requireUser(
     locale,
     `/${locale}/business/mobility`,
@@ -179,10 +187,11 @@ export async function createRentalBlock(formData: FormData) {
       location(
         locale,
         error.code === "PT409" ? "error=overlap" : "error=availability",
+        formData,
       ),
     );
   revalidatePath(`/${locale}/business/mobility`);
-  redirect(location(locale, "created=availability"));
+  redirect(location(locale, "created=availability", formData));
 }
 
 export async function updateRentalBookingStatus(formData: FormData) {
@@ -193,7 +202,7 @@ export async function updateRentalBookingStatus(formData: FormData) {
       status: z.enum(["confirmed", "declined", "cancelled", "completed"]),
     })
     .safeParse(Object.fromEntries(formData));
-  if (!parsed.success) redirect(location(locale, "error=booking"));
+  if (!parsed.success) redirect(location(locale, "error=booking", formData));
   const { supabase } = await requireUser(
     locale,
     `/${locale}/business/mobility`,
@@ -207,38 +216,11 @@ export async function updateRentalBookingStatus(formData: FormData) {
       location(
         locale,
         error.code === "PT409" ? "error=overlap" : "error=booking",
+        formData,
       ),
     );
   revalidatePath(`/${locale}/business/mobility`);
-  redirect(location(locale, "updated=booking"));
-}
-
-// Explicit opt-in: retain the existing company/fleet and attach only to a venue
-// the caller can manage. RLS remains authoritative; no service client is used.
-export async function linkRentalCompanyVenue(formData: FormData) {
-  const locale = formData.get("locale") === "en" ? "en" : "es";
-  const parsed = z
-    .object({ companyId: z.string().uuid(), venueId: z.string().uuid() })
-    .safeParse(Object.fromEntries(formData));
-  if (!parsed.success) redirect(location(locale, "error=company"));
-  const { supabase } = await requireUser(
-    locale,
-    `/${locale}/business/mobility`,
-  );
-  const { data: allowed, error: accessError } = await supabase.rpc(
-    "is_venue_member",
-    { target_venue: parsed.data.venueId, allowed_roles: ["owner", "manager"] },
-  );
-  if (accessError || !allowed) redirect(location(locale, "error=company"));
-  const { data: updated, error } = await supabase.rpc(
-    "link_owned_rental_company_venue",
-    { p_company: parsed.data.companyId, p_venue: parsed.data.venueId },
-  );
-  if (error || !updated) redirect(location(locale, "error=company"));
-  revalidatePath(`/${locale}/business`);
-  redirect(
-    `/${locale}/business/venue/${parsed.data.venueId}?section=fleet&updated=fleet`,
-  );
+  redirect(location(locale, "updated=booking", formData));
 }
 
 export async function removeRentalBlock(formData: FormData) {
@@ -250,25 +232,29 @@ export async function removeRentalBlock(formData: FormData) {
       blockId: z.string().uuid(),
     })
     .safeParse(Object.fromEntries(formData));
-  if (!parsed.success) redirect(location(locale, "error=availability"));
-  const { supabase, user } = await requireUser(
+  if (!parsed.success)
+    redirect(location(locale, "error=availability", formData));
+  const { supabase } = await requireUser(
     locale,
     `/${locale}/business/mobility`,
   );
+  const { data: allowed } = await supabase.rpc("can_manage_rental_company", {
+    p_company: parsed.data.companyId,
+  });
+  if (!allowed) redirect(location(locale, "error=availability", formData));
   const { data: company } = await supabase
     .from("car_rental_companies")
     .select("id")
     .eq("id", parsed.data.companyId)
-    .eq("submitted_by", user.id)
     .maybeSingle();
-  if (!company) redirect(location(locale, "error=availability"));
+  if (!company) redirect(location(locale, "error=availability", formData));
   const { data: vehicle } = await supabase
     .from("car_rental_vehicles")
     .select("id")
     .eq("id", parsed.data.vehicleId)
     .eq("company_id", company.id)
     .maybeSingle();
-  if (!vehicle) redirect(location(locale, "error=availability"));
+  if (!vehicle) redirect(location(locale, "error=availability", formData));
   const { data: removed, error } = await supabase
     .from("car_rental_calendar_blocks")
     .delete()
@@ -277,7 +263,100 @@ export async function removeRentalBlock(formData: FormData) {
     .eq("reason", "maintenance")
     .select("id")
     .maybeSingle();
-  if (error || !removed) redirect(location(locale, "error=availability"));
+  if (error || !removed)
+    redirect(location(locale, "error=availability", formData));
   revalidatePath(`/${locale}/business/mobility`);
-  redirect(location(locale, "updated=availability"));
+  redirect(location(locale, "updated=availability", formData));
+}
+
+export async function updateRentalCompany(formData: FormData) {
+  const locale = formData.get("locale") === "en" ? "en" : "es";
+  const parsed = z
+    .object({
+      companyId: z.string().uuid(),
+      name: z.string().trim().min(2).max(120),
+      city: z.string().trim().min(2).max(100),
+      address: z.string().trim().min(4).max(240),
+      latitude: z.coerce.number().min(27).max(44),
+      longitude: z.coerce.number().min(-19).max(5),
+      phone: z.string().trim().min(7).max(40),
+      website: z.union([
+        z.literal(""),
+        z
+          .string()
+          .url()
+          .refine((v) => new URL(v).protocol === "https:"),
+      ]),
+      description_es: z.string().trim().max(2000),
+      description_en: z.string().trim().max(2000),
+      logo_media_id: z.union([z.literal(""), z.string().uuid()]),
+      hero_media_id: z.union([z.literal(""), z.string().uuid()]),
+    })
+    .safeParse(Object.fromEntries(formData));
+  if (!parsed.success)
+    redirect(location(locale, "error=profile&tab=company", formData));
+  const { supabase } = await requireUser(
+    locale,
+    `/${locale}/business/mobility`,
+  );
+  const { data: allowed } = await supabase.rpc("can_manage_rental_company", {
+    p_company: parsed.data.companyId,
+  });
+  if (!allowed)
+    redirect(location(locale, "error=profile&tab=company", formData));
+  const { companyId, website, ...values } = parsed.data;
+  const { data, error } = await supabase
+    .from("car_rental_companies")
+    .update({
+      ...values,
+      website_url: website || null,
+      logo_media_id: values.logo_media_id || null,
+      hero_media_id: values.hero_media_id || null,
+    })
+    .eq("id", companyId)
+    .select("id")
+    .maybeSingle();
+  if (error || !data)
+    redirect(location(locale, "error=profile&tab=company", formData));
+  revalidatePath(`/${locale}/business`);
+  revalidatePath(`/${locale}/business/mobility`);
+  redirect(location(locale, "updated=profile&tab=company", formData));
+}
+export async function deleteRentalMedia(formData: FormData) {
+  const locale = formData.get("locale") === "en" ? "en" : "es";
+  const parsed = z
+    .object({ companyId: z.string().uuid(), mediaId: z.string().uuid() })
+    .safeParse(Object.fromEntries(formData));
+  if (!parsed.success)
+    redirect(location(locale, "error=media&tab=media", formData));
+  const { supabase } = await requireUser(
+    locale,
+    `/${locale}/business/mobility`,
+  );
+  const { data: allowed } = await supabase.rpc("can_manage_rental_company", {
+    p_company: parsed.data.companyId,
+  });
+  if (!allowed) redirect(location(locale, "error=media&tab=media", formData));
+  const { data: item } = await supabase
+    .from("car_rental_media")
+    .select("id,storage_path,storage_bucket")
+    .eq("id", parsed.data.mediaId)
+    .eq("company_id", parsed.data.companyId)
+    .maybeSingle();
+  if (!item) redirect(location(locale, "error=media&tab=media", formData));
+  // Legacy originals remain with their original owner; only copied branch files are removed.
+  if (item.storage_bucket === "rental-media") {
+    const { error } = await supabase.storage
+      .from("rental-media")
+      .remove([item.storage_path]);
+    if (error) redirect(location(locale, "error=media&tab=media", formData));
+  }
+  const { error } = await supabase
+    .from("car_rental_media")
+    .delete()
+    .eq("id", item.id)
+    .eq("company_id", parsed.data.companyId);
+  if (error) redirect(location(locale, "error=media&tab=media", formData));
+  revalidatePath(`/${locale}/business/mobility`);
+  redirect(location(locale, "updated=media&tab=media", formData));
 }
