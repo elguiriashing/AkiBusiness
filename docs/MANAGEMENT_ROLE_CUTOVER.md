@@ -76,3 +76,28 @@ unavailable or ambiguous retries, and shows conflicts without generating a new I
 Successful creation returns to the RLS-owned list. It creates no listing, sends no
 mail and grants no subscription. Operations links name the exact selected workspace.
 Existing operational membership remains independently server-enforced there.
+
+## 2026-10-15 | Explicit company grouping candidate
+
+The free management hub adds company creation and explicit existing-location
+attachment through reviewed authenticated RPCs. Creating a company does not
+create public listings, assign customer subscriptions or inherit operational
+permissions. Company location metadata with a null membership role has no
+operations link. Standalone private location creation remains available; only
+canonical workspace owners can request attachment, and SQL also checks company
+owner/admin authority. Existing workspace/venue relationships are never detached
+or regrouped automatically. A legacy workspace may aggregate multiple venues;
+this UI does not establish a new physical-location mapping. The server
+AKISUITE_ORGANISATIONS_READY gate remains false pending migration20261016030000
+and live acceptance. Paginated lists have explicit bounds. Name/request identity
+is retained on conflicts and unavailable retries. Source revert/closedgate rolls
+back presentation without deleting legitimate companies or mappings.
+
+Rental branch attachment additionally requires migration 20261016040000. The
+caller explicitly selects an owned branch and owned canonical workspace; the
+server RPC validates both roles and rejects reassignment. Its private relation
+never appears on the public rental-company row. Existing branch/fleet/reservation
+IDs and daily role checks remain intact. Independent property creation can also
+select an existing owned workspace; its reviewed creation RPC validates ownership
+and there is no implicit reassignment of legacy properties. Existing workspace
+aggregates remain intact pending owner-reviewed reconciliation.

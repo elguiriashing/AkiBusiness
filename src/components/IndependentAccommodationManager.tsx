@@ -92,9 +92,11 @@ const labels = {
 export function IndependentAccommodationManager({
   locale,
   initialProperty = "",
+  locations = [],
 }: {
   locale: "en" | "es";
   initialProperty?: string;
+  locations?: { id: string; name: string }[];
 }) {
   const es = locale === "es";
   const [properties, setProperties] = useState<Property[]>([]),
@@ -173,7 +175,12 @@ export function IndependentAccommodationManager({
     const text = (key: string) => String(values.get(key) || "");
     const action = text("action");
     let payload: Record<string, unknown> = { action, property: selected };
-    if (action === "create") payload = { action, name: text("name") };
+    if (action === "create")
+      payload = {
+        action,
+        name: text("name"),
+        ...(text("workspace") ? { workspace: text("workspace") } : {}),
+      };
     if (action === "profile")
       payload = {
         ...payload,
@@ -302,6 +309,21 @@ export function IndependentAccommodationManager({
                 {es ? "Nombre" : "Name"}
                 <input name="name" required minLength={2} maxLength={120} />
               </label>
+              {locations.length > 0 && (
+                <label>
+                  {es
+                    ? "Ubicación operativa propia (opcional)"
+                    : "Owned operating location (optional)"}
+                  <select name="workspace" defaultValue="">
+                    <option value="">{es ? "Sin vincular" : "Unlinked"}</option>
+                    {locations.map((location) => (
+                      <option key={location.id} value={location.id}>
+                        {location.name}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+              )}
               <button type="submit">{es ? "Crear" : "Create"}</button>
             </fieldset>
           </form>

@@ -108,6 +108,7 @@ export async function POST(request: Request) {
     const reviewed = await db.rpc("review_accommodation_property", {
       p_property: p.property,
       p_publish: p.publish,
+      p_revision: p.revision,
       p_reason: p.reason,
     });
     return reviewed.error

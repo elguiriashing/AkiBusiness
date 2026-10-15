@@ -36,6 +36,7 @@ export const accommodationOperation = z.discriminatedUnion("action", [
   z
     .object({
       action: z.literal("review"),
+      revision: uuid,
       property: uuid,
       publish: z.boolean(),
       reason: z.string().trim().min(10).max(2000),

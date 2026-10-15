@@ -16,10 +16,17 @@ export default async function AccommodationManagement({
   if (!isLocale(locale)) notFound();
   const query = await searchParams;
   const property = accommodationPropertyId.safeParse(query.property);
-  await requireUser(
+  const { supabase } = await requireUser(
     locale,
     `/${locale}/business/accommodations${property.success ? "?property=" + property.data : ""}`,
   );
+  const locations =
+    process.env.AKISUITE_ORGANISATIONS_READY === "true"
+      ? await supabase.rpc("list_managed_operating_locations", {
+          p_limit: 100,
+          p_offset: 0,
+        })
+      : { data: [], error: null };
   return (
     <main>
       <Link href={`/${locale}/business`}>
@@ -28,6 +35,9 @@ export default async function AccommodationManagement({
       {process.env.AKISUITE_ACCOMMODATION_READY === "true" ? (
         <IndependentAccommodationManager
           locale={locale}
+          locations={(locations.data || []).filter(
+            (item: { role: string }) => item.role === "owner",
+          )}
           initialProperty={property.success ? property.data : ""}
         />
       ) : (

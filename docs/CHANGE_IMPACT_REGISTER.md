@@ -1567,3 +1567,19 @@ gallery placement. Legacy venue-backed tools remain reachable. The server
 AKISUITE_ACCOMMODATION_READY flag defaults false until coordinated schema and
 release acceptance. Source tests do not establish live auth, booking or delivery.
 See INDEPENDENT_ACCOMMODATION_MANAGEMENT.md for verification and rollback.
+
+## 2026-10-15 | Explicit company grouping candidate
+
+The free management hub adds company creation and explicit existing-location
+attachment through reviewed authenticated RPCs. Creating a company does not
+create public listings, assign customer subscriptions or inherit operational
+permissions. Company location metadata with a null membership role has no
+operations link. Standalone private location creation remains available; only
+canonical workspace owners can request attachment, and SQL also checks company
+owner/admin authority. Existing workspace/venue relationships are never detached
+or regrouped automatically. A legacy workspace may aggregate multiple venues;
+this UI does not establish a new physical-location mapping. The server
+AKISUITE_ORGANISATIONS_READY gate remains false pending migration20261016030000
+and live acceptance. Paginated lists have explicit bounds. Name/request identity
+is retained on conflicts and unavailable retries. Source revert/closedgate rolls
+back presentation without deleting legitimate companies or mappings.
