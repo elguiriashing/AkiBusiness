@@ -3,6 +3,7 @@ import { RentalOperatorDesk } from "./RentalOperatorDesk";
 import { rentalCategoryLabels } from "@/lib/akiconduzco";
 import {
   createVenueRentalCompany,
+  removeVenueRentalBlock,
   createVenueRentalVehicle,
   createVenueRentalBlock,
   updateVenueRentalBookingStatus,
@@ -121,6 +122,7 @@ export function AkiCochesFleetWorkspace({
         update: updateVenueRentalVehicle,
         block: createVenueRentalBlock,
         booking: updateVenueRentalBookingStatus,
+        removeBlock: removeVenueRentalBlock,
       }}
     />
   );
