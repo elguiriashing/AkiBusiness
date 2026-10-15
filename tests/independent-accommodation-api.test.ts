@@ -34,6 +34,7 @@ function query(data: unknown = [{ id }], error: unknown = null) {
     "eq",
     "order",
     "limit",
+    "range",
   ])
     q[method] = vi.fn(() => q);
   q.then = (resolve: (v: unknown) => unknown) =>
@@ -228,4 +229,60 @@ it("keeps independent API unavailable until migration gate is ready", async () =
       .status,
   ).toBe(503);
   expect(db.auth.getUser).not.toHaveBeenCalled();
+});
+
+it("delegates explicit member grants to owner-only RPC without broad manager bypass", async () => {
+  const response = await call({
+    action: "member",
+    property,
+    profile: id,
+    role: "manager",
+  });
+  expect(response.status).toBe(200);
+  expect(db.rpc).toHaveBeenCalledWith("set_accommodation_property_member", {
+    p_property: property,
+    p_profile: id,
+    p_role: "manager",
+  });
+  expect(db.rpc).not.toHaveBeenCalledWith(
+    "can_manage_accommodation_property",
+    expect.anything(),
+  );
+  db.rpc.mockResolvedValue({ data: null, error: { code: "42501" } });
+  expect(
+    (await call({ action: "member", property, profile: id, role: null }))
+      .status,
+  ).toBe(403);
+  expect(
+    (await call({ action: "member", property, profile: id, role: "owner" }))
+      .status,
+  ).toBe(400);
+});
+it("bounds pagination and rejects arbitrary section tables", async () => {
+  expect(
+    (
+      await GET(
+        new Request(
+          `https://akihq.app/api/business/accommodations?property=${property}&section=profiles`,
+        ),
+      )
+    ).status,
+  ).toBe(400);
+  expect(
+    (
+      await GET(
+        new Request(`https://akihq.app/api/business/accommodations?page=101`),
+      )
+    ).status,
+  ).toBe(400);
+  const q = query(Array.from({ length: 101 }, () => ({ id })));
+  db.from.mockReturnValue(q);
+  const result = await GET(
+    new Request(
+      `https://akihq.app/api/business/accommodations?property=${property}&section=units&page=2`,
+    ),
+  );
+  expect(q.range).toHaveBeenCalledWith(200, 300);
+  expect(q.order).toHaveBeenCalledWith("id");
+  expect((await result.json()).units).toMatchObject({ page: 2, hasMore: true });
 });

@@ -20,7 +20,7 @@ strict schemas, can_manage_accommodation_property and property-scoped writes
 remain authoritative. SQL validates cross-property relationships, overlapping
 inventory, quotes, allowed transitions and tenant access. Partial section failures
 block dependent controls and never imply empty/free inventory. UI displays the
-100-record per-section read bound; further pagination remains a product limit.
+100-record pages with bounded explicit navigation (see below).
 
 Confirmation transitions use the existing database outbox. This extracted app owns
 no scheduler and does not send mail directly. No live test reservation, customer
@@ -43,3 +43,27 @@ review submission is not publication. Only the reviewed staff RPC can publish.
 The media API validates upload size/type/signature, uses property-scoped storage
 paths, signs manager reads and supports explicit 0–11 public gallery placement or
 private/unplaced state. Gallery placement alone never publishes a private property.
+
+## Explicit property team and bounded pagination
+
+The readiness gate also requires migration `20261016050000_accommodation_property_team`.
+Canonical independent owners can grant or revoke the existing manager role by exact
+verified profile UUID in the Team tab. The SQL RPC rejects owner changes, legacy
+venue-backed properties, unverified accounts, and callers without canonical ownership.
+Managers cannot administer the team; no organisation membership is inherited and no
+invitation email is sent. Existing venue-backed team management remains available from
+the property's legacy venue link.
+
+Property lists and inventory now paginate in stable order, 100 records at a time with
+one-row lookahead. Requests accept pages 0–100 only (10,100 records); larger datasets
+need a separately reviewed pagination extension. Inventory pages fail closed, and
+missing rows never establish availability. Room/unit selectors use the currently loaded
+inventory page: load the relevant room/unit page before opening its dependent form.
+Team lists use the same bounded pages and an authoritative total. Photographs remain
+bounded by the separately managed media interface.
+
+Validation distinguishes UI fixtures from real backend acceptance: API tests exercise
+scope forwarding, owner RPC denials and pagination bounds, component tests exercise
+exact UUID grants/revocation and manager-only views. Backend owner/self/legacy/revoked
+membership guarantees require the coordinated migration's SQL tests and production
+acceptance before enabling this gate.

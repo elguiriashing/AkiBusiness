@@ -203,3 +203,70 @@ it("edits loaded profile without fabricating publication or dropping existing fi
     },
   });
 });
+it("owner team grants only exact manager UUID and revokes explicit memberships", async () => {
+  const member = "33333333-3333-4333-8333-333333333333";
+  fetchMock.mockImplementation(async (url, options) => ({
+    ok: true,
+    json: async () =>
+      options?.method === "POST"
+        ? { ok: true }
+        : String(url).includes("section=team")
+          ? {
+              canManageTeam: true,
+              ownerProfileId: property,
+              members: [{ profile_id: member, role: "manager" }],
+              total: 1,
+            }
+          : empty(),
+  }));
+  render(
+    <IndependentAccommodationManager locale="en" initialProperty={property} />,
+  );
+  fireEvent.click(await screen.findByRole("button", { name: /^Team$/ }));
+  const input = await screen.findByLabelText("Verified account UUID");
+  fireEvent.change(input, { target: { value: room } });
+  fireEvent.submit(input.closest("form")!);
+  await waitFor(() =>
+    expect(
+      fetchMock.mock.calls.some(
+        ([, o]) => o?.body && JSON.parse(o.body).profile === room,
+      ),
+    ).toBe(true),
+  );
+  const grant = fetchMock.mock.calls.find(([, o]) => o?.method === "POST");
+  expect(JSON.parse(grant![1].body)).toEqual({
+    action: "member",
+    property,
+    profile: room,
+    role: "manager",
+  });
+  fireEvent.click(await screen.findByRole("button", { name: "Revoke access" }));
+  await waitFor(() =>
+    expect(
+      fetchMock.mock.calls.some(
+        ([, o]) => o?.body && JSON.parse(o.body).role === null,
+      ),
+    ).toBe(true),
+  );
+});
+it("manager team view has no grant or revoke controls", async () => {
+  fetchMock.mockImplementation(async (url) => ({
+    ok: true,
+    json: async () =>
+      String(url).includes("section=team")
+        ? {
+            canManageTeam: false,
+            ownerProfileId: property,
+            members: [{ profile_id: room, role: "manager" }],
+            total: 1,
+          }
+        : empty(),
+  }));
+  render(
+    <IndependentAccommodationManager locale="en" initialProperty={property} />,
+  );
+  fireEvent.click(await screen.findByRole("button", { name: /^Team$/ }));
+  await screen.findByText(/Only the owner can change/);
+  expect(screen.queryByLabelText("Verified account UUID")).toBeNull();
+  expect(screen.queryByRole("button", { name: "Revoke access" })).toBeNull();
+});

@@ -1583,3 +1583,12 @@ AKISUITE_ORGANISATIONS_READY gate remains false pending migration20261016030000
 and live acceptance. Paginated lists have explicit bounds. Name/request identity
 is retained on conflicts and unavailable retries. Source revert/closedgate rolls
 back presentation without deleting legitimate companies or mappings.
+
+### Independent accommodation team and paginated inventory
+
+- Adds canonical-owner-only explicit verified UUID manager assignment/revocation, with
+  SQL authority, owner preservation, no inherited organisation permissions or emails.
+- Adds bounded deterministic inventory/list navigation and partial-failure handling.
+- Requires additive team/pagination migration 20261016050000 before accommodation readiness.
+- Fixes standalone rental browser fixture environment definitions after shared role imports;
+  all existing browser assertions remain in place. No production configuration changed.

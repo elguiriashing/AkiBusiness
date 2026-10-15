@@ -126,7 +126,19 @@ try {
               mutations.push(route.request().postDataJSON());
               return route.fulfill({ json: { property } });
             }
-            if (!url.search) return route.fulfill({ json: { properties: [] } });
+            if (!url.searchParams.has("property"))
+              return route.fulfill({
+                json: { properties: [], hasMore: false },
+              });
+            if (url.searchParams.get("section") === "team")
+              return route.fulfill({
+                json: {
+                  canManageTeam: true,
+                  ownerProfileId: property,
+                  members: [],
+                  total: 0,
+                },
+              });
             return route.fulfill({
               json: Object.fromEntries(
                 [
@@ -213,6 +225,38 @@ try {
         assert.equal(mutations[1].property, property);
         assert.equal(mutations[1].action, "room_type");
         assert.equal("venueId" in mutations[1], false);
+        await page
+          .getByRole("button", {
+            name: locale === "es" ? "Equipo" : "Team",
+            exact: true,
+          })
+          .click();
+        const member = "33333333-3333-4333-8333-333333333333";
+        await page
+          .getByLabel(
+            locale === "es"
+              ? "UUID de la cuenta verificada"
+              : "Verified account UUID",
+          )
+          .fill(member);
+        await page
+          .getByRole("button", {
+            name: locale === "es" ? "Conceder gestión" : "Grant management",
+          })
+          .click();
+        await page
+          .getByLabel(
+            locale === "es"
+              ? "UUID de la cuenta verificada"
+              : "Verified account UUID",
+          )
+          .waitFor();
+        assert.deepEqual(mutations[2], {
+          action: "member",
+          property,
+          profile: member,
+          role: "manager",
+        });
         assert.ok(
           await page.evaluate(
             () => document.documentElement.scrollWidth <= innerWidth + 2,

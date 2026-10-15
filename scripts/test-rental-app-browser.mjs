@@ -70,7 +70,7 @@ await build({
   bundle: true,
   jsx: "automatic",
   minify: true,
-  define: { "process.env.NODE_ENV": '"production"' },
+  define: { "process.env.NODE_ENV": '"production"', "process.env": "{}" },
   plugins: [
     {
       name: "next-test-boundary",

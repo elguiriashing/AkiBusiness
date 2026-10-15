@@ -1,4 +1,5 @@
 "use client";
+import { IndependentAccommodationTeam } from "./IndependentAccommodationTeam";
 import { IndependentAccommodationMedia } from "./IndependentAccommodationMedia";
 import { useEffect, useState, type FormEvent } from "react";
 
@@ -40,7 +41,12 @@ type Row = {
   notification_email?: string;
   storage_path?: string;
 };
-type Section = { rows?: Row[]; error?: string };
+type Section = {
+  rows?: Row[];
+  error?: string;
+  page?: number;
+  hasMore?: boolean;
+};
 type Inventory = Record<string, Section>;
 const sections = [
   "profile",
@@ -51,6 +57,7 @@ const sections = [
   "booking_settings",
   "reservations",
   "property_media",
+  "team",
 ] as const;
 const reservationTransitions: Record<string, string[]> = {
   requested: ["confirmed", "declined", "cancelled"],
@@ -77,6 +84,7 @@ const labels = {
     "Booking settings",
     "Reservations",
     "Photos",
+    "Team",
   ],
   es: [
     "Ficha del alojamiento",
@@ -87,6 +95,7 @@ const labels = {
     "Configuración de reservas",
     "Reservas",
     "Fotografías",
+    "Equipo",
   ],
 };
 export function IndependentAccommodationManager({
@@ -107,12 +116,37 @@ export function IndependentAccommodationManager({
     [busy, setBusy] = useState(false),
     [error, setError] = useState("");
   const [refresh, setRefresh] = useState(0);
+  const [listPage, setListPage] = useState(0),
+    [listMore, setListMore] = useState(false);
+  async function loadPage(section: string, page: number) {
+    setBusy(true);
+    setError("");
+    try {
+      const response = await fetch(
+        `/api/business/accommodations?property=${encodeURIComponent(selected)}&section=${section}&page=${page}`,
+        { cache: "no-store" },
+      );
+      if (!response.ok) throw Error();
+      const data = await response.json();
+      setInventory((current) => ({ ...current, ...data }));
+    } catch {
+      setInventory((current) => ({
+        ...current,
+        [section]: { error: "unavailable" },
+      }));
+      setError(
+        es ? "No se pudo cargar la página." : "Could not load the page.",
+      );
+    } finally {
+      setBusy(false);
+    }
+  }
   useEffect(() => {
     let current = true;
     setLoading(true);
     setError("");
     fetch(
-      `/api/business/accommodations${selected ? "?property=" + encodeURIComponent(selected) : ""}`,
+      `/api/business/accommodations${selected ? "?property=" + encodeURIComponent(selected) : "?page=" + listPage}`,
       { cache: "no-store" },
     )
       .then(async (response) => {
@@ -122,7 +156,10 @@ export function IndependentAccommodationManager({
       .then((data) => {
         if (current) {
           if (selected) setInventory(data);
-          else setProperties(data.properties || []);
+          else {
+            setProperties(data.properties || []);
+            setListMore(data.hasMore === true);
+          }
         }
       })
       .catch(() => {
@@ -139,7 +176,7 @@ export function IndependentAccommodationManager({
     return () => {
       current = false;
     };
-  }, [selected, refresh, es]);
+  }, [selected, refresh, es, listPage]);
   async function mutate(
     payload: Record<string, unknown>,
     form?: HTMLFormElement,
@@ -272,15 +309,30 @@ export function IndependentAccommodationManager({
       </button>
       {!selected && (
         <p>
-          {es
-            ? "Se muestran hasta 100 alojamientos. Contacta con soporte si necesitas gestionar más."
-            : "Showing up to 100 properties. Contact support if you need to manage more."}
+          {es ? "100 alojamientos por página." : "100 properties per page."}
         </p>
       )}
       {loading ? (
         <p role="status">{es ? "Cargando…" : "Loading…"}</p>
       ) : !selected ? (
         <>
+          <div>
+            <button
+              type="button"
+              disabled={listPage === 0}
+              onClick={() => setListPage((p) => p - 1)}
+            >
+              {es ? "Anterior" : "Previous"}
+            </button>
+            <span> {listPage + 1} </span>
+            <button
+              type="button"
+              disabled={!listMore || listPage >= 100}
+              onClick={() => setListPage((p) => p + 1)}
+            >
+              {es ? "Siguiente" : "Next"}
+            </button>
+          </div>
           <ul>
             {properties.map((property) => (
               <li key={property.id}>
@@ -364,7 +416,9 @@ export function IndependentAccommodationManager({
             ))}
           </nav>
           <h2>{labels[locale][sections.indexOf(tab)]}</h2>
-          {tab === "property_media" ? (
+          {tab === "team" ? (
+            <IndependentAccommodationTeam property={selected} locale={locale} />
+          ) : tab === "property_media" ? (
             <IndependentAccommodationMedia
               property={selected}
               locale={locale}
@@ -379,9 +433,36 @@ export function IndependentAccommodationManager({
             <>
               <p>
                 {es
-                  ? "Se muestran hasta 100 registros por sección. Contacta con soporte si tienes más inventario. La ausencia de resultados no implica disponibilidad."
-                  : "Up to 100 records are shown per section. Contact support for larger inventory. Missing results do not establish availability."}
+                  ? "100 registros por página. La ausencia de resultados no implica disponibilidad."
+                  : "100 records per page. Missing results do not establish availability."}
               </p>
+              {!["profile", "booking_settings"].includes(tab) && (
+                <div>
+                  <button
+                    type="button"
+                    disabled={busy || !inventory[tab]?.page}
+                    onClick={() =>
+                      void loadPage(tab, (inventory[tab]?.page ?? 0) - 1)
+                    }
+                  >
+                    {es ? "Anterior" : "Previous"}
+                  </button>
+                  <span> {(inventory[tab]?.page ?? 0) + 1} </span>
+                  <button
+                    type="button"
+                    disabled={
+                      busy ||
+                      !inventory[tab]?.hasMore ||
+                      (inventory[tab]?.page ?? 0) >= 100
+                    }
+                    onClick={() =>
+                      void loadPage(tab, (inventory[tab]?.page ?? 0) + 1)
+                    }
+                  >
+                    {es ? "Siguiente" : "Next"}
+                  </button>
+                </div>
+              )}
               <ul>
                 {rows.map((row) => (
                   <li key={row.id || "settings"}>
