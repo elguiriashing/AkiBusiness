@@ -1071,3 +1071,15 @@ CI, clean Cloudflare packaging and authenticated preview acceptance are required
 before release. Rollback: revert app code; keep the compatible additive RPC, or
 revoke/drop that function in a reviewed forward migration. Never unlink records
 or drop customer data as rollback.
+
+## 2026-10-15 | Coordinated management role build
+
+The build-time NEXT_PUBLIC_AKISUITE_ROLE_SWAP switch prepares this management
+application for AkiHQ while retaining legacy defaults, business capability keys,
+permissions and routes. Public navigation, auth origin validation, PWA/metadata,
+management email links and operations handoffs share the role map. Exact preview
+origins remain separate from canonical destinations. See MANAGEMENT_ROLE_CUTOVER.md
+for deployment order, existing entitlement limitations and rollback. No provider
+setting, database, customer mail, charge or live domain is changed by this source.
+Both flag modes have regression coverage; production/authenticated acceptance
+remains unverified and required before activation.

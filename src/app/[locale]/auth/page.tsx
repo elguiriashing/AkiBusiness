@@ -1,3 +1,4 @@
+import { managementProduct, operationsProduct } from "@/lib/product-roles";
 import { notFound } from "next/navigation";
 import { headers } from "next/headers";
 import { config, isLocale } from "@/lib/config";
@@ -99,7 +100,7 @@ export default async function AuthPage({
               : isStayHost
                 ? "AkiDuermo"
                 : isBusinessHost
-                  ? "AkiBusiness"
+                  ? managementProduct.name
                   : businessIntent
                     ? es
                       ? "Paso 1 de 3 · Añade tu negocio"
@@ -165,7 +166,7 @@ export default async function AuthPage({
                 aria-hidden="true"
               />
               <span>
-                <strong>AkiBusiness</strong>
+                <strong>{managementProduct.name}</strong>
               </span>
             </a>
             <a className="auth-product-card" href={config.crmUrl}>
@@ -174,7 +175,7 @@ export default async function AuthPage({
                 aria-hidden="true"
               />
               <span>
-                <strong>AkiHQ</strong>
+                <strong>{operationsProduct.name}</strong>
               </span>
             </a>
           </aside>
@@ -283,8 +284,8 @@ export default async function AuthPage({
                       : "Sign in to AkiDuermo"
                     : isBusinessHost
                       ? es
-                        ? "Entra en AkiBusiness"
-                        : "Sign in to AkiBusiness"
+                        ? `Entra en ${managementProduct.name}`
+                        : `Sign in to ${managementProduct.name}`
                       : es
                         ? "Entra en AkiPasa"
                         : "Sign in to AkiPasa"}

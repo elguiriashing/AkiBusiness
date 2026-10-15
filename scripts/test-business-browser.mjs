@@ -1,3 +1,7 @@
+const managementName =
+  process.env.NEXT_PUBLIC_AKISUITE_ROLE_SWAP === "true"
+    ? "AkiHQ"
+    : "AkiBusiness";
 import { chromium } from "@playwright/test";
 import assert from "node:assert/strict";
 import { mkdir } from "node:fs/promises";
@@ -33,7 +37,7 @@ try {
         assert.ok(csp.includes("wss://vhpbvcfkcteswlsdjrfl.supabase.co"));
         assert.equal(csp.includes("*.supabase.co"), false);
         assert.match(page.url(), new RegExp(`/${locale}/auth\\?next=`));
-        assert.equal(await page.title(), "AkiBusiness");
+        assert.equal(await page.title(), managementName);
         assert.equal(await page.locator("html").getAttribute("lang"), locale);
         assert.equal(
           await page.locator("body").getAttribute("data-product"),
@@ -64,7 +68,7 @@ try {
         const manifest = await context.request.get(
           `${base}/manifest.webmanifest`,
         );
-        assert.equal((await manifest.json()).name, "AkiBusiness");
+        assert.equal((await manifest.json()).name, managementName);
         const health = await context.request.get(`${base}/api/health`);
         assert.equal((await health.json()).product, "akibusiness");
         const blocked = await context.request.post(

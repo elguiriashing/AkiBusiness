@@ -1,4 +1,5 @@
-const canonical = "https://akibusiness.com";
+import { managementProduct, roleSwapEnabled } from "./product-roles";
+const canonical = managementProduct.origin;
 function trustedOrigin(value: string) {
   try {
     const parsed = new URL(value);
@@ -20,7 +21,9 @@ function trustedOrigin(value: string) {
       parsed.protocol === "https:" &&
       ([
         canonical,
-        "https://www.akibusiness.com",
+        roleSwapEnabled
+          ? "https://www.akihq.app"
+          : "https://www.akibusiness.com",
         "https://business.akipasa.com",
       ].includes(parsed.origin) ||
         previews.includes(parsed.origin))
@@ -31,7 +34,10 @@ function trustedOrigin(value: string) {
   }
   return null;
 }
-export function publicRequestOrigin(headers: Headers, _fallback = canonical) {
+export function publicRequestOrigin(
+  headers: Headers,
+  _fallback: string = canonical,
+) {
   void _fallback;
   const host = (headers.get("host") || "").split(",")[0].trim();
   const local = /^(localhost|127\.0\.0\.1)(:|$)/.test(host);

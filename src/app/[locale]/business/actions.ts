@@ -2,7 +2,7 @@
 
 import { redirect } from "next/navigation";
 import { z } from "zod";
-import { isLocale } from "@/lib/config";
+import { config, isLocale } from "@/lib/config";
 import { requireUser } from "@/lib/auth";
 import { requireBusinessAccess } from "@/lib/entitlements";
 import { safeExternalUrlSchema } from "@/lib/auth-security";
@@ -65,7 +65,7 @@ export async function openCrmWorkspace(formData: FormData) {
   );
   if (error || typeof workspaceId !== "string")
     redirect(`/${locale}/business?error=crm_workspace`);
-  const crmUrl = process.env.NEXT_PUBLIC_AKIHQ_URL || "https://akihq.app";
+  const crmUrl = config.crmUrl;
   redirect(`${crmUrl}/?workspace=${encodeURIComponent(workspaceId)}`);
 }
 

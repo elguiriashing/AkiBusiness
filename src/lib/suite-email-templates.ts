@@ -1,3 +1,4 @@
+import { managementProduct, operationsProduct } from "./product-roles";
 export const suiteEmailFrom = "AkiPasa Support <support@akipasa.com>";
 
 export const suiteEmailKinds = [
@@ -46,9 +47,9 @@ const appUrl = (product: string, locale: SuiteEmailLocale) =>
   product === "akiduermo"
     ? "https://akiduermo.com/"
     : product === "akibusiness"
-      ? "https://akibusiness.com/" + locale + "/business"
+      ? managementProduct.origin + "/" + locale + "/business"
       : product === "akihq"
-        ? "https://akihq.app/"
+        ? operationsProduct.origin + "/"
         : "https://akipasa.com/" + locale;
 const stayBookingsUrl = (locale: SuiteEmailLocale) =>
   "https://akiduermo.com/bookings?lang=" + locale;
@@ -152,7 +153,9 @@ export function suiteEmailCopy(
             ? "Te informaremos de la decisión o solicitaremos información adicional."
             : "We'll contact you with a decision or if more information is needed.",
         ],
-        button: es ? "Abrir AkiBusiness" : "Open AkiBusiness",
+        button: es
+          ? `Abrir ${managementProduct.name}`
+          : `Open ${managementProduct.name}`,
         href: appUrl("akibusiness", locale) + "?view=claims",
         footer: baseFooter,
       };
@@ -211,13 +214,15 @@ export function suiteEmailCopy(
     case "welcome_akibusiness":
       return {
         product: "akibusiness",
-        subject: es ? "¡Bienvenido a AkiBusiness!" : "Welcome to AkiBusiness!",
+        subject: es
+          ? `¡Bienvenido a ${managementProduct.name}!`
+          : `Welcome to ${managementProduct.name}!`,
         heading: es
           ? "Haz que tu negocio destaque"
           : "Put your business on the map",
         intro: es
-          ? "AkiBusiness te ayuda a reclamar y administrar tus locales y alojamientos, editar sus datos, gestionar eventos y reservas y mejorar su visibilidad."
-          : "AkiBusiness helps you claim and manage venues or accommodation listings, edit details, handle events and bookings, and improve visibility.",
+          ? `${managementProduct.name} te ayuda a reclamar y administrar tus locales y alojamientos, editar sus datos, gestionar eventos y reservas y mejorar su visibilidad.`
+          : `${managementProduct.name} helps you claim and manage venues or accommodation listings, edit details, handle events and bookings, and improve visibility.`,
         facts: [],
         steps: [
           es
@@ -237,13 +242,15 @@ export function suiteEmailCopy(
     case "welcome_akihq":
       return {
         product: "akihq",
-        subject: es ? "¡Bienvenido a AkiHQ!" : "Welcome to AkiHQ!",
+        subject: es
+          ? `¡Bienvenido a ${operationsProduct.name}!`
+          : `Welcome to ${operationsProduct.name}!`,
         heading: es
           ? "Tu negocio, organizado en un solo lugar"
           : "Your business, organised in one place",
         intro: es
-          ? "AkiHQ reúne herramientas de gestión: CRM, inventario, punto de venta, soporte, tareas, equipo y seguimiento de ventas."
-          : "AkiHQ brings your business tools together: CRM, inventory, point of sale, support, tasks, team collaboration and sales tracking.",
+          ? `${operationsProduct.name} reúne herramientas de gestión: CRM, inventario, punto de venta, soporte, tareas, equipo y seguimiento de ventas.`
+          : `${operationsProduct.name} brings your business tools together: CRM, inventory, point of sale, support, tasks, team collaboration and sales tracking.`,
         facts: [],
         steps: [
           es
@@ -256,7 +263,9 @@ export function suiteEmailCopy(
             ? "Consulta pedidos y ventas, tareas, soporte y clientes desde el panel."
             : "Review orders, sales, tasks, customer support and CRM from the dashboard.",
         ],
-        button: es ? "Entrar en AkiHQ" : "Open AkiHQ",
+        button: es
+          ? `Entrar en ${operationsProduct.name}`
+          : `Open ${operationsProduct.name}`,
         href: appUrl("akihq", locale),
         footer: baseFooter,
       };
@@ -419,8 +428,16 @@ export function suiteEmailCopy(
 const palette = {
   akipasa: { primary: "#ed7021", accent: "#f5aa40", label: "AkiPasa" },
   akiduermo: { primary: "#21876b", accent: "#50bb94", label: "AkiDuermo" },
-  akibusiness: { primary: "#b27b00", accent: "#f5be3f", label: "AkiBusiness" },
-  akihq: { primary: "#7955c6", accent: "#ab82f7", label: "AkiHQ" },
+  akibusiness: {
+    primary: "#b27b00",
+    accent: "#f5be3f",
+    label: managementProduct.name,
+  },
+  akihq: {
+    primary: "#7955c6",
+    accent: "#ab82f7",
+    label: operationsProduct.name,
+  },
 };
 
 export function renderSuiteEmail(

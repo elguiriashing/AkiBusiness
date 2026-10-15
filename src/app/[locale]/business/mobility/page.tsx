@@ -1,3 +1,4 @@
+import { managementProduct } from "@/lib/product-roles";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { requireUser } from "@/lib/auth";
@@ -49,7 +50,7 @@ export default async function RentalBranchWorkspace({
     return (
       <div className={styles.business}>
         <main className={styles.businessMain}>
-          <Link href={`/${locale}/business`}>← AkiBusiness</Link>
+          <Link href={`/${locale}/business`}>← {managementProduct.name}</Link>
           <section className={styles.businessCard}>
             <h1>{es ? "Tu sucursal AkiCoches" : "Your AkiCoches branch"}</h1>
             <p>

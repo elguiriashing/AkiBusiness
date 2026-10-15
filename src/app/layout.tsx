@@ -1,3 +1,4 @@
+import { managementProduct } from "@/lib/product-roles";
 import "./globals.css";
 import "./compact-app.css";
 import "./brand.css";
@@ -11,13 +12,19 @@ import { ThemeManager } from "@/components/ThemeModeControls";
 import { ConsentAnalytics } from "@/components/ConsentAnalytics";
 import { PersonalisationConsent } from "@/components/PersonalisationConsent";
 export const metadata: Metadata = {
-  metadataBase: new URL("https://akibusiness.com"),
-  title: { default: "AkiBusiness", template: "%s · AkiBusiness" },
-  description: "Gestiona locales, alojamientos y flotas con AkiBusiness.",
-  applicationName: "AkiBusiness",
+  metadataBase: new URL(managementProduct.origin),
+  title: {
+    default: managementProduct.name,
+    template: `%s · ${managementProduct.name}`,
+  },
+  description: `Gestiona locales, alojamientos y flotas con ${managementProduct.name}.`,
+  applicationName: managementProduct.name,
   manifest: "/manifest.webmanifest",
   robots: { index: false, follow: false },
-  icons: { icon: "/pwa/business-192.png", apple: "/pwa/business-192.png" },
+  icons: {
+    icon: `/brand/${managementProduct.logo}-icon.png`,
+    apple: `/brand/${managementProduct.logo}-icon.png`,
+  },
 };
 export const viewport: Viewport = { themeColor: "#ffd447" };
 export default async function RootLayout({

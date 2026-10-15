@@ -1,15 +1,31 @@
+import {
+  managementProduct,
+  operationsProduct,
+  roleOrigin,
+} from "./product-roles";
 import { spainLocations } from "./locations";
 
 export const config = {
-  productName: process.env.NEXT_PUBLIC_PRODUCT_NAME || "AkiBusiness",
+  productName: managementProduct.name,
   wordmark: "AkiPasa",
   handle: "akipasa",
   domain: "akipasa.com",
-  siteUrl: process.env.NEXT_PUBLIC_SITE_URL || "https://akibusiness.com",
+  siteUrl: roleOrigin(
+    process.env.NEXT_PUBLIC_SITE_URL,
+    "https://akibusiness.com",
+    managementProduct.origin,
+  ),
   consumerUrl: "https://akipasa.com",
-  crmUrl: process.env.NEXT_PUBLIC_CRM_URL || "https://akihq.app",
-  businessUrl:
-    process.env.NEXT_PUBLIC_BUSINESS_URL || "https://akibusiness.com",
+  crmUrl: roleOrigin(
+    process.env.NEXT_PUBLIC_CRM_URL || process.env.NEXT_PUBLIC_AKIHQ_URL,
+    "https://akihq.app",
+    operationsProduct.origin,
+  ),
+  businessUrl: roleOrigin(
+    process.env.NEXT_PUBLIC_BUSINESS_URL,
+    "https://akibusiness.com",
+    managementProduct.origin,
+  ),
   tagline: { es: "Sal. Explora. Disfruta.", en: "Go out. Explore. Enjoy." },
   dataProvider: process.env.NEXT_PUBLIC_DATA_PROVIDER || "fixtures",
   mapStyleUrl:

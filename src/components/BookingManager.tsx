@@ -1,5 +1,7 @@
 "use client";
 
+import { managementProduct } from "@/lib/product-roles";
+
 import React, { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -209,7 +211,7 @@ export function BookingManager({
     >
       <div className="workspace-inline-heading">
         <div>
-          <span className="eyebrow">AkiBusiness</span>
+          <span className="eyebrow">{managementProduct.name}</span>
           <h2>{es ? "Gestor de reservas" : "Booking manager"}</h2>
           <p>
             {es

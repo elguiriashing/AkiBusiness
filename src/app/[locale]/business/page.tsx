@@ -1,9 +1,10 @@
+import { roleSwapEnabled } from "@/lib/product-roles";
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import { config, isLocale } from "@/lib/config";
 import { loadFeatureFlags } from "@/lib/feature-flags";
 import { requireUser } from "@/lib/auth";
-import { requireBusinessAccess } from "@/lib/entitlements";
+import { requireManagementHomeAccess } from "@/lib/entitlements";
 import {
   confirmRedemption,
   createOfficialEvent,
@@ -100,7 +101,7 @@ export default async function BusinessPage({
   const returnPath = `/${locale}/business?${new URLSearchParams({ view, ...(query.venueId ? { venueId: query.venueId } : {}) })}`;
   const { supabase, user } = claimView
     ? await requireUser(locale, returnPath)
-    : await requireBusinessAccess(locale, returnPath);
+    : await requireManagementHomeAccess(locale, returnPath);
   const { data: profile } = await supabase
     .from("profiles")
     .select("app_role")
@@ -405,8 +406,15 @@ export default async function BusinessPage({
           </section>
         )}
 
-        {/* AkiHQ is now a separate product surface. Keep AkiBusiness focused
-            on public listing, events, loyalty, promotion and analytics. */}
+        {roleSwapEnabled && view === "venues" && (
+          <p>
+            <Link href={`/${locale}/business/locations`}>
+              {es
+                ? "Gestionar ubicaciones privadas"
+                : "Manage private operating locations"}
+            </Link>
+          </p>
+        )}
         {view === "venues" && (
           <BusinessHome
             locale={locale}

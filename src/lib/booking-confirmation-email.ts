@@ -1,3 +1,4 @@
+import { managementProduct } from "./product-roles";
 export type BookingConfirmation = {
   bookingId: string;
   venueId: string;
@@ -96,7 +97,7 @@ export function renderBookingConfirmation(
       ? stay
         ? `https://akiduermo.com/bookings?lang=${data.locale}`
         : `https://akipasa.com/${data.locale}/account/bookings`
-      : `https://akibusiness.com/${data.locale}/business/venue/${encodeURIComponent(data.venueId)}?section=bookings&${stay ? "accommodationTab=reservations" : "bookingTab=inbox"}`;
+      : `${managementProduct.origin}/${data.locale}/business/venue/${encodeURIComponent(data.venueId)}?section=bookings&${stay ? "accommodationTab=reservations" : "bookingTab=inbox"}`;
   const cta =
     audience === "customer"
       ? es

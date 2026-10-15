@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const mocks = vi.hoisted(() => ({ requireUser: vi.fn(), redirect: vi.fn() }));
 vi.mock("../src/lib/auth", () => ({ requireUser: mocks.requireUser }));
@@ -115,4 +115,35 @@ describe("AkiBusiness team access", () => {
       expect(supabase.from).toHaveBeenCalledTimes(1);
     },
   );
+});
+
+afterEach(() => {
+  vi.unstubAllEnvs();
+  vi.resetModules();
+});
+describe("free management home", () => {
+  it("admits a signed-in private branch owner or new user without a paid entitlement", async () => {
+    vi.stubEnv("NEXT_PUBLIC_AKISUITE_ROLE_SWAP", "true");
+    vi.resetModules();
+    const { context, supabase } = fixture("consumer");
+    const {
+      requireManagementHomeAccess,
+      requireBusinessAccess: guardedMutation,
+    } = await import("../src/lib/entitlements");
+    expect(await requireManagementHomeAccess("en")).toBe(context);
+    expect(supabase.from).not.toHaveBeenCalled();
+    expect(supabase.rpc).not.toHaveBeenCalled();
+    await expect(guardedMutation("en")).rejects.toThrow("business_required");
+  });
+  it("keeps legacy home access unchanged before cutover", async () => {
+    vi.stubEnv("NEXT_PUBLIC_AKISUITE_ROLE_SWAP", "false");
+    vi.resetModules();
+    fixture("consumer");
+    const { requireManagementHomeAccess } = await import(
+      "../src/lib/entitlements"
+    );
+    await expect(requireManagementHomeAccess("es")).rejects.toThrow(
+      "business_required",
+    );
+  });
 });
