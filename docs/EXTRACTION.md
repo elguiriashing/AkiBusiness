@@ -63,3 +63,8 @@ rejects custom domains and cron bindings, and verifies the deployed source over
 HTTPS. Closed billing flags remain enforced. This workflow does not constitute
 authenticated or production acceptance; deployment secrets are still unavailable
 in the terminal.
+
+Release packaging clears generated `.open-next` state before each build while
+retaining the Next compilation cache; this prevents duplicate adapter exports and
+stale assets across repeated packaging. Preview workflows mask the public provider
+key and restrict Wrangler logs before inspecting deployment bindings.

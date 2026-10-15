@@ -19,7 +19,9 @@ const cli = path.join(
   "index.js",
 );
 const commit = sourceCommit();
-rmSync(path.join(process.cwd(), ".open-next/assets/release-source.json"), {
+// Generated adapter state must not accumulate exports or stale asset chunks.
+rmSync(path.join(process.cwd(), ".open-next"), {
+  recursive: true,
   force: true,
 });
 const result = spawnSync(process.execPath, [cli, action], {

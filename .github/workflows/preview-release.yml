@@ -42,6 +42,7 @@ jobs:
       AKISUITE_ALLOWED_PREVIEW_ORIGINS: https://akibusiness-preview.alexashing1.workers.dev
       NEXT_TELEMETRY_DISABLED: "1"
       WRANGLER_SEND_METRICS: "false"
+      WRANGLER_LOG: error
     steps:
       - name: Validate release selection
         run: |
@@ -96,6 +97,7 @@ jobs:
             config.vars[name] = 'false';
           }
           const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
+          if (key) console.log('::add-mask::' + key);
           if (!key.startsWith('sb_publishable_')) {
             assert.ok(!key.startsWith('sb_secret_'), 'A browser build cannot use a secret key');
             const claims = JSON.parse(Buffer.from(key.split('.')[1] || '', 'base64url').toString());
