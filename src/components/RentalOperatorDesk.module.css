@@ -780,3 +780,36 @@
     display: block;
   }
 }
+
+.blockRow {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 0;
+  border-bottom: 1px solid var(--desk-border);
+}
+.blockRow .primary {
+  min-height: 34px;
+  padding: 7px 10px;
+  font-size: 10px;
+}
+
+.vehicleDetails {
+  border: 1px solid var(--desk-border);
+  border-radius: 12px;
+  padding: 10px;
+}
+.vehicleDetails summary {
+  font-size: 12px;
+  font-weight: 750;
+  cursor: pointer;
+  min-height: 28px;
+}
+.vehicleDetails[open] {
+  display: grid;
+  gap: 12px;
+}
+.vehicleDetails[open] label {
+  margin-top: 8px;
+}
