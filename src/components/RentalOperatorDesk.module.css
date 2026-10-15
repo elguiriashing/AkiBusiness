@@ -813,3 +813,24 @@
 .vehicleDetails[open] label {
   margin-top: 8px;
 }
+
+/* Keep the shared privacy control inside the fullscreen app's viewport. */
+:global(body):has(.desk) {
+  overflow: hidden;
+}
+:global(body):has(.desk) > :global(.privacy-preferences) {
+  position: fixed;
+  right: 8px;
+  bottom: calc(6px + env(safe-area-inset-bottom, 0px));
+  z-index: 110;
+  padding: 0;
+}
+:global(body):has(.desk) > :global(.privacy-preferences) :global(.button) {
+  min-height: 32px;
+  padding: 5px 10px;
+  font-size: 10px;
+}
+
+.desk {
+  padding-bottom: calc(46px + env(safe-area-inset-bottom, 0px));
+}

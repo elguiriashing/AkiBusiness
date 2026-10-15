@@ -110,7 +110,7 @@ const server = createServer(async (req, res) => {
   }
   res.setHeader("Content-Type", "text/html");
   res.end(
-    `<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><link rel="stylesheet" href="/app.css"><style>*{box-sizing:border-box}html,body{margin:0;font-family:Arial,sans-serif}html{--bg:#0d1322;--panel:#151d2c;--ink:#e9eef7;--muted:#a3afc4;--border:#ffffff20}html[data-theme=light]{--bg:#f7f8fb;--panel:#fff;--ink:#182338;--muted:#637087;--border:#d6dce6}button,input,select,textarea{font-family:inherit}</style></head><body><div id="root"></div><script type="module" src="/app.js"></script></body></html>`,
+    `<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><link rel="stylesheet" href="/app.css"><style>*{box-sizing:border-box}html,body{margin:0;font-family:Arial,sans-serif}html{--bg:#0d1322;--panel:#151d2c;--ink:#e9eef7;--muted:#a3afc4;--border:#ffffff20}html[data-theme=light]{--bg:#f7f8fb;--panel:#fff;--ink:#182338;--muted:#637087;--border:#d6dce6}button,input,select,textarea{font-family:inherit}.privacy-preferences{padding:1rem;text-align:center}</style></head><body><div id="root"></div><div class="privacy-preferences"><button class="button">Privacy choices</button></div><script type="module" src="/app.js"></script></body></html>`,
   );
 });
 await new Promise((resolve) => server.listen(0, "127.0.0.1", resolve));
@@ -148,6 +148,19 @@ try {
           throw new Error(
             `Document overflow: ${JSON.stringify({ locale, theme, viewport, overflow })}`,
           );
+        const privacyVisible = await page
+          .getByRole("button", { name: "Privacy choices", exact: true })
+          .evaluate((button) => {
+            const rect = button.getBoundingClientRect();
+            return (
+              rect.top >= 0 &&
+              rect.bottom <= innerHeight &&
+              rect.left >= 0 &&
+              rect.right <= innerWidth
+            );
+          });
+        if (!privacyVisible)
+          throw new Error("Privacy control outside the fullscreen viewport");
         const name = `${operator ? "desk" : "company"}-${locale}-${theme}-${viewport.width}`;
         const screenshot = await page.screenshot({
           path: path.join(results, `${name}.png`),
