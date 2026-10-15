@@ -1,5 +1,10 @@
 "use server";
 
+import {
+  rentalVehicleEditFields,
+  rentalVehicleEditValues,
+} from "@/lib/akiconduzco";
+
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
@@ -115,6 +120,7 @@ export async function updateRentalVehicle(formData: FormData) {
   const locale = formData.get("locale") === "en" ? "en" : "es";
   const parsed = z
     .object({
+      ...rentalVehicleEditFields,
       companyId: z.string().uuid(),
       vehicleId: z.string().uuid(),
       dailyPrice: z.coerce.number().int().min(1).max(10000),
@@ -130,6 +136,7 @@ export async function updateRentalVehicle(formData: FormData) {
   const { error } = await supabase
     .from("car_rental_vehicles")
     .update({
+      ...rentalVehicleEditValues(parsed.data),
       daily_price_cents: rentalEurosToCents(parsed.data.dailyPrice),
       deposit_cents: rentalEurosToCents(parsed.data.deposit),
       active: parsed.data.active === "true",
@@ -204,4 +211,73 @@ export async function updateRentalBookingStatus(formData: FormData) {
     );
   revalidatePath(`/${locale}/business/mobility`);
   redirect(location(locale, "updated=booking"));
+}
+
+// Explicit opt-in: retain the existing company/fleet and attach only to a venue
+// the caller can manage. RLS remains authoritative; no service client is used.
+export async function linkRentalCompanyVenue(formData: FormData) {
+  const locale = formData.get("locale") === "en" ? "en" : "es";
+  const parsed = z
+    .object({ companyId: z.string().uuid(), venueId: z.string().uuid() })
+    .safeParse(Object.fromEntries(formData));
+  if (!parsed.success) redirect(location(locale, "error=company"));
+  const { supabase } = await requireUser(
+    locale,
+    `/${locale}/business/mobility`,
+  );
+  const { data: allowed, error: accessError } = await supabase.rpc(
+    "is_venue_member",
+    { target_venue: parsed.data.venueId, allowed_roles: ["owner", "manager"] },
+  );
+  if (accessError || !allowed) redirect(location(locale, "error=company"));
+  const { data: updated, error } = await supabase.rpc(
+    "link_owned_rental_company_venue",
+    { p_company: parsed.data.companyId, p_venue: parsed.data.venueId },
+  );
+  if (error || !updated) redirect(location(locale, "error=company"));
+  revalidatePath(`/${locale}/business`);
+  redirect(
+    `/${locale}/business/venue/${parsed.data.venueId}?section=fleet&updated=fleet`,
+  );
+}
+
+export async function removeRentalBlock(formData: FormData) {
+  const locale = formData.get("locale") === "en" ? "en" : "es";
+  const parsed = z
+    .object({
+      companyId: z.string().uuid(),
+      vehicleId: z.string().uuid(),
+      blockId: z.string().uuid(),
+    })
+    .safeParse(Object.fromEntries(formData));
+  if (!parsed.success) redirect(location(locale, "error=availability"));
+  const { supabase, user } = await requireUser(
+    locale,
+    `/${locale}/business/mobility`,
+  );
+  const { data: company } = await supabase
+    .from("car_rental_companies")
+    .select("id")
+    .eq("id", parsed.data.companyId)
+    .eq("submitted_by", user.id)
+    .maybeSingle();
+  if (!company) redirect(location(locale, "error=availability"));
+  const { data: vehicle } = await supabase
+    .from("car_rental_vehicles")
+    .select("id")
+    .eq("id", parsed.data.vehicleId)
+    .eq("company_id", company.id)
+    .maybeSingle();
+  if (!vehicle) redirect(location(locale, "error=availability"));
+  const { data: removed, error } = await supabase
+    .from("car_rental_calendar_blocks")
+    .delete()
+    .eq("id", parsed.data.blockId)
+    .eq("vehicle_id", vehicle.id)
+    .eq("reason", "maintenance")
+    .select("id")
+    .maybeSingle();
+  if (error || !removed) redirect(location(locale, "error=availability"));
+  revalidatePath(`/${locale}/business/mobility`);
+  redirect(location(locale, "updated=availability"));
 }

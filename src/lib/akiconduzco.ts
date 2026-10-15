@@ -102,3 +102,21 @@ export function rentalDays(start: string, end: string) {
     86_400_000
   );
 }
+
+// Optional for compatibility with existing rate-only clients. Supplied fields
+// are validated before either legacy-owner or venue-manager mutations.
+export const rentalVehicleEditFields = {
+  name: z.string().trim().min(2).max(120).optional(),
+  category: z.enum(rentalCategories).optional(),
+  transmission: z.enum(["manual", "automatic"]).optional(),
+  fuel: z.enum(["petrol", "diesel", "hybrid", "electric", "other"]).optional(),
+  seats: z.coerce.number().int().min(2).max(9).optional(),
+  luggage: z.coerce.number().int().min(0).max(12).optional(),
+};
+export function rentalVehicleEditValues(input: Record<string, unknown>) {
+  return Object.fromEntries(
+    Object.keys(rentalVehicleEditFields).flatMap((key) =>
+      input[key] === undefined ? [] : [[key, input[key]]],
+    ),
+  );
+}

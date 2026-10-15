@@ -225,14 +225,14 @@ export default async function VenueWorkspace({
   ]);
   if (!venue) notFound();
   const isAccommodation = venue.discovery_vertical === "accommodation";
-  const { data: rentalCompany } = !isAccommodation
+  const { data: rentalCompany, error: rentalCompanyError } = !isAccommodation
     ? await supabase
         .from("car_rental_companies")
-        .select("id,status")
+        .select("id,status,slug,name,city,address")
         .eq("venue_id", id)
         .maybeSingle()
-    : { data: null };
-  const { data: rentalVehicles } = rentalCompany
+    : { data: null, error: null };
+  const { data: rentalVehicles, error: rentalVehiclesError } = rentalCompany
     ? await supabase
         .from("car_rental_vehicles")
         .select(
@@ -240,27 +240,35 @@ export default async function VenueWorkspace({
         )
         .eq("company_id", rentalCompany.id)
         .order("created_at", { ascending: false })
-    : { data: [] };
+    : { data: [], error: null };
   const fleetVehicleIds = (rentalVehicles || []).map((vehicle) => vehicle.id);
-  const [{ data: rentalBookings }, { data: rentalBlocks }] =
-    fleetVehicleIds.length
-      ? await Promise.all([
-          supabase
-            .from("car_rental_bookings")
-            .select(
-              "id,vehicle_id,start_date,end_date,status,contact_name,quoted_total_cents",
-            )
-            .in("vehicle_id", fleetVehicleIds)
-            .order("created_at", { ascending: false })
-            .limit(100),
-          supabase
-            .from("car_rental_calendar_blocks")
-            .select("id,vehicle_id,start_date,end_date,reason")
-            .in("vehicle_id", fleetVehicleIds)
-            .order("start_date")
-            .limit(100),
-        ])
-      : [{ data: [] }, { data: [] }];
+  const [
+    { data: rentalBookings, error: rentalBookingsError },
+    { data: rentalBlocks, error: rentalBlocksError, count: rentalBlockCount },
+  ] = fleetVehicleIds.length
+    ? await Promise.all([
+        supabase
+          .from("car_rental_bookings")
+          .select(
+            "id,vehicle_id,start_date,end_date,status,contact_name,quoted_total_cents",
+          )
+          .in("vehicle_id", fleetVehicleIds)
+          .order("created_at", { ascending: false })
+          .limit(100),
+        supabase
+          .from("car_rental_calendar_blocks")
+          .select("id,vehicle_id,start_date,end_date,reason", {
+            count: "exact",
+          })
+          .in("vehicle_id", fleetVehicleIds)
+          .gte("end_date", new Date().toISOString().slice(0, 10))
+          .order("start_date")
+          .limit(1000),
+      ])
+    : [
+        { data: [], error: null },
+        { data: [], error: null, count: 0 },
+      ];
   const suiteToolsReady =
     process.env.AKISUITE_FEATURES_READY === "true" &&
     process.env.AKISUITE_SUBSCRIPTIONS_READY === "true";
@@ -1934,21 +1942,35 @@ export default async function VenueWorkspace({
             />
           ),
         fleet: !isAccommodation ? (
-          <>
-            <AkiCochesFleetWorkspace
-              locale={locale}
-              venueId={id}
-              venueName={venue.name}
-              company={rentalCompany}
-              vehicles={(rentalVehicles || []) as never[]}
-              media={mediaStudioItems.map((item) => ({
-                id: item.id,
-                alt: item.alt,
-              }))}
-              bookings={rentalBookings || []}
-              blocks={rentalBlocks || []}
-            />
-            <section className="panel profile-media-hub">
+          <AkiCochesFleetWorkspace
+            locale={locale}
+            venueId={id}
+            venueName={venue.name}
+            company={rentalCompany}
+            feedback={
+              query.error
+                ? "error"
+                : query.updated || query.created
+                  ? "success"
+                  : undefined
+            }
+            readError={Boolean(
+              rentalCompanyError ||
+                rentalVehiclesError ||
+                rentalBookingsError ||
+                rentalBlocksError ||
+                rentalBlockCount === null ||
+                (rentalBlockCount || 0) > (rentalBlocks?.length || 0),
+            )}
+            vehicles={(rentalVehicles || []) as never[]}
+            media={mediaStudioItems.map((item) => ({
+              id: item.id,
+              alt: item.alt,
+              url: item.url,
+            }))}
+            bookings={rentalBookings || []}
+            blocks={rentalBlocks || []}
+            mediaStudio={
               <VenueMediaStudio
                 locale={locale}
                 venueId={id}
@@ -1958,8 +1980,8 @@ export default async function VenueWorkspace({
                 stayHeaderIds={[]}
                 premium={suiteToolsReady && venuePremium}
               />
-            </section>
-          </>
+            }
+          />
         ) : null,
         team: (
           <>

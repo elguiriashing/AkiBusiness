@@ -1,5 +1,10 @@
 "use server";
 
+import {
+  rentalVehicleEditFields,
+  rentalVehicleEditValues,
+} from "@/lib/akiconduzco";
+
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
@@ -171,6 +176,7 @@ export async function createVenueRentalVehicle(formData: FormData) {
 export async function updateVenueRentalVehicle(formData: FormData) {
   const parsed = z
     .object({
+      ...rentalVehicleEditFields,
       locale: z.enum(["en", "es"]),
       venueId: z.string().uuid(),
       companyId: z.string().uuid(),
@@ -208,6 +214,7 @@ export async function updateVenueRentalVehicle(formData: FormData) {
   const { error } = await supabase
     .from("car_rental_vehicles")
     .update({
+      ...rentalVehicleEditValues(parsed.data),
       active: parsed.data.active === "true",
       daily_price_cents: parsed.data.dailyPrice * 100,
       deposit_cents: parsed.data.deposit * 100,
@@ -2591,4 +2598,49 @@ export async function uploadEventImage(formData: FormData) {
     };
   }
   redirect(destination(locale, venueId, "section=events&updated=event-media"));
+}
+
+export async function removeVenueRentalBlock(formData: FormData) {
+  const locale = formData.get("locale") === "en" ? "en" : "es";
+  const parsed = z
+    .object({
+      locale: z.enum(["en", "es"]),
+      venueId: z.string().uuid(),
+      companyId: z.string().uuid(),
+      vehicleId: z.string().uuid(),
+      blockId: z.string().uuid(),
+    })
+    .safeParse(Object.fromEntries(formData));
+  const venueId = String(formData.get("venueId") || "");
+  if (!parsed.success)
+    redirect(fleetDestination(locale, venueId, "error=availability"));
+  const { supabase } = await requireFleetManager(locale, parsed.data.venueId);
+  const { data: company } = await supabase
+    .from("car_rental_companies")
+    .select("id")
+    .eq("id", parsed.data.companyId)
+    .eq("venue_id", parsed.data.venueId)
+    .maybeSingle();
+  if (!company)
+    redirect(fleetDestination(locale, venueId, "error=availability"));
+  const { data: vehicle } = await supabase
+    .from("car_rental_vehicles")
+    .select("id")
+    .eq("id", parsed.data.vehicleId)
+    .eq("company_id", company.id)
+    .maybeSingle();
+  if (!vehicle)
+    redirect(fleetDestination(locale, venueId, "error=availability"));
+  const { data: removed, error } = await supabase
+    .from("car_rental_calendar_blocks")
+    .delete()
+    .eq("id", parsed.data.blockId)
+    .eq("vehicle_id", vehicle.id)
+    .eq("reason", "maintenance")
+    .select("id")
+    .maybeSingle();
+  if (error || !removed)
+    redirect(fleetDestination(locale, venueId, "error=availability"));
+  revalidatePath(`/${locale}/business/venue/${venueId}`);
+  redirect(fleetDestination(locale, venueId, "updated=fleet"));
 }
