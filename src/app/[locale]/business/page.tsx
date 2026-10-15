@@ -415,6 +415,16 @@ export default async function BusinessPage({
             </Link>
           </p>
         )}
+        {view === "venues" &&
+          process.env.AKISUITE_ACCOMMODATION_READY === "true" && (
+            <p>
+              <Link href={`/${locale}/business/accommodations`}>
+                {es
+                  ? "Gestionar alojamientos independientes"
+                  : "Manage independent accommodation"}
+              </Link>
+            </p>
+          )}
         {view === "venues" && (
           <BusinessHome
             locale={locale}

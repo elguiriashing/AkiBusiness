@@ -1554,3 +1554,16 @@ for deployment order, existing entitlement limitations and rollback. No provider
 setting, database, customer mail, charge or live domain is changed by this source.
 Both flag modes have regression coverage; production/authenticated acceptance
 remains unverified and required before activation.
+
+## 2026-10-15 | Independent property management candidate
+
+The dedicated /[locale]/business/accommodations workspace uses canonical property
+IDs without dummy venues. Its bounded API/module are copied from the coordinated
+AkiPasa independent-property migration slice; no sibling runtime imports exist.
+Private create, profile/save/review submission, room/unit/rate/block/settings and
+reservation transitions retain server auth, property authorization and SQL/RLS.
+Media uses a private property bucket with bounded upload, signed reads and explicit
+gallery placement. Legacy venue-backed tools remain reachable. The server
+AKISUITE_ACCOMMODATION_READY flag defaults false until coordinated schema and
+release acceptance. Source tests do not establish live auth, booking or delivery.
+See INDEPENDENT_ACCOMMODATION_MANAGEMENT.md for verification and rollback.
