@@ -135,8 +135,13 @@ try {
                 json: {
                   canManageTeam: true,
                   ownerProfileId: property,
-                  members: [],
-                  total: 0,
+                  members: [
+                    {
+                      profile_id: "33333333-3333-4333-8333-333333333333",
+                      role: "manager",
+                    },
+                  ],
+                  total: 1,
                 },
               });
             return route.fulfill({
@@ -256,6 +261,24 @@ try {
           property,
           profile: member,
           role: "manager",
+        });
+        await page
+          .getByRole("button", {
+            name: locale === "es" ? "Revocar acceso" : "Revoke access",
+          })
+          .click();
+        await page
+          .getByLabel(
+            locale === "es"
+              ? "UUID de la cuenta verificada"
+              : "Verified account UUID",
+          )
+          .waitFor();
+        assert.deepEqual(mutations[3], {
+          action: "member",
+          property,
+          profile: member,
+          role: null,
         });
         assert.ok(
           await page.evaluate(

@@ -1,7 +1,7 @@
 "use client";
 import { IndependentAccommodationTeam } from "./IndependentAccommodationTeam";
 import { IndependentAccommodationMedia } from "./IndependentAccommodationMedia";
-import { useEffect, useState, type FormEvent } from "react";
+import { useEffect, useRef, useState, type FormEvent } from "react";
 
 type Property = {
   id: string;
@@ -118,7 +118,9 @@ export function IndependentAccommodationManager({
   const [refresh, setRefresh] = useState(0);
   const [listPage, setListPage] = useState(0),
     [listMore, setListMore] = useState(false);
+  const requestGeneration = useRef(0);
   async function loadPage(section: string, page: number) {
+    const generation = requestGeneration.current;
     setBusy(true);
     setError("");
     try {
@@ -128,8 +130,10 @@ export function IndependentAccommodationManager({
       );
       if (!response.ok) throw Error();
       const data = await response.json();
+      if (generation !== requestGeneration.current) return;
       setInventory((current) => ({ ...current, ...data }));
     } catch {
+      if (generation !== requestGeneration.current) return;
       setInventory((current) => ({
         ...current,
         [section]: { error: "unavailable" },
@@ -138,10 +142,12 @@ export function IndependentAccommodationManager({
         es ? "No se pudo cargar la página." : "Could not load the page.",
       );
     } finally {
-      setBusy(false);
+      if (generation === requestGeneration.current) setBusy(false);
     }
   }
   useEffect(() => {
+    requestGeneration.current += 1;
+    setBusy(false);
     let current = true;
     setLoading(true);
     setError("");
@@ -175,6 +181,7 @@ export function IndependentAccommodationManager({
       });
     return () => {
       current = false;
+      requestGeneration.current += 1;
     };
   }, [selected, refresh, es, listPage]);
   async function mutate(
@@ -417,7 +424,11 @@ export function IndependentAccommodationManager({
           </nav>
           <h2>{labels[locale][sections.indexOf(tab)]}</h2>
           {tab === "team" ? (
-            <IndependentAccommodationTeam property={selected} locale={locale} />
+            <IndependentAccommodationTeam
+              key={selected}
+              property={selected}
+              locale={locale}
+            />
           ) : tab === "property_media" ? (
             <IndependentAccommodationMedia
               property={selected}

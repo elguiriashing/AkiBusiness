@@ -270,3 +270,68 @@ it("manager team view has no grant or revoke controls", async () => {
   expect(screen.queryByLabelText("Verified account UUID")).toBeNull();
   expect(screen.queryByRole("button", { name: "Revoke access" })).toBeNull();
 });
+it("ignores a delayed inventory page after switching to another property", async () => {
+  let resolvePage!: (value: unknown) => void;
+  const deferred = new Promise((resolve) => {
+    resolvePage = resolve;
+  });
+  fetchMock.mockImplementation(async (url) => {
+    if (String(url).includes("section=room_types")) return deferred;
+    if (!String(url).includes("property="))
+      return {
+        ok: true,
+        json: async () => ({
+          properties: [
+            { id: room, name: "Second property", status: "private" },
+          ],
+        }),
+      };
+    const second = String(url).includes(room);
+    return {
+      ok: true,
+      json: async () => ({
+        ...empty(),
+        room_types: {
+          rows: [
+            {
+              id: second ? room : property,
+              name: second ? "Second room" : "First room",
+            },
+          ],
+          hasMore: !second,
+          page: 0,
+        },
+      }),
+    };
+  });
+  const { rerender } = render(
+    <IndependentAccommodationManager locale="en" initialProperty={property} />,
+  );
+  await screen.findByText("First room");
+  fireEvent.click(screen.getByRole("button", { name: "Next" }));
+  // A locale/navigation refresh invalidates the pending page before choosing B.
+  rerender(
+    <IndependentAccommodationManager locale="es" initialProperty={property} />,
+  );
+  await screen.findByText("First room");
+  fireEvent.click(
+    screen.getByRole("button", { name: "Todos mis alojamientos" }),
+  );
+  fireEvent.click(
+    await screen.findByRole("button", { name: /Second property/ }),
+  );
+  await screen.findByText("Second room");
+  resolvePage({
+    ok: true,
+    json: async () => ({
+      room_types: {
+        rows: [{ id: property, name: "Stale first room" }],
+        page: 1,
+        hasMore: false,
+      },
+    }),
+  });
+  await new Promise((resolve) => setTimeout(resolve, 0));
+  expect(screen.queryByText("Stale first room")).toBeNull();
+  expect(screen.getByText("Second room")).toBeTruthy();
+});
