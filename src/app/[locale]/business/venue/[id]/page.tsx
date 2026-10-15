@@ -244,7 +244,7 @@ export default async function VenueWorkspace({
   const fleetVehicleIds = (rentalVehicles || []).map((vehicle) => vehicle.id);
   const [
     { data: rentalBookings, error: rentalBookingsError },
-    { data: rentalBlocks, error: rentalBlocksError },
+    { data: rentalBlocks, error: rentalBlocksError, count: rentalBlockCount },
   ] = fleetVehicleIds.length
     ? await Promise.all([
         supabase
@@ -257,14 +257,17 @@ export default async function VenueWorkspace({
           .limit(100),
         supabase
           .from("car_rental_calendar_blocks")
-          .select("id,vehicle_id,start_date,end_date,reason")
+          .select("id,vehicle_id,start_date,end_date,reason", {
+            count: "exact",
+          })
           .in("vehicle_id", fleetVehicleIds)
+          .gte("end_date", new Date().toISOString().slice(0, 10))
           .order("start_date")
-          .limit(100),
+          .limit(1000),
       ])
     : [
         { data: [], error: null },
-        { data: [], error: null },
+        { data: [], error: null, count: 0 },
       ];
   const suiteToolsReady =
     process.env.AKISUITE_FEATURES_READY === "true" &&
@@ -1955,7 +1958,9 @@ export default async function VenueWorkspace({
               rentalCompanyError ||
                 rentalVehiclesError ||
                 rentalBookingsError ||
-                rentalBlocksError,
+                rentalBlocksError ||
+                rentalBlockCount === null ||
+                (rentalBlockCount || 0) > (rentalBlocks?.length || 0),
             )}
             vehicles={(rentalVehicles || []) as never[]}
             media={mediaStudioItems.map((item) => ({
