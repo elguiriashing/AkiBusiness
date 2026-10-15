@@ -1,3 +1,4 @@
+import "../accommodations/accommodations.css";
 import { OrganisationManagement } from "@/components/OrganisationManagement";
 import Link from "next/link";
 import { notFound } from "next/navigation";
@@ -79,7 +80,7 @@ export default async function PrivateLocations({
   );
   const requestId = z.string().uuid().safeParse(query.requestId);
   return (
-    <main className="business-main">
+    <main className="business-main private-management">
       <Link href={`/${locale}/business`}>
         {es ? "Volver a mi gestión" : "Back to management"}
       </Link>

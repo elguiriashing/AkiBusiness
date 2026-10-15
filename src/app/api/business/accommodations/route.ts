@@ -1,3 +1,4 @@
+import { accommodationApiTerms } from "@/lib/accommodation-api-terms";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import {
   accommodationOperation,
@@ -18,6 +19,9 @@ export async function GET(request: Request) {
     data: { user },
   } = await db.auth.getUser();
   if (!user) return reply({ error: "sign_in" }, 401);
+  const terms = await accommodationApiTerms(db, user.id);
+  if (terms)
+    return reply({ error: terms }, terms === "unavailable" ? 503 : 403);
   const raw = new URL(request.url).searchParams.get("property");
   if (!raw) {
     const { data, error } = await db.rpc("managed_accommodation_properties");
@@ -94,6 +98,9 @@ export async function POST(request: Request) {
     data: { user },
   } = await db.auth.getUser();
   if (!user) return reply({ error: "sign_in" }, 401);
+  const terms = await accommodationApiTerms(db, user.id);
+  if (terms)
+    return reply({ error: terms }, terms === "unavailable" ? 503 : 403);
   const p = parsed.data;
   if (p.action === "create") {
     const result = await db.rpc("create_accommodation_property", {

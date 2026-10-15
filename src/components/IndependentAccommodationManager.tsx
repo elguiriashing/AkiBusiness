@@ -270,6 +270,13 @@ export function IndependentAccommodationManager({
       >
         {es ? "Volver a cargar" : "Reload"}
       </button>
+      {!selected && (
+        <p>
+          {es
+            ? "Se muestran hasta 100 alojamientos. Contacta con soporte si necesitas gestionar más."
+            : "Showing up to 100 properties. Contact support if you need to manage more."}
+        </p>
+      )}
       {loading ? (
         <p role="status">{es ? "Cargando…" : "Loading…"}</p>
       ) : !selected ? (
@@ -372,8 +379,8 @@ export function IndependentAccommodationManager({
             <>
               <p>
                 {es
-                  ? "Se muestran hasta 100 registros por sección. No se presupone disponibilidad por la ausencia de resultados."
-                  : "Up to 100 records are shown per section. Missing results do not establish availability."}
+                  ? "Se muestran hasta 100 registros por sección. Contacta con soporte si tienes más inventario. La ausencia de resultados no implica disponibilidad."
+                  : "Up to 100 records are shown per section. Contact support for larger inventory. Missing results do not establish availability."}
               </p>
               <ul>
                 {rows.map((row) => (

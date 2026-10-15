@@ -156,13 +156,25 @@ try {
           .waitFor();
         await page
           .getByRole("button", {
-            name: locale === "es" ? "Rechazar opcionales" : "Reject optional",
+            name:
+              locale === "es"
+                ? "Cerrar opciones de privacidad"
+                : "Close privacy choices",
             exact: true,
           })
           .click();
         await page
           .getByLabel(locale === "es" ? "Nombre" : "Name", { exact: true })
           .fill("Disposable private stay");
+        assert.ok(
+          await page
+            .getByLabel(locale === "es" ? "Nombre" : "Name", { exact: true })
+            .evaluate(
+              (input) =>
+                parseFloat(getComputedStyle(input).borderTopWidth) >= 1 &&
+                input.getBoundingClientRect().height >= 44,
+            ),
+        );
         await page
           .getByRole("button", {
             name: locale === "es" ? "Crear" : "Create",

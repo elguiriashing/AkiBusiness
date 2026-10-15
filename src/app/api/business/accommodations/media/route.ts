@@ -1,3 +1,4 @@
+import { accommodationApiTerms } from "@/lib/accommodation-api-terms";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { accommodationPropertyId } from "@/lib/independent-accommodation";
 import {
@@ -35,6 +36,11 @@ async function access(property: string) {
     data: { user },
   } = await db.auth.getUser();
   if (!user) return { response: reply({ error: "sign_in" }, 401) };
+  const terms = await accommodationApiTerms(db, user.id);
+  if (terms)
+    return {
+      response: reply({ error: terms }, terms === "unavailable" ? 503 : 403),
+    };
   const { data, error } = await db.rpc("can_manage_accommodation_property", {
     p_property: property,
   });

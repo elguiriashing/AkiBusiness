@@ -1,4 +1,8 @@
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
+const terms = vi.hoisted(() => vi.fn());
+vi.mock("../src/lib/accommodation-api-terms", () => ({
+  accommodationApiTerms: terms,
+}));
 const mock = vi.hoisted(() => ({
   db: {
     auth: { getUser: vi.fn() },
@@ -68,6 +72,7 @@ afterEach(() => vi.unstubAllEnvs());
 beforeEach(() => {
   vi.stubEnv("AKISUITE_ACCOMMODATION_READY", "true");
   vi.clearAllMocks();
+  terms.mockResolvedValue(null);
   mock.db.auth.getUser.mockResolvedValue({ data: { user: { id: "owner" } } });
   mock.db.rpc.mockResolvedValue({ data: true, error: null });
   mock.db.from.mockReturnValue(query());
@@ -189,4 +194,15 @@ it("scopes placement and deletion by actual property, preserving metadata on sto
   expect((await POST(json({ action: "remove", property, id }))).status).toBe(
     404,
   );
+});
+
+it("denies missing current terms before inventory or media access", async () => {
+  terms.mockResolvedValue("terms_required");
+  const response = await GET(
+    new Request(
+      "https://akihq.app/api/business/accommodations?property=" + property,
+    ),
+  );
+  expect(response.status).toBe(403);
+  expect(await response.json()).toEqual({ error: "terms_required" });
 });

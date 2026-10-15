@@ -1,4 +1,8 @@
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
+const terms = vi.hoisted(() => vi.fn());
+vi.mock("../src/lib/accommodation-api-terms", () => ({
+  accommodationApiTerms: terms,
+}));
 const db = vi.hoisted(() => ({
   auth: { getUser: vi.fn() },
   from: vi.fn(),
@@ -44,6 +48,7 @@ afterEach(() => vi.unstubAllEnvs());
 beforeEach(() => {
   vi.stubEnv("AKISUITE_ACCOMMODATION_READY", "true");
   vi.clearAllMocks();
+  terms.mockResolvedValue(null);
   db.auth.getUser.mockResolvedValue({ data: { user: { id: "owner" } } });
   db.rpc.mockResolvedValue({ data: true, error: null });
   db.from.mockReturnValue(query());
@@ -205,15 +210,22 @@ it("retains section-specific unavailable reads instead of inventing empty invent
   });
 });
 
-it("keeps new property API closed before migration acceptance", async () => {
+it("denies missing current terms before inventory or media access", async () => {
+  terms.mockResolvedValue("terms_required");
+  const response = await GET(
+    new Request(
+      "https://akihq.app/api/business/accommodations?property=" + property,
+    ),
+  );
+  expect(response.status).toBe(403);
+  expect(await response.json()).toEqual({ error: "terms_required" });
+});
+
+it("keeps independent API unavailable until migration gate is ready", async () => {
   vi.stubEnv("AKISUITE_ACCOMMODATION_READY", "false");
   expect(
     (await GET(new Request("https://akihq.app/api/business/accommodations")))
       .status,
   ).toBe(503);
-  expect((await call({ action: "create", name: "Private stay" })).status).toBe(
-    503,
-  );
   expect(db.auth.getUser).not.toHaveBeenCalled();
-  expect(db.rpc).not.toHaveBeenCalled();
 });

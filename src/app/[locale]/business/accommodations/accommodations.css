@@ -50,3 +50,54 @@
   outline: 2px solid currentColor;
   outline-offset: 2px;
 }
+
+:is(.independent-accommodation, .private-management)
+  :is(
+    input:not([type="hidden"]):not([type="checkbox"]),
+    select,
+    textarea,
+    button
+  ) {
+  min-height: 44px;
+  border: 1px solid color-mix(in srgb, currentColor 35%, transparent);
+  border-radius: 0.55rem;
+  padding: 0.65rem 0.8rem;
+  color: inherit;
+  background: color-mix(in srgb, currentColor 5%, transparent);
+}
+:is(.independent-accommodation, .private-management)
+  :is(input, select, textarea, button, a):focus-visible {
+  outline: 3px solid currentColor;
+  outline-offset: 3px;
+}
+:is(.independent-accommodation, .private-management) :disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+.private-management {
+  max-width: 72rem;
+  padding: 1rem;
+  margin: auto;
+  overflow-wrap: anywhere;
+}
+.private-management form {
+  margin: 1rem 0;
+}
+.private-management fieldset {
+  display: grid;
+  gap: 0.8rem;
+  min-width: 0;
+}
+.private-management label {
+  display: grid;
+  gap: 0.4rem;
+}
+.private-management :is(input, select, textarea) {
+  max-width: 100%;
+  min-width: 0;
+}
+.private-management nav {
+  display: flex;
+  gap: 1rem;
+  margin: 0.8rem 0;
+}
