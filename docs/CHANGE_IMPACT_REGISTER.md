@@ -1,5 +1,19 @@
 # Change Impact Register
 
+## 2026-10-15 | Bounded cross-origin query inspection
+
+An actual canonical subscription handoff with a dummy nested callback code
+forwarded that code inside next. The Business external-only adapter now uses the
+same reviewed bounded query helper as AkiCoches, copied without runtime imports
+from sibling repositories. It removes opaque navigation wrappers and detects
+encoded/nested credential assignments, JSON escapes, wrapped keys and URL userinfo;
+excessive or malformed values fail closed. Safe filters and attribution remain.
+Shared helper regressions plus real Business middleware EN/ES tests verify external
+removal and unchanged local PKCE code/state. Browser smoke includes the nested URL
+and JSON cases. No real credentials, password reset, account/logout mutation,
+database, legal-gate or custom-domain changes are made by these checks. Rebuild,
+current-head CI and actual provider HTTP checks remain release requirements.
+
 ## 2026-10-15 | Host session logout isolation
 
 Before: both copied Business auth actions called `signOut()` without a scope,

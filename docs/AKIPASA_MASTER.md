@@ -1,5 +1,16 @@
 # AKIPASA MASTER SYSTEM CONTRACT
 
+## 2026-10-15 | Nested credential isolation at product handoffs
+
+Cross-origin navigation now drops opaque next/return/redirect/callback wrappers
+and credential-bearing query values, including encoded nested URLs, bracket/dotted
+keys, JSON Unicode escapes and URL userinfo. The bounded reviewed query helper is
+copied from AkiCoches content SHA256
+`644097c9aad37b7149f1753e184d1be272afd8af717451c4cae3d31c41c67c9a`;
+there are no sibling-checkout imports. Safe search, locale, dates and UTM context
+remain. Local OAuth/PKCE callbacks retain their code/state for the existing exchange.
+No session, account, legal gate, provider, record or routing configuration is changed.
+
 ## 2026-10-15 | Business session isolation
 
 Normal Business logout explicitly uses Supabase's local session scope, preserving

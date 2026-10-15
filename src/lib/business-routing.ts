@@ -1,21 +1,13 @@
-/** Credentials never travel to another product through a navigation handoff. */
+import { stripCrossProductCredentials } from "./cross-product-query";
+
+/** Only inspected, non-authentication context may leave this product origin. */
 export function scrubBusinessHandoffQuery(query: URLSearchParams) {
-  const sensitive = new Set([
-    "code",
-    "token",
-    "token_hash",
-    "access_token",
-    "refresh_token",
-    "provider_token",
-    "provider_refresh_token",
-    "id_token",
-    "client_secret",
-    "password",
-    "state",
-    "error_description",
-  ]);
-  for (const key of [...query.keys()])
-    if (sensitive.has(key.toLowerCase())) query.delete(key);
+  const inspected = new URL("https://akipasa.com");
+  inspected.search = query.toString();
+  stripCrossProductCredentials(inspected);
+  const remaining = [...inspected.searchParams];
+  for (const key of [...query.keys()]) query.delete(key);
+  for (const [key, value] of remaining) query.append(key, value);
 }
 
 /** Product boundary applies on canonical, localhost and preview hosts alike. */

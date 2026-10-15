@@ -10,6 +10,52 @@ import {
 } from "../src/lib/auth-security";
 
 describe("independent business boundary", () => {
+  it.each(["en", "es"])(
+    "removes nested credentials at the actual %s external handoff",
+    async (locale) => {
+      const { NextRequest } = await import("next/server");
+      const { middleware } = await import("../src/middleware");
+      const source = new URL(
+        `https://akibusiness.com/${locale}/account/subscription?lang=${locale}&q=Malaga&start=2027-01-01&end=2027-01-04&utm_source=instagram`,
+      );
+      source.searchParams.set("next", "/en/auth/callback?code=qa-dummy");
+      source.searchParams.set("context", '{"\\u0063ode":"qa-dummy"}');
+      const response = await middleware(
+        new NextRequest(source, { headers: { host: "akibusiness.com" } }),
+      );
+      expect(response.status).toBe(307);
+      const target = new URL(response.headers.get("location")!);
+      expect(target.origin).toBe("https://akipasa.com");
+      expect(target.pathname).toBe(`/${locale}/account/subscription`);
+      expect([...target.searchParams]).toEqual([
+        ["lang", locale],
+        ["q", "Malaga"],
+        ["start", "2027-01-01"],
+        ["end", "2027-01-04"],
+        ["utm_source", "instagram"],
+        ["from", "akibusiness"],
+      ]);
+      expect(target.hash).toBe("#redirected");
+      expect(target.href).not.toContain("qa-dummy");
+    },
+  );
+
+  it.each(["en", "es"])(
+    "preserves same-origin %s PKCE callback fields for the exchange handler",
+    async (locale) => {
+      const { NextRequest } = await import("next/server");
+      const { middleware } = await import("../src/middleware");
+      const source = new NextRequest(
+        `https://akibusiness.com/${locale}/auth/callback?code=qa-dummy&state=qa-state`,
+        { headers: { host: "akibusiness.com" } },
+      );
+      const response = await middleware(source);
+      expect(response.headers.get("location")).toBeNull();
+      expect(source.nextUrl.searchParams.get("code")).toBe("qa-dummy");
+      expect(source.nextUrl.searchParams.get("state")).toBe("qa-state");
+    },
+  );
+
   it("scrubs every case and duplicate credential while preserving safe handoff context", () => {
     const query = new URLSearchParams(
       "ACCESS_TOKEN=one&Access_Token=two&access_token=three&CODE=auth-code&client_secret=secret&PASSWORD=secret&state=provider-state&error_description=private&from=akibusiness&section=billing",
