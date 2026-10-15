@@ -1,0 +1,180 @@
+name: Build and optionally deploy AkiBusiness preview
+on:
+  workflow_dispatch:
+    inputs:
+      source_sha:
+        description: Exact reviewed 40-character commit with successful product CI
+        required: true
+        type: string
+      deploy_preview:
+        description: Deploy the built application to its isolated workers.dev origin
+        required: true
+        default: false
+        type: boolean
+permissions:
+  contents: read
+  actions: read
+concurrency:
+  group: akibusiness-preview-preview-release
+  cancel-in-progress: false
+jobs:
+  preview:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    environment: preview
+    env:
+      EXPECTED_SOURCE_SHA: ${{ inputs.source_sha }}
+      EXPECTED_REPOSITORY: elguiriashing/AkiBusiness
+      EXPECTED_WORKER: akibusiness-preview
+      EXPECTED_CI: AkiBusiness
+      PREVIEW_ORIGIN: https://akibusiness-preview.alexashing1.workers.dev
+      CLOUDFLARE_ACCOUNT_ID: 501bc9434d8ae555a6ac984a26dd2725
+      RELEASE_PATH: /release-source.json
+      NEXT_PUBLIC_PRODUCT_NAME: AkiBusiness
+      NEXT_PUBLIC_SITE_URL: https://akibusiness.com
+      NEXT_PUBLIC_BUSINESS_URL: https://akibusiness.com
+      NEXT_PUBLIC_CRM_URL: https://akihq.app
+      NEXT_PUBLIC_DATA_PROVIDER: hybrid
+      NEXT_PUBLIC_MAP_STYLE_URL: https://tiles.openfreemap.org/styles/liberty
+      NEXT_PUBLIC_GOOGLE_AUTH_ENABLED: "true"
+      NEXT_PUBLIC_SUPABASE_URL: https://vhpbvcfkcteswlsdjrfl.supabase.co
+      NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ vars.NEXT_PUBLIC_SUPABASE_ANON_KEY || secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
+      AKISUITE_ALLOWED_PREVIEW_ORIGINS: https://akibusiness-preview.alexashing1.workers.dev
+      NEXT_TELEMETRY_DISABLED: "1"
+      WRANGLER_SEND_METRICS: "false"
+    steps:
+      - name: Validate release selection
+        run: |
+          node --input-type=module <<'NODE'
+          import assert from 'node:assert/strict';
+          assert.match(process.env.EXPECTED_SOURCE_SHA, /^[a-f0-9]{40}$/);
+          assert.equal(process.env.GITHUB_REPOSITORY.toLowerCase(), process.env.EXPECTED_REPOSITORY.toLowerCase());
+          NODE
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.source_sha }}
+          persist-credentials: false
+      - name: Require successful product CI for this exact source
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const runs = await github.paginate(github.rest.actions.listWorkflowRunsForRepo, {
+              ...context.repo,
+              head_sha: process.env.EXPECTED_SOURCE_SHA,
+              status: 'success',
+              per_page: 100,
+            });
+            if (!runs.some(run => run.head_sha === process.env.EXPECTED_SOURCE_SHA && run.name === process.env.EXPECTED_CI && run.conclusion === 'success')) {
+              core.setFailed('No successful product CI exists for the exact selected source commit.');
+            }
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+      - run: npm ci --no-audit --no-fund
+      - name: Validate provider and isolate runtime configuration
+        run: |
+          node --input-type=module <<'NODE'
+          import assert from 'node:assert/strict';
+          import { readFileSync, mkdirSync, writeFileSync } from 'node:fs';
+          import { execFileSync } from 'node:child_process';
+          import path from 'node:path';
+          import ts from 'typescript';
+          const sha = execFileSync('git', ['rev-parse', 'HEAD'], { encoding: 'utf8' }).trim();
+          assert.equal(sha, process.env.EXPECTED_SOURCE_SHA);
+          const parsed = ts.parseConfigFileTextToJson('wrangler.jsonc', readFileSync('wrangler.jsonc', 'utf8'));
+          assert.equal(parsed.error, undefined);
+          const config = parsed.config;
+          assert.equal(config.name, process.env.EXPECTED_WORKER);
+          assert.ok(!config.account_id || config.account_id === process.env.CLOUDFLARE_ACCOUNT_ID);
+          assert.ok(!config.route && !config.routes?.length && !config.env, 'Preview cannot attach domains or select another environment');
+          assert.ok(!config.triggers?.crons?.length, 'Shared schedules remain on AkiPasa');
+          config.vars ||= {};
+          for (const flag of ['CHECKOUT_ENABLED', 'TAX_READY', 'SUBSCRIPTIONS_READY', 'FEATURES_READY', 'BILLING_VERIFIED']) {
+            const name = `AKISUITE_${flag}`;
+            assert.ok(config.vars[name] === undefined || config.vars[name] === 'false', 'Billing remains disabled during migration');
+            config.vars[name] = 'false';
+          }
+          const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
+          if (!key.startsWith('sb_publishable_')) {
+            assert.ok(!key.startsWith('sb_secret_'), 'A browser build cannot use a secret key');
+            const claims = JSON.parse(Buffer.from(key.split('.')[1] || '', 'base64url').toString());
+            assert.equal(claims.role, 'anon');
+            assert.equal(claims.ref, 'vhpbvcfkcteswlsdjrfl');
+          }
+          const settings = await fetch(`${process.env.NEXT_PUBLIC_SUPABASE_URL}/auth/v1/settings`, { headers: { apikey: key }, signal: AbortSignal.timeout(15000) });
+          assert.ok(settings.ok, 'Confirmed shared Supabase project must accept the public key');
+          config.account_id = process.env.CLOUDFLARE_ACCOUNT_ID;
+          config.workers_dev = true;
+          config.main = path.resolve(config.main);
+          config.assets.directory = path.resolve(config.assets.directory);
+          config.vars = { ...config.vars,
+            NEXT_PUBLIC_SUPABASE_URL: process.env.NEXT_PUBLIC_SUPABASE_URL,
+            NEXT_PUBLIC_SUPABASE_ANON_KEY: key,
+            NEXT_PUBLIC_GOOGLE_AUTH_ENABLED: process.env.NEXT_PUBLIC_GOOGLE_AUTH_ENABLED,
+            AKISUITE_ALLOWED_PREVIEW_ORIGINS: process.env.PREVIEW_ORIGIN,
+          };
+          mkdirSync('.wrangler', { recursive: true });
+          writeFileSync('.wrangler/preview-release.json', JSON.stringify(config, null, 2));
+          NODE
+      - uses: actions/cache@v4
+        with:
+          path: .next/cache
+          key: akibusiness-preview-release-${{ runner.os }}-${{ hashFiles('package-lock.json') }}-${{ inputs.source_sha }}
+          restore-keys: akibusiness-preview-release-${{ runner.os }}-${{ hashFiles('package-lock.json') }}-
+      - name: Build actual application and validate Cloudflare bundle
+        run: |
+          npm run build:cloudflare
+          npx wrangler deploy --config .wrangler/preview-release.json --dry-run --outdir .wrangler/preview-dry-run
+          node --input-type=module <<'NODE'
+          import assert from 'node:assert/strict';
+          import { readFileSync } from 'node:fs';
+          const stamp = JSON.parse(readFileSync('.open-next/assets/release-source.json', 'utf8'));
+          assert.equal(stamp.sourceCommit, process.env.EXPECTED_SOURCE_SHA);
+          NODE
+          tar -czf "$RUNNER_TEMP/akibusiness-preview-release.tar.gz" .open-next .wrangler/preview-dry-run wrangler.jsonc
+          sha256sum "$RUNNER_TEMP/akibusiness-preview-release.tar.gz" > "$RUNNER_TEMP/akibusiness-preview-release.sha256"
+      - name: Retain compiled source-matched release
+        uses: actions/upload-artifact@v4
+        with:
+          name: akibusiness-preview-${{ inputs.source_sha }}
+          path: |
+            ${{ runner.temp }}/akibusiness-preview-release.tar.gz
+            ${{ runner.temp }}/akibusiness-preview-release.sha256
+          retention-days: 14
+      - name: Require preview-only provider state
+        if: inputs.deploy_preview
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+        run: |
+          node --input-type=module <<'NODE'
+          import assert from 'node:assert/strict';
+          const token = process.env.CLOUDFLARE_API_TOKEN;
+          assert.ok(token, 'Configure a scoped Cloudflare preview deployment token');
+          const base = `https://api.cloudflare.com/client/v4/accounts/${process.env.CLOUDFLARE_ACCOUNT_ID}`;
+          const response = await fetch(`${base}/workers/domains?service=${process.env.EXPECTED_WORKER}`, { headers: { Authorization: `Bearer ${token}` }, signal: AbortSignal.timeout(15000) });
+          const domains = await response.json();
+          assert.ok(response.ok && domains.success, 'Cannot verify current Worker domain bindings');
+          assert.equal(domains.result.length, 0, 'This preview workflow must never update a Worker attached to a production domain');
+          const scheduled = await fetch(`${base}/workers/scripts/${process.env.EXPECTED_WORKER}/schedules`, { headers: { Authorization: `Bearer ${token}` }, signal: AbortSignal.timeout(15000) });
+          if (scheduled.status !== 404) {
+            const schedules = await scheduled.json();
+            assert.ok(scheduled.ok && schedules.success, 'Cannot verify current Worker schedules');
+            assert.equal(schedules.result.schedules.length, 0, 'An existing scheduled Worker is not an isolated product preview');
+          }
+          NODE
+      - name: Deploy isolated preview
+        if: inputs.deploy_preview
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+        run: npx wrangler deploy --config .wrangler/preview-release.json --keep-vars
+      - name: Verify exact deployed source over HTTPS
+        if: inputs.deploy_preview
+        run: |
+          node --input-type=module <<'NODE'
+          import assert from 'node:assert/strict';
+          const response = await fetch(`${process.env.PREVIEW_ORIGIN}${process.env.RELEASE_PATH}`, { redirect: 'error', cache: 'no-store', signal: AbortSignal.timeout(15000) });
+          assert.equal(response.status, 200);
+          assert.equal((await response.json()).sourceCommit, process.env.EXPECTED_SOURCE_SHA);
+          console.log(`Verified ${process.env.PREVIEW_ORIGIN} at ${process.env.EXPECTED_SOURCE_SHA}; authenticated acceptance remains required.`);
+          NODE

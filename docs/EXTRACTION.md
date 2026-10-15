@@ -51,3 +51,15 @@ known Supabase hosts (`akipasa.supabase.co` and the retained project reference).
 Their provider alias equivalence remains a live verification gate. Next config
 changed for this boundary, so the earlier standalone artifact is invalidated and
 a full clean-commit OpenNext rebuild is required before final packaging.
+
+## Preview release workflow (2026-10-15)
+
+`preview-release.yml` is manually dispatched, build-only by default. It requires
+successful product CI for an exact source SHA, validates the confirmed public
+Supabase key/project, builds the actual app and retains compiled artifacts plus
+checksums. Optional deployment requires the preview environment's scoped
+Cloudflare token. It targets only `akibusiness-preview` in the confirmed account,
+rejects custom domains and cron bindings, and verifies the deployed source over
+HTTPS. Closed billing flags remain enforced. This workflow does not constitute
+authenticated or production acceptance; deployment secrets are still unavailable
+in the terminal.

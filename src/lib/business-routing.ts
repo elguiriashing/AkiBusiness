@@ -1,3 +1,23 @@
+/** Credentials never travel to another product through a navigation handoff. */
+export function scrubBusinessHandoffQuery(query: URLSearchParams) {
+  const sensitive = new Set([
+    "code",
+    "token",
+    "token_hash",
+    "access_token",
+    "refresh_token",
+    "provider_token",
+    "provider_refresh_token",
+    "id_token",
+    "client_secret",
+    "password",
+    "state",
+    "error_description",
+  ]);
+  for (const key of [...query.keys()])
+    if (sensitive.has(key.toLowerCase())) query.delete(key);
+}
+
 /** Product boundary applies on canonical, localhost and preview hosts alike. */
 export function businessRoute(path: string, method = "GET") {
   if (path === "/") return { kind: "redirect", path: "/es/business" } as const;

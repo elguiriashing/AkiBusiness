@@ -1,7 +1,10 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { refreshSession } from "@/lib/supabase/middleware";
 import { isTrustedBusinessHost } from "@/lib/public-request-origin";
-import { businessRoute } from "@/lib/business-routing";
+import {
+  businessRoute,
+  scrubBusinessHandoffQuery,
+} from "@/lib/business-routing";
 
 export async function middleware(request: NextRequest) {
   if (!isTrustedBusinessHost(request.headers.get("host") || ""))
@@ -23,17 +26,7 @@ export async function middleware(request: NextRequest) {
       url.hostname = "akipasa.com";
       url.protocol = "https:";
       url.port = "";
-      for (const key of [
-        "code",
-        "token",
-        "token_hash",
-        "access_token",
-        "refresh_token",
-        "provider_token",
-        "provider_refresh_token",
-        "id_token",
-      ])
-        url.searchParams.delete(key);
+      scrubBusinessHandoffQuery(url.searchParams);
       url.hash = "redirected";
       if (/\/(membership|memberships|account)(\/|$)/.test(route.path))
         url.searchParams.set("from", "akibusiness");

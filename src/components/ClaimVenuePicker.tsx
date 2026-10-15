@@ -47,7 +47,9 @@ export function ClaimVenuePicker({
   useEffect(() => {
     if (!initialVenueId) return;
     const controller = new AbortController();
-    fetch(`/api/map/venue/${initialVenueId}`, { signal: controller.signal })
+    fetch(`/api/business/claim-venue/${encodeURIComponent(initialVenueId)}`, {
+      signal: controller.signal,
+    })
       .then(async (response) => {
         if (!response.ok) return null;
         const detail = mapVenueDetailSchema.parse(await response.json());
@@ -56,6 +58,7 @@ export function ClaimVenuePicker({
       })
       .then((detail) => {
         if (!detail) return;
+        setVertical(detail.discoveryVertical);
         setQuery(detail.name);
       })
       .catch(() => {});

@@ -1,5 +1,20 @@
 # Change Impact Register
 
+## 2026-10-15 | Independent Business claim and credential handoff repair
+
+The extracted claim picker referenced an absent consumer map route. Its new
+management-only public catalogue lookup restores the initial venue name and
+activities/accommodation vertical through the existing privacy-safe ownership RPC;
+unknown ownership fails closed. Initial claims now work without reintroducing the
+consumer map API. Cross-product redirects also strip credential query names
+case-insensitively, including duplicates, client secrets and provider state; safe
+locale/product context remains. The hash is still replaced before handoff.
+Existing authenticated claim submissions, RLS and tenant authorization are unchanged.
+No schema, data, billing, scheduler or production route change is included. Scoped
+endpoint/query regressions, full checks and actual Cloudflare packaging are required;
+provider-backed auth acceptance remains a release gate. Revert source/Worker to
+roll back; existing shared records require no restoration.
+
 ## 2026-10-14 | AkiConduzco mobility foundation (implementation candidate)
 
 - **Request / before:** AkiPasa has no car-rental discovery or fleet tools. Its

@@ -1,5 +1,17 @@
 # AKIPASA MASTER SYSTEM CONTRACT
 
+## 2026-10-15 | Independent Business claim deep links
+
+The extracted AkiBusiness claim picker reads its initial venue through the narrow
+`/api/business/claim-venue/[id]` endpoint. The consumer map API is outside this
+application's boundary. Published catalogue fields and the privacy-safe
+`public_venue_is_claimed` RPC supply the initial name and activities/accommodation
+vertical; unavailable ownership fails closed. No owner identity is exposed.
+The existing authenticated claim submission guard remains authoritative. No
+schema, records, billing or legacy routing change is required. Seven focused endpoint
+regressions and all 107 scoped tests pass; provider-backed authentication,
+preview/TLS and production acceptance remain release gates.
+
 ## 2026-10-14 | AkiConduzco mobility product (live release)
 
 AkiConduzco is a car-rental discovery and booking-request product on

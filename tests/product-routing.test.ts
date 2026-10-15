@@ -1,5 +1,8 @@
 import { describe, expect, it } from "vitest";
-import { businessRoute } from "../src/lib/business-routing";
+import {
+  businessRoute,
+  scrubBusinessHandoffQuery,
+} from "../src/lib/business-routing";
 import { publicRequestOrigin } from "../src/lib/public-request-origin";
 import {
   safeAuthDestinationForOrigin,
@@ -7,6 +10,16 @@ import {
 } from "../src/lib/auth-security";
 
 describe("independent business boundary", () => {
+  it("scrubs every case and duplicate credential while preserving safe handoff context", () => {
+    const query = new URLSearchParams(
+      "ACCESS_TOKEN=one&Access_Token=two&access_token=three&CODE=auth-code&client_secret=secret&PASSWORD=secret&state=provider-state&error_description=private&from=akibusiness&section=billing",
+    );
+    scrubBusinessHandoffQuery(query);
+    expect([...query]).toEqual([
+      ["from", "akibusiness"],
+      ["section", "billing"],
+    ]);
+  });
   it("uses its business homepage on every deployment host", () => {
     expect(businessRoute("/")).toEqual({
       kind: "redirect",
