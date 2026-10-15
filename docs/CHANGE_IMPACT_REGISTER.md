@@ -1487,3 +1487,11 @@ CI, clean Cloudflare packaging and authenticated preview acceptance are required
 before release. Rollback: revert app code; keep the compatible additive RPC, or
 revoke/drop that function in a reviewed forward migration. Never unlink records
 or drop customer data as rollback.
+
+Manager completion follow-up: vehicle name/category/transmission/fuel/seats/luggage
+can now be edited through both existing authorized action paths. Optional supplied
+fields share Zod bounds, preserving older rate-only clients. Operators can reopen
+only maintenance blocks after company/vehicle ownership or venue-manager checks;
+booking-created blocks are never deleted through this action. Focused action
+regressions cover invalid specifications, scoped updates, ownership denial and
+maintenance-only deletion. No production vehicle/block records were modified.
