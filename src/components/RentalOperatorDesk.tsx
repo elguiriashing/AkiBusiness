@@ -61,7 +61,13 @@ type Props = {
   companyTools?: ReactNode;
   feedback?: "error" | "success";
   readError?: boolean;
-  actions: { create: Action; update: Action; block: Action; booking: Action };
+  actions: {
+    create: Action;
+    update: Action;
+    block: Action;
+    booking: Action;
+    removeBlock?: Action;
+  };
 };
 function SaveButton({ children }: { children: ReactNode }) {
   const { pending } = useFormStatus();
@@ -161,7 +167,8 @@ export function RentalOperatorDesk({
             ? "Editar vehículo"
             : "Edit vehicle"}
       </h2>
-      {create && (
+      <details open={create} className={s.vehicleDetails}>
+        <summary>{es ? "Detalles del vehículo" : "Vehicle details"}</summary>
         <>
           <label>
             {es ? "Modelo / nombre" : "Model / name"}
@@ -171,18 +178,25 @@ export function RentalOperatorDesk({
               minLength={2}
               maxLength={120}
               placeholder="Toyota Yaris"
+              defaultValue={create ? "" : selected?.name}
             />
           </label>
           <div className={s.two}>
             <label>
               {es ? "Categoría" : "Category"}
-              <select name="category" defaultValue="economy">
+              <select
+                name="category"
+                defaultValue={create ? "economy" : selected?.category}
+              >
                 {categories}
               </select>
             </label>
             <label>
               {es ? "Cambio" : "Transmission"}
-              <select name="transmission">
+              <select
+                name="transmission"
+                defaultValue={create ? "manual" : selected?.transmission}
+              >
                 <option value="manual">Manual</option>
                 <option value="automatic">
                   {es ? "Automático" : "Automatic"}
@@ -198,7 +212,7 @@ export function RentalOperatorDesk({
                 type="number"
                 min={2}
                 max={9}
-                defaultValue={5}
+                defaultValue={create ? 5 : selected?.seats}
                 required
               />
             </label>
@@ -209,13 +223,16 @@ export function RentalOperatorDesk({
                 type="number"
                 min={0}
                 max={12}
-                defaultValue={2}
+                defaultValue={create ? 2 : selected?.luggage}
                 required
               />
             </label>
             <label>
               {es ? "Motor" : "Fuel"}
-              <select name="fuel">
+              <select
+                name="fuel"
+                defaultValue={create ? "petrol" : selected?.fuel}
+              >
                 <option value="petrol">{es ? "Gasolina" : "Petrol"}</option>
                 <option value="diesel">Diésel</option>
                 <option value="hybrid">{es ? "Híbrido" : "Hybrid"}</option>
@@ -227,7 +244,7 @@ export function RentalOperatorDesk({
             </label>
           </div>
         </>
-      )}
+      </details>
       <div className={s.two}>
         <label>
           {es ? "Precio / día (€)" : "Daily rate (€)"}
@@ -604,6 +621,7 @@ export function RentalOperatorDesk({
                           .slice(0, 7),
                       )
                     }
+                    disabled={month <= today.slice(0, 7)}
                     aria-label={es ? "Mes anterior" : "Previous month"}
                   >
                     ←
@@ -700,9 +718,24 @@ export function RentalOperatorDesk({
                   )
                   .slice(0, 6)
                   .map((b) => (
-                    <p key={b.id}>
-                      {b.start_date} → {b.end_date}
-                    </p>
+                    <form
+                      key={b.id}
+                      action={actions.removeBlock}
+                      className={s.blockRow}
+                    >
+                      <span>
+                        {b.start_date} → {b.end_date}
+                      </span>
+                      {actions.removeBlock && (
+                        <>
+                          {fields(b.vehicle_id)}
+                          <input type="hidden" name="blockId" value={b.id} />
+                          <SaveButton>
+                            {es ? "Reabrir fechas" : "Reopen dates"}
+                          </SaveButton>
+                        </>
+                      )}
+                    </form>
                   ))}
               </div>
             </section>
