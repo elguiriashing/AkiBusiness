@@ -1495,3 +1495,12 @@ only maintenance blocks after company/vehicle ownership or venue-manager checks;
 booking-created blocks are never deleted through this action. Focused action
 regressions cover invalid specifications, scoped updates, ownership denial and
 maintenance-only deletion. No production vehicle/block records were modified.
+
+## 2026-10-15 | Fullscreen privacy control integration
+
+Live rental acceptance found the root privacy control adding a footer below the
+customer viewport; the fixed operator desk also covered that global control.
+Scoped rental styles now keep privacy access in a reserved bottom strip, above
+the desk, without document scrolling. The existing consent panel and choices
+remain unchanged. Responsive browser fixtures now include the shared footer and
+assert that its control remains within the viewport. No data or auth changes.
