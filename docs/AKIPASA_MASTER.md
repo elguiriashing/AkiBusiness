@@ -1,5 +1,15 @@
 # AKIPASA MASTER SYSTEM CONTRACT
 
+## 2026-10-15 | Rental company in Business home
+
+The independent Business home includes rental companies owned by the signed-in
+profile as AkiCoches cards alongside venues and stays. A company linked to a
+venue opens that venue's Fleet tool; an existing unlinked company opens its
+legacy full-screen fleet workspace. This avoids assigning a rental company to
+an unrelated venue or creating a public AkiPasa listing. No rental ownership,
+visibility or RLS rule changes. Authenticated owner acceptance remains to be
+verified on the canonical domain.
+
 ## 2026-10-15 | AkiCoches venue fleet integration
 
 The independent AkiBusiness application places AkiCoches within each ordinary
