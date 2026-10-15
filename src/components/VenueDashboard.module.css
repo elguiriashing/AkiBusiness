@@ -7,6 +7,10 @@
   overflow-x: clip;
   color: var(--ink);
 }
+.dashboard[data-active-section="fleet"] {
+  width: min(100% - 2rem, 96rem);
+  min-height: 100dvh;
+}
 .dashboard svg {
   flex-shrink: 0;
   width: 1.15rem;

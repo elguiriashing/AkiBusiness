@@ -18,6 +18,7 @@ type Counts = {
   credentials: number;
   requests: number;
   members: number;
+  vehicles?: number;
 };
 
 export function VenueDashboard({
@@ -32,6 +33,7 @@ export function VenueDashboard({
   sections,
   overview,
   product = "venue",
+  mobility = false,
 }: {
   locale: "en" | "es";
   name: string;
@@ -44,6 +46,7 @@ export function VenueDashboard({
   sections: Partial<Record<ToolSection, ReactNode>>;
   overview?: ReactNode;
   product?: "venue" | "accommodation";
+  mobility?: boolean;
 }) {
   const es = locale === "es";
   const stay = product === "accommodation";
@@ -175,6 +178,19 @@ export function VenueDashboard({
       ),
     },
     {
+      id: "fleet",
+      label: "AkiCoches",
+      description: es
+        ? "Flota, precios, disponibilidad y solicitudes"
+        : "Fleet, prices, availability and requests",
+      icon: "venue",
+      detail: countLabel(
+        counts.vehicles || 0,
+        ["vehicle", "vehicles"],
+        ["vehículo", "vehículos"],
+      ),
+    },
+    {
       id: "team",
       label: es ? "Equipo" : "Team",
       description: es ? "Miembros y permisos" : "Members and permissions",
@@ -188,7 +204,7 @@ export function VenueDashboard({
   ];
   const availableTools = stay
     ? tools.filter((tool) => ["profile", "bookings", "team"].includes(tool.id))
-    : tools;
+    : tools.filter((tool) => tool.id !== "fleet" || mobility);
   const navigation = [
     {
       id: "overview" as const,
@@ -262,7 +278,11 @@ export function VenueDashboard({
   }
 
   return (
-    <main ref={dashboard} className={styles.dashboard}>
+    <main
+      ref={dashboard}
+      className={styles.dashboard}
+      data-active-section={active}
+    >
       <Link className={styles.back} href={`/${locale}/business`}>
         <Icon name="arrow-right" />
         {stay

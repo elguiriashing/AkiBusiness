@@ -67,6 +67,8 @@ export default async function MobilityWorkspace({
       "id,name,slug,city,address,latitude,longitude,phone,website_url,status,created_at",
     )
     .eq("submitted_by", user.id)
+    .order("created_at", { ascending: true })
+    .limit(1)
     .maybeSingle();
   let vehicles: Vehicle[] = [];
   let vehicleError = false;

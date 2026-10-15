@@ -19,6 +19,7 @@ import {
   translateVenueCatalogueDocument,
 } from "@/lib/localized-copy";
 import type { VenueCatalogueDocument } from "@/lib/venue-catalogue";
+import { parseDatabasePoint } from "@/lib/repository";
 
 const context = z.object({
   locale: z.enum(["es", "en"]),
@@ -26,6 +27,302 @@ const context = z.object({
 });
 function destination(locale: string, venueId: string, result: string) {
   return `/${locale}/business/venue/${venueId}?${result}`;
+}
+
+function fleetDestination(locale: string, venueId: string, result: string) {
+  return destination(locale, venueId, `section=fleet&${result}`);
+}
+
+async function requireFleetManager(locale: "en" | "es", venueId: string) {
+  const access = await requireBusinessAccess(locale);
+  const { data, error } = await access.supabase.rpc("is_venue_member", {
+    target_venue: venueId,
+    allowed_roles: ["owner", "manager"],
+  });
+  if (error || !data)
+    redirect(fleetDestination(locale, venueId, "error=fleet-permission"));
+  return access;
+}
+
+export async function createVenueRentalCompany(formData: FormData) {
+  const parsed = z
+    .object({
+      locale: z.enum(["en", "es"]),
+      venueId: z.string().uuid(),
+      name: z.string().trim().min(2).max(120),
+    })
+    .safeParse(Object.fromEntries(formData));
+  const locale = formData.get("locale") === "en" ? "en" : "es";
+  const venueId = String(formData.get("venueId") || "");
+  if (!parsed.success)
+    redirect(fleetDestination(locale, venueId, "error=fleet"));
+  const { supabase, user } = await requireFleetManager(
+    parsed.data.locale,
+    parsed.data.venueId,
+  );
+  const { data: venue } = await supabase
+    .from("venues")
+    .select("address,location,cities(name_es,name_en)")
+    .eq("id", parsed.data.venueId)
+    .maybeSingle();
+  const point = parseDatabasePoint(venue?.location || null);
+  const city = venue?.cities?.[0];
+  if (
+    !venue ||
+    point.latitude < 27 ||
+    point.latitude > 44 ||
+    point.longitude < -19 ||
+    point.longitude > 5
+  )
+    redirect(fleetDestination(locale, venueId, "error=fleet"));
+  const base =
+    parsed.data.name
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, "-")
+      .replace(/^-|-$/g, "")
+      .slice(0, 54) || "rental-company";
+  const { error } = await supabase.from("car_rental_companies").insert({
+    venue_id: parsed.data.venueId,
+    submitted_by: user.id,
+    name: parsed.data.name,
+    slug: `${base}-${parsed.data.venueId.slice(0, 6)}`,
+    address: venue.address,
+    city: city?.name_es || city?.name_en || "España",
+    latitude: point.latitude,
+    longitude: point.longitude,
+  });
+  revalidatePath(`/${locale}/business/venue/${venueId}`);
+  redirect(
+    fleetDestination(locale, venueId, error ? "error=fleet" : "updated=fleet"),
+  );
+}
+
+export async function createVenueRentalVehicle(formData: FormData) {
+  const parsed = z
+    .object({
+      locale: z.enum(["en", "es"]),
+      venueId: z.string().uuid(),
+      companyId: z.string().uuid(),
+      name: z.string().trim().min(2).max(120),
+      category: z.enum([
+        "mini",
+        "economy",
+        "compact",
+        "suv",
+        "people_carrier",
+        "premium",
+        "electric",
+        "van",
+      ]),
+      transmission: z.enum(["manual", "automatic"]),
+      fuel: z.enum(["petrol", "diesel", "hybrid", "electric", "other"]),
+      seats: z.coerce.number().int().min(2).max(9),
+      luggage: z.coerce.number().int().min(0).max(12),
+      dailyPrice: z.coerce.number().int().min(1).max(10000),
+      deposit: z.coerce.number().int().min(0).max(50000),
+      mediaId: z.union([z.string().uuid(), z.literal("")]).default(""),
+    })
+    .safeParse(Object.fromEntries(formData));
+  const locale = formData.get("locale") === "en" ? "en" : "es";
+  const venueId = String(formData.get("venueId") || "");
+  if (!parsed.success)
+    redirect(fleetDestination(locale, venueId, "error=fleet"));
+  const { supabase } = await requireFleetManager(
+    parsed.data.locale,
+    parsed.data.venueId,
+  );
+  const { data: company } = await supabase
+    .from("car_rental_companies")
+    .select("id")
+    .eq("id", parsed.data.companyId)
+    .eq("venue_id", parsed.data.venueId)
+    .maybeSingle();
+  if (!company) redirect(fleetDestination(locale, venueId, "error=fleet"));
+  if (parsed.data.mediaId) {
+    const { data: media } = await supabase
+      .from("venue_media")
+      .select("id")
+      .eq("id", parsed.data.mediaId)
+      .eq("venue_id", parsed.data.venueId)
+      .maybeSingle();
+    if (!media) redirect(fleetDestination(locale, venueId, "error=fleet"));
+  }
+  const { error } = await supabase
+    .from("car_rental_vehicles")
+    .insert({
+      company_id: parsed.data.companyId,
+      name: parsed.data.name,
+      category: parsed.data.category,
+      transmission: parsed.data.transmission,
+      fuel: parsed.data.fuel,
+      seats: parsed.data.seats,
+      luggage: parsed.data.luggage,
+      daily_price_cents: parsed.data.dailyPrice * 100,
+      deposit_cents: parsed.data.deposit * 100,
+      cover_media_id: parsed.data.mediaId || null,
+      active: true,
+    });
+  revalidatePath(`/${locale}/business/venue/${venueId}`);
+  redirect(
+    fleetDestination(locale, venueId, error ? "error=fleet" : "updated=fleet"),
+  );
+}
+
+export async function updateVenueRentalVehicle(formData: FormData) {
+  const parsed = z
+    .object({
+      locale: z.enum(["en", "es"]),
+      venueId: z.string().uuid(),
+      companyId: z.string().uuid(),
+      vehicleId: z.string().uuid(),
+      active: z.enum(["true", "false"]),
+      dailyPrice: z.coerce.number().int().min(1).max(10000),
+      deposit: z.coerce.number().int().min(0).max(50000),
+      mediaId: z.union([z.string().uuid(), z.literal("")]).default(""),
+    })
+    .safeParse(Object.fromEntries(formData));
+  const locale = formData.get("locale") === "en" ? "en" : "es";
+  const venueId = String(formData.get("venueId") || "");
+  if (!parsed.success)
+    redirect(fleetDestination(locale, venueId, "error=fleet"));
+  const { supabase } = await requireFleetManager(
+    parsed.data.locale,
+    parsed.data.venueId,
+  );
+  const { data: company } = await supabase
+    .from("car_rental_companies")
+    .select("id")
+    .eq("id", parsed.data.companyId)
+    .eq("venue_id", parsed.data.venueId)
+    .maybeSingle();
+  if (!company) redirect(fleetDestination(locale, venueId, "error=fleet"));
+  if (parsed.data.mediaId) {
+    const { data: media } = await supabase
+      .from("venue_media")
+      .select("id")
+      .eq("id", parsed.data.mediaId)
+      .eq("venue_id", parsed.data.venueId)
+      .maybeSingle();
+    if (!media) redirect(fleetDestination(locale, venueId, "error=fleet"));
+  }
+  const { error } = await supabase
+    .from("car_rental_vehicles")
+    .update({
+      active: parsed.data.active === "true",
+      daily_price_cents: parsed.data.dailyPrice * 100,
+      deposit_cents: parsed.data.deposit * 100,
+      cover_media_id: parsed.data.mediaId || null,
+    })
+    .eq("id", parsed.data.vehicleId)
+    .eq("company_id", parsed.data.companyId);
+  revalidatePath(`/${locale}/business/venue/${venueId}`);
+  redirect(
+    fleetDestination(locale, venueId, error ? "error=fleet" : "updated=fleet"),
+  );
+}
+
+export async function createVenueRentalBlock(formData: FormData) {
+  const parsed = z
+    .object({
+      locale: z.enum(["en", "es"]),
+      venueId: z.string().uuid(),
+      companyId: z.string().uuid(),
+      vehicleId: z.string().uuid(),
+      start: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+      end: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+    })
+    .refine(
+      (value) =>
+        value.end > value.start &&
+        value.start >= new Date().toISOString().slice(0, 10),
+    )
+    .safeParse(Object.fromEntries(formData));
+  const locale = formData.get("locale") === "en" ? "en" : "es";
+  const venueId = String(formData.get("venueId") || "");
+  if (!parsed.success)
+    redirect(fleetDestination(locale, venueId, "error=availability"));
+  const { supabase } = await requireFleetManager(
+    parsed.data.locale,
+    parsed.data.venueId,
+  );
+  const { data: company } = await supabase
+    .from("car_rental_companies")
+    .select("id")
+    .eq("id", parsed.data.companyId)
+    .eq("venue_id", parsed.data.venueId)
+    .maybeSingle();
+  const { data: vehicle } = company
+    ? await supabase
+        .from("car_rental_vehicles")
+        .select("id")
+        .eq("id", parsed.data.vehicleId)
+        .eq("company_id", company.id)
+        .maybeSingle()
+    : { data: null };
+  if (!vehicle)
+    redirect(fleetDestination(locale, venueId, "error=availability"));
+  const { error } = await supabase.from("car_rental_calendar_blocks").insert({
+    vehicle_id: vehicle.id,
+    start_date: parsed.data.start,
+    end_date: parsed.data.end,
+    reason: "maintenance",
+  });
+  revalidatePath(`/${locale}/business/venue/${venueId}`);
+  redirect(
+    fleetDestination(
+      locale,
+      venueId,
+      error ? "error=availability" : "updated=fleet",
+    ),
+  );
+}
+
+export async function updateVenueRentalBookingStatus(formData: FormData) {
+  const parsed = z
+    .object({
+      locale: z.enum(["en", "es"]),
+      venueId: z.string().uuid(),
+      companyId: z.string().uuid(),
+      bookingId: z.string().uuid(),
+      status: z.enum(["confirmed", "declined", "cancelled", "completed"]),
+    })
+    .safeParse(Object.fromEntries(formData));
+  const locale = formData.get("locale") === "en" ? "en" : "es";
+  const venueId = String(formData.get("venueId") || "");
+  if (!parsed.success)
+    redirect(fleetDestination(locale, venueId, "error=booking"));
+  const { supabase } = await requireFleetManager(
+    parsed.data.locale,
+    parsed.data.venueId,
+  );
+  const { data: booking } = await supabase
+    .from("car_rental_bookings")
+    .select("id,vehicle:car_rental_vehicles!inner(company_id)")
+    .eq("id", parsed.data.bookingId)
+    .eq("vehicle.company_id", parsed.data.companyId)
+    .maybeSingle();
+  const { data: company } = await supabase
+    .from("car_rental_companies")
+    .select("id")
+    .eq("id", parsed.data.companyId)
+    .eq("venue_id", parsed.data.venueId)
+    .maybeSingle();
+  if (!company || !booking)
+    redirect(fleetDestination(locale, venueId, "error=booking"));
+  const { error } = await supabase.rpc("set_car_rental_booking_status", {
+    p_booking: parsed.data.bookingId,
+    p_status: parsed.data.status,
+  });
+  revalidatePath(`/${locale}/business/venue/${venueId}`);
+  redirect(
+    fleetDestination(
+      locale,
+      venueId,
+      error ? "error=booking" : "updated=fleet",
+    ),
+  );
 }
 
 export async function updateVenue(formData: FormData) {

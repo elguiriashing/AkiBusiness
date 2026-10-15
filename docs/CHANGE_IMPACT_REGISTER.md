@@ -1,5 +1,26 @@
 # Change Impact Register
 
+## 2026-10-15 | Venue-scoped AkiCoches management
+
+The AkiCoches entry moves from the top-level Business navigation into each
+non-accommodation venue dashboard. A venue owner/manager can activate one linked
+rental company, add/edit vehicle rates, cover and visibility, block dates and
+decide rental requests. The same venue media library is available within the
+fleet screen for upload, selection and removal; the legacy mobility route stays
+reachable for existing unlinked companies. The fleet screen uses a wider canvas,
+scarlet accent and shared light/dark venue tokens.
+
+This depends on the mirrored AkiPasa migration
+`20261015124045_akicoches_venue_workspace`: venue/cover FKs, scoped RLS,
+legacy owner compatibility, protected cover/venue association and manager
+authorization in the booking status RPC. The independent AkiCoches catalogue
+uses the same shared records and signs only permitted published venue covers.
+No confirmed booking or payment is fabricated; AkiPasa retains shared jobs.
+Roll back the application versions independently; the additive schema and
+owner index change require a reviewed forward migration, not deleting records.
+Provider-backed owner/other-tenant media, availability and booking acceptance
+must still be checked on the actual canonical hosts.
+
 ## 2026-10-15 | Bounded cross-origin query inspection
 
 An actual canonical subscription handoff with a dummy nested callback code

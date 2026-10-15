@@ -6,6 +6,7 @@ export const venueDashboardSections = [
   "rewards",
   "checkin",
   "bookings",
+  "fleet",
   "team",
 ] as const;
 

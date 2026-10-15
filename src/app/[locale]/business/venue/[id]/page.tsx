@@ -20,6 +20,7 @@ import {
 import { VenueMediaStudio } from "@/components/VenueMediaStudio";
 import { BusinessEventEditPanel } from "@/components/BusinessEventEditPanel";
 import { VenueEventBrowser } from "@/components/VenueEventBrowser";
+import { AkiCochesFleetWorkspace } from "@/components/AkiCochesFleetWorkspace";
 import { getVenueDashboardSection } from "@/lib/venue-dashboard";
 import {
   parseCatalogueDocument,
@@ -224,6 +225,42 @@ export default async function VenueWorkspace({
   ]);
   if (!venue) notFound();
   const isAccommodation = venue.discovery_vertical === "accommodation";
+  const { data: rentalCompany } = !isAccommodation
+    ? await supabase
+        .from("car_rental_companies")
+        .select("id,status")
+        .eq("venue_id", id)
+        .maybeSingle()
+    : { data: null };
+  const { data: rentalVehicles } = rentalCompany
+    ? await supabase
+        .from("car_rental_vehicles")
+        .select(
+          "id,name,category,transmission,fuel,seats,luggage,daily_price_cents,deposit_cents,cover_media_id,active",
+        )
+        .eq("company_id", rentalCompany.id)
+        .order("created_at", { ascending: false })
+    : { data: [] };
+  const fleetVehicleIds = (rentalVehicles || []).map((vehicle) => vehicle.id);
+  const [{ data: rentalBookings }, { data: rentalBlocks }] =
+    fleetVehicleIds.length
+      ? await Promise.all([
+          supabase
+            .from("car_rental_bookings")
+            .select(
+              "id,vehicle_id,start_date,end_date,status,contact_name,quoted_total_cents",
+            )
+            .in("vehicle_id", fleetVehicleIds)
+            .order("created_at", { ascending: false })
+            .limit(100),
+          supabase
+            .from("car_rental_calendar_blocks")
+            .select("id,vehicle_id,start_date,end_date,reason")
+            .in("vehicle_id", fleetVehicleIds)
+            .order("start_date")
+            .limit(100),
+        ])
+      : [{ data: [] }, { data: [] }];
   const suiteToolsReady =
     process.env.AKISUITE_FEATURES_READY === "true" &&
     process.env.AKISUITE_SUBSCRIPTIONS_READY === "true";
@@ -454,6 +491,7 @@ export default async function VenueWorkspace({
       product={
         venue.discovery_vertical === "accommodation" ? "accommodation" : "venue"
       }
+      mobility={!isAccommodation}
       status={venue.status}
       verified={venue.verified}
       publicHref={
@@ -473,6 +511,7 @@ export default async function VenueWorkspace({
         credentials: credentials?.length || 0,
         requests: pendingBookingCount || 0,
         members: members?.length || 0,
+        vehicles: rentalVehicles?.length || 0,
       }}
       overview={
         <>
@@ -1894,6 +1933,34 @@ export default async function VenueWorkspace({
               updateRequest={updateBookingRequest}
             />
           ),
+        fleet: !isAccommodation ? (
+          <>
+            <AkiCochesFleetWorkspace
+              locale={locale}
+              venueId={id}
+              venueName={venue.name}
+              company={rentalCompany}
+              vehicles={(rentalVehicles || []) as never[]}
+              media={mediaStudioItems.map((item) => ({
+                id: item.id,
+                alt: item.alt,
+              }))}
+              bookings={rentalBookings || []}
+              blocks={rentalBlocks || []}
+            />
+            <section className="panel profile-media-hub">
+              <VenueMediaStudio
+                locale={locale}
+                venueId={id}
+                media={mediaStudioItems}
+                placements={venueMediaSlots}
+                accommodation={false}
+                stayHeaderIds={[]}
+                premium={suiteToolsReady && venuePremium}
+              />
+            </section>
+          </>
+        ) : null,
         team: (
           <>
             <section className="panel team-hub">

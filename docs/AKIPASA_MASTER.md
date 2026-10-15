@@ -1,5 +1,17 @@
 # AKIPASA MASTER SYSTEM CONTRACT
 
+## 2026-10-15 | AkiCoches venue fleet integration
+
+The independent AkiBusiness application places AkiCoches within each ordinary
+venue dashboard, reusing its team, location and shared media library. Linked
+fleet records remain in `car_rental_*` and require the AkiPasa-owned mirrored
+venue workspace migration before these tools can operate. Existing unlinked
+operator companies remain valid through the legacy route. Public rental search
+and requests stay in the independent AkiCoches product. Company review, RLS,
+request confirmation, storage placement and billing boundaries remain distinct.
+The migration and both independent Worker versions must be verified before
+claiming a live integrated release.
+
 ## 2026-10-15 | Nested credential isolation at product handoffs
 
 Cross-origin navigation now drops opaque next/return/redirect/callback wrappers
