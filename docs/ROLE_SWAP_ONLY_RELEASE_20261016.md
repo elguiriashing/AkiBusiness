@@ -37,3 +37,11 @@ Both domains have been switched via the Cloudflare API while retaining the exist
 Release state: **domain role cutover deployed and anonymously smoke-tested**. The authenticated Google login, owner/staff/other-tenant/RLS journeys, printer and protected PoS actions still need real-user acceptance; do not claim them verified. The consumer AkiDuermo and AkiCoches old management links must be updated in separate safe releases; AkiCoches targeted PR #9 exists.
 
 Do not change Stripe customer pricing, independent property migrations, old gateway mappings or legacy entitlement keys to 'complete' the brand swap. Keep the previous domain/Worker/Pages bindings above available for coordinated rollback if a critical authenticated journey fails.
+
+### Post-cutover compatibility and gateway fix
+
+The existing `akihq-integration-gateway` Worker had `ALLOWED_ORIGINS` without `https://akibusiness.com` after the domain swap. Its settings were patched non-destructively to append the new operations origin. All 18 previous bindings (including all secret/service/Storage bindings) remained present; current gateway deployment `b9cf9a96-76f6-4429-a944-3d1faa92b21a`, version `440d98b3-3a39-4aad-9286-206ced26f3cc`. A real browser fetch from `https://akibusiness.com` to the gateway `/api/health` returned `HTTP 200; CORS OK`.
+
+Cloudflare zone `akibusiness.com` has a targeted, temporary redirect ruleset `6b137a3e82b04b97a47379af0ad517c0` (rule `59cf66c03656424f95098bbc2e8a66f1`): requests to the old management paths `/en/business`, `/es/business` and their descendants are redirected with HTTP 302 to the same path on `https://akihq.app`, without forwarding query strings. It does NOT redirect the operations root or other paths. Real-browser checks confirmed the legacy handoff URLs resolve to the AkiHQ product while `https://akibusiness.com/en` remains AkiBusiness. Remove this compatibility rule only after old discovery links and emails have been fully migrated and confirmed.
+
+AkiCoches scoped source patch is in PR `elguiriashing/AkiCoches#9` with CI under review; AkiDuermo discovery links remain a separate release. The role-swapped canonical domains are serving valid public artifacts, but real Google login, staff/tenant role acceptance and printing/POS are still not certified.
