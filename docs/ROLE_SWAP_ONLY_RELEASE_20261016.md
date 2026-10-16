@@ -25,3 +25,15 @@ Coordinated route migration:
 4. Rollback both together if any protected route or identity flow fails: restore `akihq.app` as custom domain on Pages `akihq` and `akibusiness.com` as Worker custom domain on `akibusiness-preview`, with the original DNS record types and verified original deployments. Confirm their source roles after restoration.
 
 Do not merge unrelated accommodation/organisation migration PRs for this route swap; migration and new checkout/readiness switches remain separately gated.
+
+## Live Cloudflare routing verification (2026-10-17)
+
+Both domains have been switched via the Cloudflare API while retaining the existing Supabase database and Stripe billing:
+- **akihq.app** is now a Worker custom domain on `akihq-management-preview` (domain ID `646caf95c8be19998a392aea0991f3bd71a68a96`). Public `/api/health` returns `status:ok, role:management, publicProduct:AkiHQ, roleSwapEnabled:true` and `/release-source.json` reports `d470fa19830283cedadc00e453d5cd6dde12f49f`. EN/ES public home pages returned AkiHQ branding.
+- **akibusiness.com** is now a Pages custom domain on `akibusiness-operations-preview`, serving the manual release `ef2ceac6-274f-4250-b7a2-ede189230de6`. Zone apex CNAME ID `43488136733c2b3606d69f30ca33dbfe` points to `akibusiness-operations-preview.pages.dev`. Cloudflare Pages validation became **active**; public `/release-source.json` reports source `29dd9a4cffed7137473761808c51b7c24621ae14`, `roleSwap:true`, `product:AkiBusiness`, `sourceTreeDirty:false`. Public homepage has title `AkiBusiness`.
+- The old Pages project `akihq` still serves the operations fallback at `crm.akipasa.com`. Original canonical Pages deployment `52a4d216-4610-499d-99d0-c312e8929ac5` and original Worker `akibusiness-preview` deployment `0372ad5d-1f59-45a9-a120-eee633f745f3` were not deleted.
+- An initial Cloudflare Pages validation and 522 during activation resolved; subsequent Pages validation showed `active` and public exact-source Browser Rendering requests returned valid documents.
+
+Release state: **domain role cutover deployed and anonymously smoke-tested**. The authenticated Google login, owner/staff/other-tenant/RLS journeys, printer and protected PoS actions still need real-user acceptance; do not claim them verified. The consumer AkiDuermo and AkiCoches old management links must be updated in separate safe releases; AkiCoches targeted PR #9 exists.
+
+Do not change Stripe customer pricing, independent property migrations, old gateway mappings or legacy entitlement keys to 'complete' the brand swap. Keep the previous domain/Worker/Pages bindings above available for coordinated rollback if a critical authenticated journey fails.
