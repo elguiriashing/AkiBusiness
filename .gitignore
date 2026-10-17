@@ -28,3 +28,6 @@ dist/
 *.p12
 *.key
 .DS_Store
+
+# Generated AkiHQ v2 icon assets, from the canonical SVGs
+/public/brand/hq-v2-*.png

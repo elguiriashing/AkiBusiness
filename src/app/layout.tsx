@@ -29,7 +29,7 @@ export const metadata: Metadata = {
         : `/brand/${managementProduct.logo}-icon.png`,
     apple:
       managementProduct.logo === "hq"
-        ? "/icon-180.png"
+        ? "/brand/hq-v2-180.png"
         : `/brand/${managementProduct.logo}-icon.png`,
   },
 };
