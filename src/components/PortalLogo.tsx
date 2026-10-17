@@ -6,35 +6,24 @@ export function PortalLogo({
 }: {
   product: "pasa" | "business" | "duermo" | "hq" | "coches";
 }) {
-  const suffix =
-    product === "business"
-      ? "Business"
-      : product === "coches"
-        ? "Coches"
-      : product === "pasa"
-        ? "Pasa"
-        : product === "duermo"
-          ? "Duermo"
-          : "HQ";
+  const suffix = {
+    pasa: "Pasa",
+    business: "Business",
+    duermo: "Duermo",
+    hq: "HQ",
+    coches: "Coches",
+  }[product];
+  const icon = {
+    pasa: "/pwa/akipasa-512.png",
+    business: "/brand/business-mark.svg",
+    duermo: "/brand/duermo-icon.png",
+    hq: "/brand/hq-mark.svg",
+    coches: "/brand/conduzco-icon.svg",
+  }[product];
+
   return (
     <span className={`${styles.logo} ${styles[product]}`} aria-hidden="true">
-      <Image
-        src={
-          product === "pasa"
-            ? "/pwa/akipasa-512.png"
-            : product === "coches"
-              ? "/brand/conduzco-icon.svg"
-            : product === "hq"
-              ? "/brand/hq-mark.svg"
-              : product === "business"
-                ? "/brand/business-mark.svg"
-                : `/brand/${product}-icon.png`
-        }
-        alt=""
-        width={40}
-        height={40}
-        priority
-      />
+      <Image src={icon} alt="" width={40} height={40} priority />
       <span className={styles.wordmark}>
         Aki<span>{suffix}</span>
         <i>.</i>
