@@ -11,3 +11,6 @@ Android/.tooling
 Android/build
 Android/app/build
 supabase/.temp
+
+# Build-specific workflow is generated and controlled separately
+.github/workflows/brand-assets.yml
