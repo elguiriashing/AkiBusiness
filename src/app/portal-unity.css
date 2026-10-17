@@ -251,13 +251,27 @@ html[data-theme="dark"] body[data-product="akibusiness"] {
 }
 
 /* Matching account actions at the foot of the product launcher. */
-.portal-product-actions { display: grid; gap: 8px; }
-.portal-product-actions > a, .portal-product-actions form button {
-  display: flex; align-items: center; width: 100%; min-height: 44px;
-  padding: 10px 12px; border: 1px solid var(--line);
-  border-radius: 11px; background: var(--surface-alt); color: var(--ink);
-  font: inherit; font-weight: 750; text-decoration: none; cursor: pointer;
+.portal-product-actions {
+  display: grid;
+  gap: 8px;
 }
-.portal-product-actions > a:hover, .portal-product-actions form button:hover {
+.portal-product-actions > a,
+.portal-product-actions form button {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  min-height: 44px;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: 11px;
+  background: var(--surface-alt);
+  color: var(--ink);
+  font: inherit;
+  font-weight: 750;
+  text-decoration: none;
+  cursor: pointer;
+}
+.portal-product-actions > a:hover,
+.portal-product-actions form button:hover {
   background: var(--primary-soft);
 }
