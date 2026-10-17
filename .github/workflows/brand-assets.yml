@@ -1,4 +1,5 @@
 name: Render and format AkiHQ branding
+# Rerun formatting after adding branded PNG PWA manifest entries
 on:
   push:
     branches: [brand/akihq-blue-gold-20261017]
