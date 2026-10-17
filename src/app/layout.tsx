@@ -23,8 +23,14 @@ export const metadata: Metadata = {
   manifest: "/manifest.webmanifest",
   robots: { index: false, follow: false },
   icons: {
-    icon: managementProduct.logo === "hq" ? "/brand/hq-mark.svg" : `/brand/${managementProduct.logo}-icon.png`,
-    apple: managementProduct.logo === "hq" ? "/brand/hq-mark.svg" : `/brand/${managementProduct.logo}-icon.png`,
+    icon:
+      managementProduct.logo === "hq"
+        ? "/brand/hq-mark.svg"
+        : `/brand/${managementProduct.logo}-icon.png`,
+    apple:
+      managementProduct.logo === "hq"
+        ? "/brand/hq-mark.svg"
+        : `/brand/${managementProduct.logo}-icon.png`,
   },
 };
 export const viewport: Viewport = { themeColor: "#1686ff" };

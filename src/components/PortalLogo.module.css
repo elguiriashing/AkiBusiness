@@ -34,8 +34,12 @@
 .duermo .wordmark i {
   color: #08735e;
 }
-.hq .wordmark span { color: #299fff; }
-.hq .wordmark i { color: #ffce3b; }
+.hq .wordmark span {
+  color: #299fff;
+}
+.hq .wordmark i {
+  color: #ffce3b;
+}
 
 :global(html[data-theme="dark"]) .duermo .wordmark span,
 :global(html[data-theme="dark"]) .duermo .wordmark i {

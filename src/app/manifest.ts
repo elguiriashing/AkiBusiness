@@ -15,7 +15,14 @@ export default async function manifest(): Promise<MetadataRoute.Manifest> {
     scope: "/",
     categories: ["business"],
     icons: roleSwapEnabled
-      ? [{ src: "/brand/hq-mark.svg", sizes: "any", type: "image/svg+xml", purpose: "any" }]
+      ? [
+          {
+            src: "/brand/hq-mark.svg",
+            sizes: "any",
+            type: "image/svg+xml",
+            purpose: "any",
+          },
+        ]
       : ([192, 512] as const).flatMap((size) => [
           {
             src: `/pwa/business-${size}.png`,
