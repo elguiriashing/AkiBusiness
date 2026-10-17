@@ -18,7 +18,10 @@
     "format:check": "prettier --check .",
     "check": "npm run lint && npm run typecheck && npm test && npm run build",
     "postinstall": "node scripts/maplibre-attribution-patch.mjs",
-    "test:e2e": "node scripts/test-business-browser.mjs"
+    "test:e2e": "node scripts/test-business-browser.mjs",
+    "predev": "node scripts/generate-brand-icons.mjs",
+    "prebuild": "node scripts/generate-brand-icons.mjs",
+    "prebuild:cloudflare": "node scripts/generate-brand-icons.mjs"
   },
   "dependencies": {
     "@supabase/ssr": "0.7.0",
