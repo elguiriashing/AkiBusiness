@@ -16,12 +16,11 @@ export default async function manifest(): Promise<MetadataRoute.Manifest> {
     categories: ["business"],
     icons: roleSwapEnabled
       ? [
-          {
-            src: "/brand/hq-mark.svg",
-            sizes: "any",
-            type: "image/svg+xml",
-            purpose: "any",
-          },
+          { src: "/brand/hq-mark.svg", sizes: "any", type: "image/svg+xml", purpose: "any" },
+          { src: "/icon-192.png", sizes: "192x192", type: "image/png", purpose: "any" },
+          { src: "/icon-512.png", sizes: "512x512", type: "image/png", purpose: "any" },
+          { src: "/brand/hq-maskable-192.png", sizes: "192x192", type: "image/png", purpose: "maskable" },
+          { src: "/brand/hq-maskable-512.png", sizes: "512x512", type: "image/png", purpose: "maskable" },
         ]
       : ([192, 512] as const).flatMap((size) => [
           {
