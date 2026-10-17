@@ -1,7 +1,7 @@
 name: Deploy verified AkiHQ brand
 on:
   push:
-    branches: [release/akihq-management-brand-v1]
+    branches: [main]
   workflow_dispatch:
 permissions:
   contents: read
