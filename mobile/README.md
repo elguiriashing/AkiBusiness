@@ -1,10 +1,10 @@
-# AkiBusiness | Mobile store-release preparation
+# AkiHQ | Mobile store-release preparation
 
 **Status: prep only. NOT a shippable AAB or IPA.** This branch intentionally does not deploy to production, create a store record, generate signing keys or submit an app. See [store-release.json](./store-release.json) for proposed IDs, localized first-pass copy, sources and explicit release gates.
 
 ## Confirmed source and product-specific review
 
-Paid operations suite target, POS, stock, CRM, team and reporting. This repository has NEXT_PUBLIC_AKISUITE_ROLE_SWAP controlling whether UI identifies as AkiHQ or AkiBusiness. Verify effective production deployment and never submit with mismatched brand, splash, seller name or product navigation. Test POS tablet split-view, printing and session recovery.
+Free AkiHQ organisation and location management hub, with black/gold pin identity. Cloudflare confirms akihq.app uses Worker akihq-management-preview, associated with the role-swapped Next.js management source in this HISTORICAL AkiBusiness repository. Confirm exact deployed Worker source/commit and NEXT_PUBLIC_AKISUITE_ROLE_SWAP before generating binaries; test company switching, listings, owner invitations, location scoping and authentication.
 
 ## Native packaging and release sequence
 
