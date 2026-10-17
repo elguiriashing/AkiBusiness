@@ -13,7 +13,6 @@
   interaction pending hosted CI; release-branch deployment not assumed live.
 - Rollback: revert header logo/menu/CSS-only changes.
 
-
 ## 2026-10-15 | Venue-scoped AkiCoches management
 
 The AkiCoches entry moves from the top-level Business navigation into each
