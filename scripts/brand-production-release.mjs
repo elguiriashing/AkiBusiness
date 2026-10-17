@@ -12,7 +12,7 @@ import ts from "typescript";
 const releases = {
   hq: {
     repository: "elguiriashing/AkiBusiness",
-    branch: "release/akihq-management-brand-v1",
+    branch: "main",
     worker: "akihq-management-preview",
     hostname: "akihq.app",
     sourceName: "akibusiness-preview",
