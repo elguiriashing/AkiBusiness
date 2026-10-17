@@ -26,10 +26,10 @@ jobs:
       - run: npm install --prefix "$RUNNER_TEMP/brand-render" --no-save --no-audit --no-fund @resvg/resvg-js@2.6.2
       - run: node scripts/render-brand-assets.mjs
       - name: Format changed frontend files
-        run: npx prettier --write src/app/layout.tsx src/app/manifest.ts src/app/product-brand.css src/components/PortalLogo.module.css src/components/PortalLogo.tsx
+        run: npx prettier --write src/app/layout.tsx src/app/manifest.ts src/app/product-brand.css src/components/PortalLogo.module.css src/components/PortalLogo.tsx scripts/render-brand-assets.mjs .github/workflows/brand-assets.yml
       - name: Commit generated icon assets and formatting on feature branch only
         run: |
-          git add public/brand/hq-icon.png public/brand/hq-maskable-192.png public/brand/hq-maskable-512.png public/icon-32.png public/icon-180.png public/icon-192.png public/icon-512.png src/app/layout.tsx src/app/manifest.ts src/app/product-brand.css src/components/PortalLogo.module.css src/components/PortalLogo.tsx
+          git add scripts/render-brand-assets.mjs .github/workflows/brand-assets.yml public/brand/hq-icon.png public/brand/hq-maskable-192.png public/brand/hq-maskable-512.png public/icon-32.png public/icon-180.png public/icon-192.png public/icon-512.png src/app/layout.tsx src/app/manifest.ts src/app/product-brand.css src/components/PortalLogo.module.css src/components/PortalLogo.tsx
           if git diff --cached --quiet; then exit 0; fi
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
