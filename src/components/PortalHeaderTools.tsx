@@ -2,7 +2,6 @@
 
 import { useEffect, useRef, type ReactNode, type CSSProperties } from "react";
 import { managementProduct, operationsProduct } from "../lib/product-roles";
-import { config } from "../lib/config";
 import { Icon } from "./Icons";
 import { LanguageLink } from "./LanguageLink";
 import { PortalLogo } from "./PortalLogo";
