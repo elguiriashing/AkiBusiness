@@ -1,12 +1,12 @@
 {
   "schemaVersion": 1,
   "status": "PREPARATION_ONLY_NOT_SUBMITTABLE",
-  "product": "AkiBusiness",
-  "webOrigin": "https://akibusiness.com",
+  "product": "AkiHQ",
+  "webOrigin": "https://akihq.app",
   "startPath": "/",
   "proposedIdentifiers": {
-    "androidApplicationId": "com.akipasa.business",
-    "iosBundleId": "com.akipasa.business",
+    "androidApplicationId": "com.akipasa.hq",
+    "iosBundleId": "com.akipasa.hq",
     "warning": "PROPOSALS ONLY. Confirm identifiers before first store app creation/signing."
   },
   "platformRequirements": {
@@ -17,15 +17,15 @@
     "primaryLocale": "es-ES",
     "secondaryLocale": "en-GB",
     "categoryCandidate": "Business",
-    "shortDescriptionEs": "Herramientas profesionales para operar tu negocio.",
-    "shortDescriptionEn": "Professional tools for running your business.",
+    "shortDescriptionEs": "Gestiona tu empresa y tus ubicaciones desde un solo lugar.",
+    "shortDescriptionEn": "Manage your organisation and locations in one place.",
     "fullDescriptionEs": "",
     "fullDescriptionEn": "",
     "privacyPolicyUrl": "",
     "supportUrl": "",
-    "marketingUrl": "https://akibusiness.com"
+    "marketingUrl": "https://akihq.app"
   },
-  "sourceObservation": "Next.js management repo with build-time NEXT_PUBLIC_AKISUITE_ROLE_SWAP; target AkiBusiness operations suite, production role must be verified",
+  "sourceObservation": "Production akihq.app is Cloudflare Worker akihq-management-preview; elguiriashing/AkiBusiness is the historical Next.js management repo with build-time role swap. Confirm exact deployed Worker commit before native packaging.",
   "gates": {
     "sourceAndLiveProductMappingVerified": false,
     "nativeAndroidBuildVerified": false,
