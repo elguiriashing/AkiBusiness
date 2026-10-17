@@ -1,0 +1,37 @@
+name: Render and format AkiHQ branding
+# Rerun formatting after adding branded PNG PWA manifest entries
+on:
+  push:
+    branches: [brand/akihq-blue-gold-20261017]
+    paths:
+      - 'public/brand/hq-mark.svg'
+      - 'public/brand/hq-maskable.svg'
+      - 'scripts/render-brand-assets.mjs'
+      - 'src/app/product-brand.css'
+      - '.github/workflows/brand-assets.yml'
+permissions:
+  contents: write
+jobs:
+  generate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: true
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci --no-audit --no-fund
+      - run: npm install --prefix "$RUNNER_TEMP/brand-render" --no-save --no-audit --no-fund @resvg/resvg-js@2.6.2
+      - run: node scripts/render-brand-assets.mjs
+      - name: Format changed frontend files
+        run: npx prettier --write src/app/layout.tsx src/app/manifest.ts src/app/product-brand.css src/components/PortalLogo.module.css src/components/PortalLogo.tsx scripts/render-brand-assets.mjs
+      - name: Commit generated icon assets and formatting on feature branch only
+        run: |
+          git add scripts/render-brand-assets.mjs public/brand/hq-icon.png public/brand/hq-maskable-192.png public/brand/hq-maskable-512.png public/icon-32.png public/icon-180.png public/icon-192.png public/icon-512.png src/app/layout.tsx src/app/manifest.ts src/app/product-brand.css src/components/PortalLogo.module.css src/components/PortalLogo.tsx
+          if git diff --cached --quiet; then exit 0; fi
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git commit -m 'Render and format AkiHQ branded favicon and PWA assets'
+          git push origin HEAD:brand/akihq-blue-gold-20261017

@@ -9,13 +9,44 @@ export default async function manifest(): Promise<MetadataRoute.Manifest> {
     description: `Gestiona locales, alojamientos y flotas con ${managementProduct.name}.`,
     start_url: "/es/business",
     display: "standalone",
-    background_color: "#192b48",
-    theme_color: "#ffd447",
+    background_color: "#0a1530",
+    theme_color: "#1686ff",
     lang: "es",
     scope: "/",
     categories: ["business"],
     icons: roleSwapEnabled
-      ? [{ src: "/brand/hq-icon.png", type: "image/png", purpose: "any" }]
+      ? [
+          {
+            src: "/brand/hq-mark.svg",
+            sizes: "any",
+            type: "image/svg+xml",
+            purpose: "any",
+          },
+          {
+            src: "/icon-192.png",
+            sizes: "192x192",
+            type: "image/png",
+            purpose: "any",
+          },
+          {
+            src: "/icon-512.png",
+            sizes: "512x512",
+            type: "image/png",
+            purpose: "any",
+          },
+          {
+            src: "/brand/hq-maskable-192.png",
+            sizes: "192x192",
+            type: "image/png",
+            purpose: "maskable",
+          },
+          {
+            src: "/brand/hq-maskable-512.png",
+            sizes: "512x512",
+            type: "image/png",
+            purpose: "maskable",
+          },
+        ]
       : ([192, 512] as const).flatMap((size) => [
           {
             src: `/pwa/business-${size}.png`,
