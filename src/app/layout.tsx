@@ -33,7 +33,7 @@ export const metadata: Metadata = {
         : `/brand/${managementProduct.logo}-icon.png`,
   },
 };
-export const viewport: Viewport = { themeColor: "#1686ff" };
+export const viewport: Viewport = { themeColor: "#111111" };
 export default async function RootLayout({
   children,
 }: {
