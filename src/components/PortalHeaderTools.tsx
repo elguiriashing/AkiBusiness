@@ -81,7 +81,7 @@ export function PortalHeaderTools({
         <div className="portal-product-popover">
           <span className="portal-apps-heading">{locale === "es" ? "Aplicaciones AkiSuite" : "AkiSuite apps"}</span>
           {apps.map((app) => {
-            const active = app.product === "management";
+            const active = (product === "business" && app.product === "management") || (product === "duermo" && app.product === "duermo");
             return (
               <a
                 key={app.product}
