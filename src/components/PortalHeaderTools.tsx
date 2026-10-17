@@ -1,8 +1,7 @@
 "use client";
 
-import { useEffect, useRef, type ReactNode } from "react";
+import { useEffect, useRef, type CSSProperties, type ReactNode } from "react";
 import { managementProduct, operationsProduct } from "../lib/product-roles";
-import { config } from "../lib/config";
 import { Icon } from "./Icons";
 import { LanguageLink } from "./LanguageLink";
 import { PortalLogo } from "./PortalLogo";
@@ -26,19 +25,38 @@ export function PortalHeaderTools({
     {
       product: "pasa",
       name: "AkiPasa",
-      href: `${config.consumerUrl.replace(/\/$/, "")}/${locale}`,
-    },
-    {
-      product: "business",
-      name: managementProduct.name,
-      href: `${config.businessUrl}/${locale}/business`,
+      href: `https://akipasa.com/${locale}`,
+      logo: "pasa",
+      accent: "#F26B1D",
     },
     {
       product: "duermo",
       name: "AkiDuermo",
       href: `https://akiduermo.com/?lang=${locale}`,
+      logo: "duermo",
+      accent: "#2FC2A5",
     },
-    { product: "hq", name: operationsProduct.name, href: config.crmUrl },
+    {
+      product: "coches",
+      name: "AkiCoches",
+      href: `https://akicoches.com/?lang=${locale}`,
+      logo: "coches",
+      accent: "#FF3047",
+    },
+    {
+      product: "management",
+      name: managementProduct.name,
+      href: `${managementProduct.origin}/${locale}/business`,
+      logo: managementProduct.logo,
+      accent: "#FFC533",
+    },
+    {
+      product: "operations",
+      name: operationsProduct.name,
+      href: operationsProduct.origin,
+      logo: operationsProduct.logo,
+      accent: "#8958FF",
+    },
   ] as const;
 
   useEffect(() => {
@@ -91,21 +109,30 @@ export function PortalHeaderTools({
           <Icon name="more" size={20} />
         </summary>
         <div className="portal-product-popover">
-          {apps
-            .filter((app) => app.product !== product)
-            .map((app) => (
-              <a key={app.product} href={app.href} aria-label={app.name}>
-                <PortalLogo
-                  product={
-                    app.product === "business"
-                      ? managementProduct.logo
-                      : app.product === "hq"
-                        ? operationsProduct.logo
-                        : app.product
-                  }
-                />
+          <span className="portal-apps-heading">
+            {locale === "es" ? "Aplicaciones AkiSuite" : "AkiSuite apps"}
+          </span>
+          {apps.map((app) => {
+            const active =
+              (product === "business" && app.product === "management") ||
+              (product === "duermo" && app.product === "duermo");
+            return (
+              <a
+                key={app.product}
+                href={app.href}
+                aria-label={app.name}
+                aria-current={active ? "page" : undefined}
+                style={{ "--app-accent": app.accent } as CSSProperties}
+              >
+                <PortalLogo product={app.logo} />
+                {active && (
+                  <span className="portal-current-app">
+                    {locale === "es" ? "Actual" : "Current"}
+                  </span>
+                )}
               </a>
-            ))}
+            );
+          })}
           {children && <div className="portal-product-actions">{children}</div>}
         </div>
       </details>

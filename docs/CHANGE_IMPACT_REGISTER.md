@@ -1,5 +1,18 @@
 # Change Impact Register
 
+## 2026-10-17 | AkiHQ management cross-site launcher
+
+- Scope: AkiHQ management portal's shared header menu and local suite assets.
+- Before: menu omitted AkiCoches and role-swapped names/URLs were ambiguous.
+- After: all five canonical AkiSuite origins with correctly mapped free AkiHQ
+  and paid AkiBusiness roles, true logo identity, localized current-product state.
+- Dependencies: deployment role-swap environment remains authoritative.
+  Existing business/property/fleet ownership, permissions, bookings, claims,
+  authentication and SQL are untouched.
+- Verification: formatting/lint/type/test, preview build and browser menu
+  interaction pending hosted CI; release-branch deployment not assumed live.
+- Rollback: revert header logo/menu/CSS-only changes.
+
 ## 2026-10-15 | Venue-scoped AkiCoches management
 
 The AkiCoches entry moves from the top-level Business navigation into each
