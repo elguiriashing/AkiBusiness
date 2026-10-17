@@ -1,3 +1,4 @@
+import { managementProduct } from "../lib/product-roles";
 import Link from "next/link";
 import { PortalLogo } from "./PortalLogo";
 import { PortalHeaderTools } from "./PortalHeaderTools";
@@ -15,10 +16,10 @@ export function BusinessHeader({
     <header className="akibusiness-topbar">
       <Link
         className="akibusiness-brand"
-        aria-label="AkiBusiness"
+        aria-label={managementProduct.name}
         href={`/${locale}/business`}
       >
-        <PortalLogo product="business" />
+        <PortalLogo product={managementProduct.logo} />
       </Link>
       <PortalHeaderTools locale={locale} product="business">
         {signedIn && (

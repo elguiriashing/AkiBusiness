@@ -6,6 +6,11 @@ on:
         description: Exact reviewed 40-character commit with successful product CI
         required: true
         type: string
+      role_swap:
+        description: Build the reviewed AkiHQ management role (isolated preview only)
+        required: true
+        default: false
+        type: boolean
       deploy_preview:
         description: Deploy the built application to its isolated workers.dev origin
         required: true
@@ -30,6 +35,7 @@ jobs:
       PREVIEW_ORIGIN: https://akibusiness-preview.alexashing1.workers.dev
       CLOUDFLARE_ACCOUNT_ID: 501bc9434d8ae555a6ac984a26dd2725
       RELEASE_PATH: /release-source.json
+      NEXT_PUBLIC_AKISUITE_ROLE_SWAP: ${{ inputs.role_swap && 'true' || 'false' }}
       NEXT_PUBLIC_PRODUCT_NAME: AkiBusiness
       NEXT_PUBLIC_SITE_URL: https://akibusiness.com
       NEXT_PUBLIC_BUSINESS_URL: https://akibusiness.com

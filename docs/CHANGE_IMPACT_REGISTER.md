@@ -1,5 +1,18 @@
 # Change Impact Register
 
+## 2026-10-17 | AkiHQ management cross-site launcher
+
+- Scope: AkiHQ management portal's shared header menu and local suite assets.
+- Before: menu omitted AkiCoches and role-swapped names/URLs were ambiguous.
+- After: all five canonical AkiSuite origins with correctly mapped free AkiHQ
+  and paid AkiBusiness roles, true logo identity, localized current-product state.
+- Dependencies: deployment role-swap environment remains authoritative.
+  Existing business/property/fleet ownership, permissions, bookings, claims,
+  authentication and SQL are untouched.
+- Verification: formatting/lint/type/test, preview build and browser menu
+  interaction pending hosted CI; release-branch deployment not assumed live.
+- Rollback: revert header logo/menu/CSS-only changes.
+
 ## 2026-10-15 | Venue-scoped AkiCoches management
 
 The AkiCoches entry moves from the top-level Business navigation into each
@@ -1542,3 +1555,53 @@ selected legacy cover imported, the existing booking count preserved, the old
 authenticated link RPC disabled and anonymous email activation denied. Security
 advisors flag the intentional deny-all legacy audit and explicitly guarded
 definer RPCs; no new public booking/contact access is granted.
+
+## 2026-10-15 | Coordinated management role build
+
+The build-time NEXT_PUBLIC_AKISUITE_ROLE_SWAP switch prepares this management
+application for AkiHQ while retaining legacy defaults, business capability keys,
+permissions and routes. Public navigation, auth origin validation, PWA/metadata,
+management email links and operations handoffs share the role map. Exact preview
+origins remain separate from canonical destinations. See MANAGEMENT_ROLE_CUTOVER.md
+for deployment order, existing entitlement limitations and rollback. No provider
+setting, database, customer mail, charge or live domain is changed by this source.
+Both flag modes have regression coverage; production/authenticated acceptance
+remains unverified and required before activation.
+
+## 2026-10-15 | Independent property management candidate
+
+The dedicated /[locale]/business/accommodations workspace uses canonical property
+IDs without dummy venues. Its bounded API/module are copied from the coordinated
+AkiPasa independent-property migration slice; no sibling runtime imports exist.
+Private create, profile/save/review submission, room/unit/rate/block/settings and
+reservation transitions retain server auth, property authorization and SQL/RLS.
+Media uses a private property bucket with bounded upload, signed reads and explicit
+gallery placement. Legacy venue-backed tools remain reachable. The server
+AKISUITE_ACCOMMODATION_READY flag defaults false until coordinated schema and
+release acceptance. Source tests do not establish live auth, booking or delivery.
+See INDEPENDENT_ACCOMMODATION_MANAGEMENT.md for verification and rollback.
+
+## 2026-10-15 | Explicit company grouping candidate
+
+The free management hub adds company creation and explicit existing-location
+attachment through reviewed authenticated RPCs. Creating a company does not
+create public listings, assign customer subscriptions or inherit operational
+permissions. Company location metadata with a null membership role has no
+operations link. Standalone private location creation remains available; only
+canonical workspace owners can request attachment, and SQL also checks company
+owner/admin authority. Existing workspace/venue relationships are never detached
+or regrouped automatically. A legacy workspace may aggregate multiple venues;
+this UI does not establish a new physical-location mapping. The server
+AKISUITE_ORGANISATIONS_READY gate remains false pending migration20261016030000
+and live acceptance. Paginated lists have explicit bounds. Name/request identity
+is retained on conflicts and unavailable retries. Source revert/closedgate rolls
+back presentation without deleting legitimate companies or mappings.
+
+### Independent accommodation team and paginated inventory
+
+- Adds canonical-owner-only explicit verified UUID manager assignment/revocation, with
+  SQL authority, owner preservation, no inherited organisation permissions or emails.
+- Adds bounded deterministic inventory/list navigation and partial-failure handling.
+- Requires additive team/pagination migration 20261016050000 before accommodation readiness.
+- Fixes standalone rental browser fixture environment definitions after shared role imports;
+  all existing browser assertions remain in place. No production configuration changed.

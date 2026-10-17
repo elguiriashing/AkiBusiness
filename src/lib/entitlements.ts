@@ -1,3 +1,4 @@
+import { roleSwapEnabled } from "./product-roles";
 import { redirect } from "next/navigation";
 import { requireUser } from "./auth";
 import type { Locale } from "./config";
@@ -59,4 +60,16 @@ export async function requireBusinessProAccess(
       `/${locale}/account/subscription?plan=business_pro&error=business_pro_required`,
     );
   return context;
+}
+
+/** The free hub lists only RLS-visible resources; entering it grants no mutations.
+ * Existing venue actions and rental/property RPCs retain resource authorization.
+ */
+export async function requireManagementHomeAccess(
+  locale: Locale,
+  next = `/${locale}/business`,
+) {
+  return roleSwapEnabled
+    ? requireUser(locale, next)
+    : requireBusinessAccess(locale, next);
 }

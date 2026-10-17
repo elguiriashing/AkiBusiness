@@ -1,4 +1,6 @@
 "use client";
+
+import { managementProduct } from "@/lib/product-roles";
 import Link from "next/link";
 import {
   saveEventTemplate,
@@ -75,7 +77,7 @@ export function AkiSuiteVenueTools({
       <header>
         <div>
           <span className="eyebrow">
-            {accommodation ? "AkiDuermo" : "AkiBusiness"}
+            {accommodation ? "AkiDuermo" : managementProduct.name}
           </span>
           <h2 id="suite-venue-growth">
             {es ? "Contenido y crecimiento" : "Content and growth"}

@@ -577,3 +577,15 @@ Actual browser acceptance caught Next retaining the old reactive query because t
 Current-head browser CI reproduced four EN/ES × light/dark 390px AkiDuermo guest journeys failing to click Hotels because the initially visible privacy panel intercepted the map filter. The shared nonmodal panel now has an EN/ES Close control (46px minimum height), scoped header styling and Escape dismissal from its controls, restoring focus to the existing Privacy trigger without scrolling the page. Closing changes visibility only: it writes no consent/version cookie, sends no POST, requests no motion permission and does not apply optional choices. Existing saved permissions remain authoritative and the draft remains available when reopened. The prompt still appears on a fresh document until an explicit consent choice is saved. Auth, account settings, consent API/RLS, telemetry permission checks, pricing, booking and production data are unchanged.
 
 Four additional component cases verify denied first visits in both locales, preserved drafts/saved permissions, keyboard focus and pending-save behavior. The existing eight locale/theme/mobile/desktop guest journeys now assert the real initially open panel, denied defaults, normal dismissal, focus restoration and zero consent writes before their ordinary discovery/filter interactions. Focused tests, complete browser/check/Cloudflare CI and exact live-source smoke remain release gates. Rollback is an application source revert; no migration or customer-data restoration.
+
+## 2026-10-15 | Coordinated management role build
+
+The build-time NEXT_PUBLIC_AKISUITE_ROLE_SWAP switch prepares this management
+application for AkiHQ while retaining legacy defaults, business capability keys,
+permissions and routes. Public navigation, auth origin validation, PWA/metadata,
+management email links and operations handoffs share the role map. Exact preview
+origins remain separate from canonical destinations. See MANAGEMENT_ROLE_CUTOVER.md
+for deployment order, existing entitlement limitations and rollback. No provider
+setting, database, customer mail, charge or live domain is changed by this source.
+Both flag modes have regression coverage; production/authenticated acceptance
+remains unverified and required before activation.

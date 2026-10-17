@@ -1071,3 +1071,44 @@ CI, clean Cloudflare packaging and authenticated preview acceptance are required
 before release. Rollback: revert app code; keep the compatible additive RPC, or
 revoke/drop that function in a reviewed forward migration. Never unlink records
 or drop customer data as rollback.
+
+## 2026-10-15 | Coordinated management role build
+
+The build-time NEXT_PUBLIC_AKISUITE_ROLE_SWAP switch prepares this management
+application for AkiHQ while retaining legacy defaults, business capability keys,
+permissions and routes. Public navigation, auth origin validation, PWA/metadata,
+management email links and operations handoffs share the role map. Exact preview
+origins remain separate from canonical destinations. See MANAGEMENT_ROLE_CUTOVER.md
+for deployment order, existing entitlement limitations and rollback. No provider
+setting, database, customer mail, charge or live domain is changed by this source.
+Both flag modes have regression coverage; production/authenticated acceptance
+remains unverified and required before activation.
+
+## 2026-10-15 | Independent property management candidate
+
+The dedicated /[locale]/business/accommodations workspace uses canonical property
+IDs without dummy venues. Its bounded API/module are copied from the coordinated
+AkiPasa independent-property migration slice; no sibling runtime imports exist.
+Private create, profile/save/review submission, room/unit/rate/block/settings and
+reservation transitions retain server auth, property authorization and SQL/RLS.
+Media uses a private property bucket with bounded upload, signed reads and explicit
+gallery placement. Legacy venue-backed tools remain reachable. The server
+AKISUITE_ACCOMMODATION_READY flag defaults false until coordinated schema and
+release acceptance. Source tests do not establish live auth, booking or delivery.
+See INDEPENDENT_ACCOMMODATION_MANAGEMENT.md for verification and rollback.
+
+## 2026-10-15 | Explicit company grouping candidate
+
+The free management hub adds company creation and explicit existing-location
+attachment through reviewed authenticated RPCs. Creating a company does not
+create public listings, assign customer subscriptions or inherit operational
+permissions. Company location metadata with a null membership role has no
+operations link. Standalone private location creation remains available; only
+canonical workspace owners can request attachment, and SQL also checks company
+owner/admin authority. Existing workspace/venue relationships are never detached
+or regrouped automatically. A legacy workspace may aggregate multiple venues;
+this UI does not establish a new physical-location mapping. The server
+AKISUITE_ORGANISATIONS_READY gate remains false pending migration20261016030000
+and live acceptance. Paginated lists have explicit bounds. Name/request identity
+is retained on conflicts and unavailable retries. Source revert/closedgate rolls
+back presentation without deleting legitimate companies or mappings.

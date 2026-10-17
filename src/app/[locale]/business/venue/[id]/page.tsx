@@ -1,3 +1,4 @@
+import { managementProduct } from "@/lib/product-roles";
 import { AccommodationBookingWorkspace } from "@/components/AccommodationBookingWorkspace";
 import { bookingEmailConfigured } from "@/lib/booking-mail-delivery";
 import {
@@ -539,8 +540,8 @@ export default async function VenueWorkspace({
               </h2>
               <p>
                 {es
-                  ? "Gestiona tu ficha, fotografías y equipo desde AkiBusiness. Tu sección de reservas AkiDuermo tiene herramientas específicas para noches; todavía no acepta reservas hoteleras hasta activar un inventario verificado."
-                  : "Manage your listing, photos and team in AkiBusiness. Your dedicated AkiDuermo booking area is designed for overnight stays and remains non-bookable until verified inventory is available."}
+                  ? `Gestiona tu ficha, fotografías y equipo desde ${managementProduct.name}. Tu sección de reservas AkiDuermo tiene herramientas específicas para noches; todavía no acepta reservas hoteleras hasta activar un inventario verificado.`
+                  : `Manage your listing, photos and team in ${managementProduct.name}. Your dedicated AkiDuermo booking area is designed for overnight stays and remains non-bookable until verified inventory is available.`}
               </p>
               {venue.status === "published" && (
                 <a

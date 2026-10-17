@@ -1,5 +1,7 @@
 "use client";
 
+import { managementProduct } from "@/lib/product-roles";
+
 import Image from "next/image";
 import { RentalBookingsDashboard } from "./RentalBookingsDashboard";
 import Link from "next/link";
@@ -342,7 +344,7 @@ export function RentalOperatorDesk({
     >
       <header className={s.header}>
         <Link className={s.back} href={`/${locale}/business`}>
-          ← AkiBusiness
+          ← {managementProduct.name}
         </Link>
         <div className={s.brand}>
           Aki<span>Coches</span>

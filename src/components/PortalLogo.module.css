@@ -21,8 +21,9 @@
 .wordmark i {
   font-style: normal;
 }
+.business .wordmark span,
 .business .wordmark i {
-  color: #c99700;
+  color: #a778ff;
 }
 .pasa .wordmark span {
   color: #f26b1d;
@@ -36,7 +37,11 @@
 }
 .hq .wordmark span,
 .hq .wordmark i {
-  color: #9162dc;
+  color: #ffc533;
+}
+.coches .wordmark span,
+.coches .wordmark i {
+  color: #ff3047;
 }
 
 :global(html[data-theme="dark"]) .duermo .wordmark span,
