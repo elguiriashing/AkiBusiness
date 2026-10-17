@@ -5,6 +5,7 @@ import "./brand.css";
 import "./appearance.css";
 import "./tablet-responsive.css";
 import "./portal-unity.css";
+import "./product-brand.css";
 import type { Metadata, Viewport } from "next";
 import { headers } from "next/headers";
 import { PwaRegistration } from "@/components/PwaRegistration";
@@ -22,11 +23,11 @@ export const metadata: Metadata = {
   manifest: "/manifest.webmanifest",
   robots: { index: false, follow: false },
   icons: {
-    icon: `/brand/${managementProduct.logo}-icon.png`,
-    apple: `/brand/${managementProduct.logo}-icon.png`,
+    icon: managementProduct.logo === "hq" ? "/brand/hq-mark.svg" : `/brand/${managementProduct.logo}-icon.png`,
+    apple: managementProduct.logo === "hq" ? "/brand/hq-mark.svg" : `/brand/${managementProduct.logo}-icon.png`,
   },
 };
-export const viewport: Viewport = { themeColor: "#ffd447" };
+export const viewport: Viewport = { themeColor: "#1686ff" };
 export default async function RootLayout({
   children,
 }: {
