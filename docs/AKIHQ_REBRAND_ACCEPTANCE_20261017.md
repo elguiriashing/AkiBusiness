@@ -17,3 +17,13 @@ bindings and secrets. A missing GitHub `CLOUDFLARE_API_TOKEN` secret fails
 closed. The exact source fingerprint, SVG/favicon, PNG and installed PWA manifest
 are checked after deployment. The separate AkiBusiness purple AB icon is not
 modified. Rollback uses the previous Worker version, not a schema migration.
+
+## Git branch promotion / production deployment
+
+After the reviewed management release has been promoted to repository `main`,
+only `main` pushes may trigger production deployment to the existing
+`akihq-management-preview` Worker bound to `akihq.app`. The long-lived
+`release/akihq-management-brand-v1` branch is a staging/review source; pushing
+there must not automatically publish unmerged work. Production deployment still
+requires the scoped GitHub Actions `CLOUDFLARE_API_TOKEN` secret and must fail
+closed when credentials, domain bindings or exact-source validation are missing.
