@@ -7,7 +7,9 @@ export const metadata = {
   robots: { index: false, follow: false },
 };
 
-export default async function MembershipPage({ params }: {
+export default async function MembershipPage({
+  params,
+}: {
   params: Promise<{ locale: string }>;
 }) {
   const { locale } = await params;
