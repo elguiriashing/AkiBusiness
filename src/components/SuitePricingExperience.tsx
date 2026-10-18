@@ -103,7 +103,7 @@ export function SuitePricingExperience({
     : ([...(personalUnlocked ? ["personal"] as Offer[] : []), "listing", "standard", "pro", "enterprise"] as Offer[]);
   const catalogue: Record<Offer, { name: string; label: string; benefits: readonly string[] }> = {
     personal: { name: `${app.name} Premium`, label: es ? "Para ti" : "For you", benefits: es ? app.personalEs : app.personalEn },
-    listing: { name: product === "akihq" ? "Premium for businesses" : `${app.name} Premium`, label: es ? "Para empresas" : "For businesses", benefits: es ? app.listingEs : app.listingEn },
+    listing: { name: product === "akihq" ? (es ? "Premium para empresas" : "Premium for businesses") : `${app.name} Premium ${es ? "para empresas" : "for Businesses"}`, label: es ? "Para empresas" : "For businesses", benefits: es ? app.listingEs : app.listingEn },
     standard: { name: "AkiBusiness Standard", label: es ? "Operaciones" : "Operations", benefits: standardFeatures[locale] },
     pro: { name: "AkiBusiness Pro", label: es ? "Operaciones avanzadas" : "Advanced operations", benefits: proFeatures[locale] },
     enterprise: { name: "AkiEnterprise", label: es ? "Toda la suite" : "Complete suite", benefits: enterpriseFeatures[locale] },
