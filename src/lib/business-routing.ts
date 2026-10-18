@@ -18,7 +18,9 @@ export function businessRoute(path: string, method = "GET") {
       kind: "redirect",
       path: `${path.replace(/\/$/, "")}/business`,
     } as const;
-  if (/^\/(en|es)\/(membership|memberships|account)(?:\/|$)/.test(path))
+  if (/^\/(en|es)\/membership\/?$/.test(path))
+    return { kind: "local", path } as const;
+  if (/^\/(en|es)\/(memberships|account)(?:\/|$)/.test(path))
     return { kind: "primary", path } as const;
   if (/^\/(en|es)\/(business|auth|terms|privacy)(?:\/|$)/.test(path))
     return { kind: "local", path } as const;
