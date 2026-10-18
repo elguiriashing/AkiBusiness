@@ -86,6 +86,12 @@ describe("independent business boundary", () => {
         expect(businessRoute(`/${locale}/${path}`, "POST").kind).toBe("local");
     }
   });
+  it("keeps localized AkiHQ membership pages on-site, but old billing remains central", () => {
+    expect(businessRoute("/en/membership")).toEqual({ kind: "local", path: "/en/membership" });
+    expect(businessRoute("/es/membership")).toEqual({ kind: "local", path: "/es/membership" });
+    expect(businessRoute("/en/account/subscription").kind).toBe("primary");
+    expect(businessRoute("/api/stripe/webhook", "POST").kind).toBe("reject");
+  });
   it("retains management APIs without exposing billing or administrative endpoints", () => {
     for (const path of [
       "/api/business/venue-media",
