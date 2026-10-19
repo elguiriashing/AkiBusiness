@@ -13,8 +13,9 @@
   return `<!doctype html><html><head><meta charset="utf-8"><title>${esc(ticket.kind)} ${esc(ticket.id)}</title><style>@page{size:${width===58?58:80}mm auto;margin:3mm}body{font:13px monospace;color:#000;width:${width===58?50:72}mm}h1{font-size:18px}li{margin:8px 0}ul{padding-left:16px}.notice{border:2px solid;padding:5px}small{overflow-wrap:anywhere}</style></head><body><h1>${esc(workspace.name)}</h1><h2>${esc(ticket.station)} · ${esc(ticket.kind)}</h2>${p.copy_of?'<h2>COPY / DUPLICADO</h2>':''}<p class="notice">${esc(p.notice||'OPERATIONAL TICKET — NO ES FACTURA')}</p><p>${esc(p.instruction||'')}</p><strong>${esc(o.label)}</strong><p>${esc(o.note)}</p>${Array.isArray(p.released)?`<h3>NEWLY FIRED / RECIÉN MARCHADO · ${esc(p.course)}</h3>${list(p.released)}<p>PREVIOUS / CURRENT BELOW ARE REFERENCE ONLY</p>`:''}${ticket.kind==='preparation'?`<h3>Previous</h3>${list(p.previous)}<h3>Current required</h3>${list(p.current)}`:list(o.lines)}${p.destination?.id?`<h3>Destination ${esc(p.destination.table_id||'Walk-in')}</h3>${list(p.destination.lines)}`:''}${p.reason?`<p>${esc(p.reason)}</p>`:''}${p.total_cents!==undefined?`<p>Total ${esc(money(p.total_cents,currency))}<br>Recorded payments ${esc(money(p.paid_cents,currency))}<br>Balance ${esc(money(p.total_cents-p.paid_cents,currency))}</p>${(o.payments||[]).map(x=>`<p>${esc(x.method)} ${esc(money(x.amount_cents,currency))} ${esc(x.reference)}${x.change_cents?` · Change ${esc(money(x.change_cents,currency))}`:''}</p>`).join('')}`:''}<small>Order ${esc(o.id||ticket.order_id)}<br>Ticket ${esc(ticket.id)}<br>${esc(ticket.created_at)}${o.sale_id?`<br>Sale ${esc(o.sale_id)}`:''}</small><p>Keep with the final invoice where required.</p></body></html>`;
  }
  function create(ctx){
-  let view='terminal',category='All',designerCategory='All',panel='',panelLine='',paymentAmount=null,immersive=false,data=null,error='',selected='',page='',busy=false,disposed=false,started=false,timer=null,last='',printTicket=null,printAttempted=false,layoutDraft=null,layoutVersion=null,pairedDevice=null,printerDevices=[],printerFilter='kitchen',printerStation='all',printerSelected='',printerSettings=false,tapJobs=[],tapTimer=null,tapDrain=null,tapInFlight=0,ledger=null,ledgerLoading=false,ledgerError='',ledgerFilters={},ledgerMode='bills',ledgerSelected='',closingConfirm=false,productQuery='',favouritesOnly=false,serviceFilters={},serviceSelected='',snapshotAt=0,lastServiceMinute=-1,courseReview=null,entryCourses={};
+  let view='terminal',category='All',designerCategory='All',panel='',panelLine='',paymentAmount=null,immersive=false,data=null,error='',selected='',page='',busy=false,cashSubmitting=false,disposed=false,started=false,timer=null,last='',printTicket=null,printAttempted=false,layoutDraft=null,layoutVersion=null,pairedDevice=null,printerDevices=[],printerFilter='kitchen',printerStation='all',printerSelected='',printerSettings=false,tapJobs=[],tapTimer=null,tapDrain=null,tapInFlight=0,ledger=null,ledgerLoading=false,ledgerError='',ledgerFilters={},ledgerMode='bills',ledgerSelected='',closingConfirm=false,productQuery='',favouritesOnly=false,serviceFilters={},serviceSelected='',snapshotAt=0,lastServiceMinute=-1,courseReview=null,entryCourses={};
   const key=`akihq:hospitality:${ctx.actor}:${ctx.workspace.id}`;
+  const cashKey=key+':cash';
   function refresh(){
    if(disposed)return;
    const expanded=new Set([...root.document.querySelectorAll('.hp-shell details[open]')].map(d=>d.querySelector(':scope > summary')?.textContent));
@@ -92,20 +93,21 @@
    saveLayout:(layout,version)=>execute({action:'layout',layout,version})
   });
   function pending(){try{return JSON.parse(root.localStorage.getItem(key)||'null')}catch{throw Error('Saved request is unreadable. Do not clear browser storage; contact support.')}}
+  function cashPending(){try{return JSON.parse(root.localStorage.getItem(cashKey)||'null')}catch{throw Error('Saved cash request is unreadable. Do not clear browser storage; contact support.')}}
   async function rpc(name,args={}){if(disposed)throw Error('Workspace changed');const r=await ctx.client.rpc(name,{p_workspace:ctx.workspace.id,...args});if(disposed)throw Error('Workspace changed');if(r.error)throw Error(r.error.message);return r.data;}
   async function load(){if(busy||!active())return;try{const next=await rpc('crm_hospitality_overview');if(!active())return;const signature=JSON.stringify({...next,server_time:null});data=next;snapshotAt=Date.now();error='';const minute=Math.floor(serviceNow()/60000);if(signature!==last||(view==='service'&&minute!==lastServiceMinute)){last=signature;lastServiceMinute=minute;const focused=root.document.activeElement;if(!layoutDraft&&!focused?.closest?.('.hp-form, .hp-v4-form, .hp-v4-inline-form, .hp-v4-product-row')&&!root.document.querySelector('.hp-form[data-dirty], .hp-v4-form[data-dirty], .hp-v4-inline-form[data-dirty], .hp-v4-product-row[data-dirty], .hp-ps-copy form[data-dirty], .hp-ps-pair[data-dirty]'))refresh();}}catch(e){if(!active())return;data=null;error=e.message;refresh();}}
   async function loadLedger(){
     if(disposed||!active()||ledgerLoading)return;
     ledgerLoading=true;ledgerError='';
     try{
-      const result=await rpc('crm_pos_ledger',{p_filters:{
+      const [result,cash]=await Promise.all([rpc('crm_pos_ledger',{p_filters:{
         from_date:ledgerFilters.from_date||null,to_date:ledgerFilters.to_date||null,
         table:ledgerFilters.table||"",item:ledgerFilters.item||"",
         account:ledgerFilters.account||"",trading_day:ledgerFilters.trading_day||"",
         min_cents:ledgerFilters.min_cents??null,max_cents:ledgerFilters.max_cents??null,
         offset:Number(ledgerFilters.offset||0),limit:30
-      }});
-      if(active())ledger=result;
+      }}),rpc('crm_pos_cash_overview')]);
+      if(active())ledger={...result,cash};
     }catch(e){if(active())ledgerError=e.message;}
     finally{ledgerLoading=false;refresh();}
   }
@@ -116,7 +118,7 @@
   }
   async function changeTradingDay(action){
     if(!data?.can_manage)throw Error('Manager permission required to manage trading days.');
-    await rpc('crm_pos_trading_day',{p_action:action,p_day:action==='end'?ledger?.active_day?.id:null});
+    await rpc('crm_pos_trading_day',{p_action:action,p_day:null});
     closingConfirm=false;ledgerFilters={...ledgerFilters,offset:0};
     await loadLedger();
   }
@@ -234,12 +236,32 @@
     return result;
    }finally{busy=false;await load();refresh();}
   }
+  async function executeCash(command,retry=false){
+   if(cashSubmitting)throw Error('A cash request is already in progress.');
+   if(!root.navigator.locks?.request)throw Error('Use an up-to-date browser over HTTPS to safely record cash controls.');
+   cashSubmitting=true;
+   try{
+    return await root.navigator.locks.request(cashKey,{},async lock=>{
+     if(!lock)throw Error('Unable to lock cash controls; review the other tab.');
+     let p=cashPending();
+     if(!retry){if(p)throw Error('Resolve the pending cash request first.');p={key:root.crypto.randomUUID(),command};root.localStorage.setItem(cashKey,JSON.stringify(p));}
+     if(!p)throw Error('No pending cash request.');
+     let response;
+     try{response=await ctx.client.rpc('crm_pos_cash_command',{p_workspace:ctx.workspace.id,p_key:p.key,p_command:p.command});}
+     catch(e){throw e;}
+     if(disposed)throw Error('Workspace changed');
+     if(response.error){root.localStorage.removeItem(cashKey);throw Error(response.error.message);}
+     root.localStorage.removeItem(cashKey);
+     return response.data;
+    });
+   }finally{cashSubmitting=false;await loadLedger();refresh();}
+  }
   const current=()=>data?.orders.find(x=>x.id===selected);
   const orderAttrs=o=>`data-order="${esc(o.id)}" data-version="${o.version}"`;
   const tables=()=>[['','New walk-in order'],...(data?.layout.tables||[]).map(t=>[t.id,`${t.name} · ${data.layout.pages.find(p=>p.id===t.page)?.name||''}`])];
   function render(){
-   start();let p=null;try{p=pending()}catch(e){error=e.message}
-   const recovery=p?`<section class="panel hp-card"><h3>Request awaiting confirmation</h3><p>New changes are blocked until this request is resolved. Retry uses the original reference.</p>${btn('retry','Retry / check result')}${btn('abandon','Check result and cancel if unrecorded')}</section>`:'';
+   start();let p=null,cp=null;try{p=pending();cp=cashPending()}catch(e){error=e.message}
+   const recovery=(p?`<section class="panel hp-card"><h3>Request awaiting confirmation</h3><p>New changes are blocked until this request is resolved. Retry uses the original reference.</p>${btn('retry','Retry / check result')}${btn('abandon','Check result and cancel if unrecorded')}</section>`:'')+(cp?`<section class="panel hp-card"><h3>Cash request awaiting confirmation</h3><p>Cash controls are blocked until this request is checked. Retry reuses the original reference and trading day.</p>${btn('cash-retry','Retry / check cash result')}</section>`:'');
    if(!data)return `<div class="hp-shell">${recovery}<section class="panel hp-card"><h2>Shared Point of Sale</h2><p role="status">${esc(error||'Connecting to shared orders…')}</p>${btn('refresh','Reconnect')}<p>This view requires the hospitality database migration. Fiscal invoicing remains unavailable.</p></section></div>`;
    const o=current(),layout=layoutDraft||data.layout;page=layout.pages.some(x=>x.id===page)?page:layout.pages[0]?.id||'';
    const floor=layout.mode==='restaurant'?`<section class="panel hp-card"><nav class="hp-toolbar">${data.can_manage?layoutDraft?btn('layout-save','Save layout')+btn('layout-discard','Discard changes'):btn('layout-edit','Arrange tables'):''}${layout.pages.map(p=>btn('page',p.name,`data-id="${esc(p.id)}" aria-pressed="${p.id===page}"`)).join('')}</nav><p>${layoutDraft?'Drag tables to move them; drag the corner to resize. Keyboard: arrows move, Alt + arrows resize, Shift uses larger steps.':'Tap a table to open its order.'}</p><div class="hp-floor" aria-label="Tables">${layout.tables.filter(t=>t.page===page).map(t=>{const order=data.orders.find(o=>o.table_id===t.id);return `<button class="hp-table ${order?'occupied':''} ${t.shape}" style="left:${Number(t.x)}%;top:${Number(t.y)}%;width:${Number(t.width)}%;height:${Number(t.height)}%" ${layoutDraft?'data-floor-edit="true"':'data-action="hp-table"'} data-id="${esc(t.id)}"><strong>${esc(t.name)}</strong><small>${t.seats} seats${order?` · ${esc(money(order.total_cents,ctx.workspace.currency))}`:''}</small>${layoutDraft?'<span data-floor-resize aria-hidden="true" class="hp-resize">↘</span>':''}</button>`}).join('')||'<p>Add a page and tables in Floor settings.</p>'}</div></section>`:'';
@@ -255,7 +277,7 @@
    const exports=data.can_export?`<details class="panel hp-card"><summary>Accountant evidence export</summary><p>Operational evidence only, not an official tax book.</p>${form('export',input('From','from','','date','required')+input('Through','through','','date','required'))}</details>`:'';
    if(view==='kitchen'&&kitchen)return `<div class="hp-shell hp-terminal hp-kds-host ${immersive?'hp-immersive':''}" aria-busy="${busy}">${switcher}${error?`<p role="alert">${esc(error)}</p>`:''}${recovery}${kitchen.render()}</div>`;
    if(view==='service'&&root.AkiPosService)return `<div class="hp-shell hp-terminal hp-service-host ${immersive?'hp-immersive':''}" aria-busy="${busy}">${switcher}${error?`<p role="alert">${esc(error)}</p>`:''}${recovery}${root.AkiPosService.serviceBody(data,serviceFilters,ctx.workspace.currency,serviceNow())}${root.AkiPosService.preparationPanel(data.orders.find(x=>x.id===serviceSelected),data.layout,!!p||busy||!!outstandingTaps())}</div>`;
-   if(view==='ledger')return `<div class="hp-shell hp-ledger-host">${switcher}${ledgerMarkup()}</div>`;
+   if(view==='ledger')return `<div class="hp-shell hp-ledger-host">${switcher}${recovery}${ledgerMarkup()}</div>`;
    if(view==='designer'&&data.can_manage)return `<div class="hp-shell hp-designer hp-v4-design-host" aria-busy="${busy}">${switcher}${error?`<p role="alert">${esc(error)}</p>`:''}${recovery}${root.AkiPosV4.designer(data,designerCategory)}<div class="hp-v4-design-floors"><h2>Floor & table designer</h2>${floor}${settings()}</div><div class="hp-v4-design-printers"><section class="panel hp-card"><h2>Printer station</h2><p>Manage the print queue and paired printers without leaving the designer.</p>${btn("printer-panel","Open printer station")}</section></div>${exports}${panel==="printer"?printerView():""}${variants?.render()||''}</div>`;
 
    return `<div class="hp-shell hp-terminal ${immersive?"hp-immersive ":""}${o?'hp-order-open':'hp-floor-open'}" aria-busy="${busy}">${o?'<div class="hp-register-intro">':''}${switcher}${error?`<p role="alert">${esc(error)}</p>`:''}${recovery}<div class="hp-day-shortcut">${ledger?.active_day?`<span><strong>Trading day active</strong> · ${root.AkiPosLedger.money(ledger.summary?.active_cents,ctx.workspace.currency)}</span>`:`<span><strong>No trading day running</strong> · Start when your venue opens.</span>`}${!ledger?.active_day&&data.can_manage?btn('day-start','▶ Start trading day'):''}${btn('switch-view','Trading day / Lookup','data-id="ledger"')}</div><div class="hp-terminal-top"><div class="hp-toolbar">${o?btn('back','← All tables'):btn('open','+ Walk-in')}${o?`<strong class="hp-register-table">${esc(tableName(o))}</strong>`:''}${btn('printer-panel',`Print queue (${root.AkiPrinterStation.decorate(data.tickets,data.orders,data.recent).filter(t=>t.active&&t.status==='queued').length})`)}${btn('refresh','Refresh')}</div>${layout.mode==='restaurant'&&!o?`<nav class="hp-floor-tabs">${layout.pages.map(p=>btn('page',p.name,`data-id="${esc(p.id)}" aria-pressed="${p.id===page}"`)).join('')}</nav>`:''}</div>${o?'</div>':''}${o?`<div class="hp-terminal-body hp-register-menu">${catalogue}</div><aside class="hp-terminal-bill hp-register-ticket" aria-label="Active ticket">${quickBill}</aside>`:`<div class="hp-terminal-body">${tileFloor}${layout.mode==='till'?orders:''}</div>`}${panel==="printer"?printerView():panel==='courses'&&courseReview?root.AkiPosCourses.dialog(courseReview.order,o,courseReview.course,{blocked:busy||!!pending()||outstandingTaps()>0,staleConnection:Date.now()-snapshotAt>10000}):o&&panel?root.AkiPosDialogs.view(panel,o,{...data,currency:ctx.workspace.currency},panelLine,paymentAmount):""}${variants?.render()||''}</div>`;
@@ -333,15 +355,16 @@
    if(a==='ledger-bill'){ledgerSelected=target.dataset.id;refresh();return;}
    if(a==='ledger-close'){ledgerSelected='';refresh();return;}
    if(a==='ledger-open-day'){ledgerMode='bills';ledgerFilters={...ledgerFilters,trading_day:target.dataset.id,offset:0};await loadLedger();return;}
-   if(a==='day-start'){await changeTradingDay('start');return;}
-   if(a==='day-end'){closingConfirm=true;refresh();return;}
+   if(a==='day-start'){await changeTradingDay('start');closingConfirm='opening';refresh();return;}
+   if(a==='day-end'){closingConfirm='close';refresh();return;}
+   if(a==='cash-open'){closingConfirm=['opening','pay_in','cash_drop'].includes(target.dataset.mode)?target.dataset.mode:false;refresh();return;}
    if(a==='day-cancel'){closingConfirm=false;refresh();return;}
-   if(a==='day-confirm'){await changeTradingDay('end');return;}
    if(a==='category'){category=target.dataset.id;refresh();return;}
    if(a==='back'){selected='';panel='';refresh();return;}
    if(a==='refresh'){await load();refresh();return;}
    if(a==='page'){page=target.dataset.id;refresh();return;}if(a==='select'){selected=target.dataset.id;panel='';panelLine='';refresh();return;}
    if(a==='retry'){await execute(null,true);return;}
+   if(a==='cash-retry'){await executeCash(null,true);closingConfirm=false;return;}
    if(a==='abandon'){if(!root.navigator.locks?.request)throw Error('Use an up-to-date browser over HTTPS');await root.navigator.locks.request(key,{ifAvailable:true},async lock=>{if(!lock)throw Error('Another tab is recording an order');const p=pending();if(p){const r=await rpc('crm_hospitality_command',{p_key:root.crypto.randomUUID(),p_command:{action:'abandon',key:p.key}});root.localStorage.removeItem(key);if(r.response?.order_id)selected=r.response.order_id;ctx.toast('Request resolved',r.already_completed?'It was already recorded.':'Unrecorded request cancelled.');}await load();refresh();});return;}
    if(a.startsWith('print')){if(!printTicket||printAttempted)throw Error('Inspect the printer; request a marked copy if another print is needed');const w=root.open('','_blank','width=420,height=650');if(!w)throw Error('Allow the print window in this browser');w.opener=null;try{await execute({action:'begin_print',ticket_id:printTicket.id});printAttempted=true;}catch(e){w.close();throw e;}w.document.write(ticketHTML(printTicket,ctx.workspace,a==='print58'?58:80));w.document.close();w.focus();w.print();refresh();return;}
    let c={action:a,order_id:target.dataset.order,version:Number(target.dataset.version)};
@@ -374,6 +397,19 @@
     if(min!==null&&max!==null&&min>max)throw Error('Minimum amount exceeds maximum.');
     ledgerFilters={...v,min_cents:min,max_cents:max,offset:0};
     ledgerSelected='';await loadLedger();return;
+   }
+   if(a.startsWith('cash-')){
+    if(!data?.can_manage)throw Error('Manager permission required for cash controls.');
+    if(cashPending())throw Error('Resolve the pending cash request first.');
+    const tradingDay=ledger?.active_day?.id;
+    if(!tradingDay)throw Error('The trading day changed. Reload cash controls.');
+    const cents=value=>{const text=String(value||'').trim();if(!/^\d{1,9}(\.\d{1,2})?$/.test(text))throw Error('Enter a valid cash amount.');return Math.round(Number(text)*100)};
+    let command;
+    if(a==='cash-opening')command={action:'opening_float',trading_day_id:tradingDay,amount_cents:cents(v.amount)};
+    else if(a==='cash-movement')command={action:'movement',trading_day_id:tradingDay,kind:f.dataset.kind,amount_cents:cents(v.amount),reason:String(v.reason||'').trim()};
+    else command={action:'reconcile_close',trading_day_id:tradingDay,counted_cents:cents(v.counted),reason:String(v.reason||'').trim()};
+    await executeCash(command);
+    closingConfirm=false;ledgerFilters={...ledgerFilters,offset:0};await loadLedger();return;
    }
    if(a.startsWith('menu-')){
     if(!data?.can_manage)throw Error('Manager permission required');
