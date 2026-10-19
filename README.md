@@ -10,6 +10,11 @@ Serve this directory as static assets (for example `python3 -m http.server 8080`
 
 The original repository is retained in Git history; no runtime GitHub checkout or frontend proxy to AkiHQ is required. AkiHQ's free management hub is a separate product in `elguiriashing/akihq`. Both may use the existing Supabase backend and authorized cross-product navigation.
 
+The recovered PoS stack and its immutable upstream heads are recorded in
+[`docs/POS-RECOVERY-20261019.md`](docs/POS-RECOVERY-20261019.md). Its local plan
+catalogue is informational and deliberately has no checkout or payment capture;
+prices and activation remain staged pending an approved commercial release.
+
 ## Deployment separation
 
 Target: existing Cloudflare Pages project **akibusiness-operations-preview**, whose custom domain currently serves **akibusiness.com**. Its current GitHub source is the historical `akihq` repository; reconnect to `elguiriashing/AkiBusiness` `main` only after verified CI/preview acceptance. Cloudflare Pages build command should remain empty and output directory the repository root.

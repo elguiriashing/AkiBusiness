@@ -2110,9 +2110,9 @@
               <span class="nav-icon">${icon("settings")}</span>
               <span class="nav-text">${escapeHtml(t("settings"))}</span>
             </button>
-            <a class="nav-item" href="https://akipasa.com/${state.settings?.locale === "es" ? "es" : "en"}/account/subscription?from=akihq" title="${state.settings?.locale === "es" ? "Gestionar membresías" : "Manage AkiSuite memberships"}" style="text-decoration:none;">
+            <a class="nav-item" href="/membership.html?locale=${state.settings?.locale === "es" ? "es" : "en"}" title="${state.settings?.locale === "es" ? "Ver planes de AkiBusiness" : "View AkiBusiness plans"}" style="text-decoration:none;">
               <span class="nav-icon">${icon("settings")}</span>
-              <span class="nav-text">${state.settings?.locale === "es" ? "Membresías AkiSuite" : "AkiSuite memberships"}</span>
+              <span class="nav-text">${state.settings?.locale === "es" ? "Planes AkiBusiness" : "AkiBusiness plans"}</span>
             </a>
             <a class="nav-item" href="https://akipasa.com" target="_blank" rel="noopener noreferrer" title="Open public website (akipasa.com)" style="text-decoration:none;">
               <span class="nav-icon">${icon("external")}</span>
