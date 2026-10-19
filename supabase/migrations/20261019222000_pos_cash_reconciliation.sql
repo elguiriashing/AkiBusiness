@@ -123,6 +123,7 @@ begin
  end if;
  select * into day from akihq_hospitality.trading_days where workspace_id=p_workspace and ended_at is null order by started_at desc limit 1 for update;
  if day.id is null then raise exception 'Start a trading day before using cash controls'; end if;
+ if nullif(p_command->>'trading_day_id','')::uuid is distinct from day.id then raise exception 'Trading day changed; reload cash controls'; end if;
  select * into shift from akihq_hospitality.cash_shifts where workspace_id=p_workspace and trading_day_id=day.id for update;
  if shift.trading_day_id is null then raise exception 'Cash controls are unavailable for this trading day'; end if;
  if action='opening_float' then

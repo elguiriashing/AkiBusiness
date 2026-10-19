@@ -7,7 +7,7 @@ let db;
 test.before(async()=>{
  db=new PGlite();await setupKitchenDatabase(db);
  await db.exec("insert into public.crm_role_template_tools values('10000000-0000-0000-0000-000000000001','pos')");
- for(const file of ['20261010223000_pos_trading_days_ledger.sql','20261019222000_pos_cash_reconciliation.sql'])
+ for(const file of ['20261010223000_pos_trading_days_ledger.sql','20261019222000_pos_cash_reconciliation.sql','20261019224000_pos_cash_command_safety.sql'])
   await db.exec(readFileSync(new URL('../supabase/migrations/'+file,import.meta.url),'utf8'));
 });
 test.after(async()=>db.close());
@@ -17,7 +17,10 @@ async function rpc(name,args,who='owner',workspace='tenant-a'){
  finally{await db.exec('reset role')}
 }
 const day=(action,id=null)=>rpc('crm_pos_trading_day',['tenant-a',action,id,'Synthetic service']);
-const cash=(command,key=crypto.randomUUID(),who='owner',workspace='tenant-a')=>rpc('crm_pos_cash_command',[workspace,key,command],who,workspace);
+const cash=async(command,key=crypto.randomUUID(),who='owner',workspace='tenant-a')=>{
+ if(!command.trading_day_id){const active=(await db.query('select id from akihq_hospitality.trading_days where workspace_id=$1 and ended_at is null',[workspace])).rows[0];command={...command,trading_day_id:active?.id}}
+ return rpc('crm_pos_cash_command',[workspace,key,command],who,workspace);
+};
 const overview=()=>rpc('crm_pos_cash_overview',['tenant-a']);
 const order=(command,key=crypto.randomUUID())=>rpc('crm_hospitality_command',['tenant-a',key,command]);
 async function cashSale(){const opened=await order({action:'open',label:'Cash table'});let o=(await rpc('crm_hospitality_overview',['tenant-a'])).orders.find(x=>x.id===opened.order_id);await order({action:'add',order_id:o.id,version:o.version,item_id:item});o=(await rpc('crm_hospitality_overview',['tenant-a'])).orders.find(x=>x.id===o.id);await order({action:'payment',order_id:o.id,version:o.version,amount_cents:o.total_cents,method:'cash'});return o.total_cents}
@@ -49,6 +52,14 @@ test('drawer close serializes with service and refuses an open bill',async()=>{
  const live=(await rpc('crm_hospitality_overview',['tenant-a'])).orders.find(x=>x.id===opened.order_id);
  await order({action:'cancel',order_id:live.id,version:live.version,reason:'End of service'});
  await cash({action:'reconcile_close',counted_cents:0,reason:''});
+});
+test('a stale manager dialog cannot affect the next trading day',async()=>{
+ const first=(await day('start')).day.id;
+ await cash({action:'reconcile_close',trading_day_id:first,counted_cents:0,reason:''});
+ const second=(await day('start')).day.id;
+ await assert.rejects(cash({action:'movement',trading_day_id:first,kind:'pay_in',amount_cents:500,reason:'Stale dialog'}),/Trading day changed/);
+ const state=await overview();assert.equal(state.active_shift.trading_day_id,second);assert.equal(state.active_shift.movement_cents,0);
+ await cash({action:'reconcile_close',trading_day_id:second,counted_cents:0,reason:''});
 });
 test('tenant, role and direct ACL boundaries are enforced',async()=>{
  await day('start');
