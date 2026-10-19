@@ -15,3 +15,7 @@ The original repository is retained in Git history; no runtime GitHub checkout o
 Target: existing Cloudflare Pages project **akibusiness-operations-preview**, whose custom domain currently serves **akibusiness.com**. Its current GitHub source is the historical `akihq` repository; reconnect to `elguiriashing/AkiBusiness` `main` only after verified CI/preview acceptance. Cloudflare Pages build command should remain empty and output directory the repository root.
 
 Release gates: static asset/deep-link checks; sign-in, Google OAuth and redirects; PoS checkout, table transfer, printer handling, offline/retry, tenant isolation, inventory and staff permissions, EN/ES, mobile/tablet layout, and rollback. Spanish invoicing/tax features are **not** represented as certified until independent compliance approval. Preserve all existing production data and settings.
+
+## Staging (19 October 2026)
+
+Cloudflare Pages staging project `akibusiness-selfowned-staging` reads **this repository** directly from `migration/standalone-akibusiness-operations-20261019`; it does not serve any production hostname. Preview at `https://akibusiness-selfowned-staging.pages.dev` after the first successful Cloudflare build. Keep the old production project and custom domain unchanged until independent acceptance and rollback readiness.
