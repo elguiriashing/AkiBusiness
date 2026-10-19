@@ -24,7 +24,7 @@ for (const enabled of [false, true]) {
       assert.equal(typeof JSON.parse(await read('release-source.json')).sourceTreeDirty, 'boolean');
       if (enabled) assert.doesNotMatch(source, /void client\.rpc\("queue_suite_portal_welcome"/);
       else assert.match(source, /void client\.rpc\("queue_suite_portal_welcome"/);
-      assert.match(await read('_redirects'), /^\/\* \/index.html 200\s*$/);
+      // Cloudflare Pages detects SPA routes automatically when no top-level 404.html exists.\n      // The historic catch-all rewrite to /index.html is rejected as a loop.\n      await assert.rejects(read('_redirects'), { code: 'ENOENT' });
       assert.match(await read('config.js'), new RegExp(`CRM_URL: +"https://${enabled ? 'akibusiness.com' : 'akihq.app'}"`));
       // Permissions, workspace selection and operational implementations are byte-identical.
       const operations = text => text.slice(text.indexOf('  async function loadAccessibleWorkspaces('), text.indexOf('  async function loadAccessibleWorkspaces(') + 3800);
