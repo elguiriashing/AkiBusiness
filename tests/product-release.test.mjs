@@ -20,6 +20,8 @@ for (const enabled of [false, true]) {
       // must stay rooted so /es/business loads /assets and /config.js.
       assert.match(await read('index.html'), /<base href="\/"\s*\/>/);
       assert.equal(JSON.parse(await read('manifest.webmanifest')).name, product);
+      assert.match(await read('membership.html'), /data-plan="standard"/);
+      assert.match(await read('membership.html'), /disabled data-staged/);
       assert.equal(JSON.parse(await read('release-source.json')).roleSwap, enabled);
       assert.equal(typeof JSON.parse(await read('release-source.json')).sourceTreeDirty, 'boolean');
       if (enabled) assert.doesNotMatch(source, /void client\.rpc\("queue_suite_portal_welcome"/);
