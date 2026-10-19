@@ -98,14 +98,14 @@
     if(disposed||!active()||ledgerLoading)return;
     ledgerLoading=true;ledgerError='';
     try{
-      const result=await rpc('crm_pos_ledger',{p_filters:{
+      const [result,cash]=await Promise.all([rpc('crm_pos_ledger',{p_filters:{
         from_date:ledgerFilters.from_date||null,to_date:ledgerFilters.to_date||null,
         table:ledgerFilters.table||"",item:ledgerFilters.item||"",
         account:ledgerFilters.account||"",trading_day:ledgerFilters.trading_day||"",
         min_cents:ledgerFilters.min_cents??null,max_cents:ledgerFilters.max_cents??null,
         offset:Number(ledgerFilters.offset||0),limit:30
-      }});
-      if(active())ledger=result;
+      }}),rpc('crm_pos_cash_overview')]);
+      if(active())ledger={...result,cash};
     }catch(e){if(active())ledgerError=e.message;}
     finally{ledgerLoading=false;refresh();}
   }
@@ -116,7 +116,7 @@
   }
   async function changeTradingDay(action){
     if(!data?.can_manage)throw Error('Manager permission required to manage trading days.');
-    await rpc('crm_pos_trading_day',{p_action:action,p_day:action==='end'?ledger?.active_day?.id:null});
+    await rpc('crm_pos_trading_day',{p_action:action,p_day:null});
     closingConfirm=false;ledgerFilters={...ledgerFilters,offset:0};
     await loadLedger();
   }
@@ -333,10 +333,10 @@
    if(a==='ledger-bill'){ledgerSelected=target.dataset.id;refresh();return;}
    if(a==='ledger-close'){ledgerSelected='';refresh();return;}
    if(a==='ledger-open-day'){ledgerMode='bills';ledgerFilters={...ledgerFilters,trading_day:target.dataset.id,offset:0};await loadLedger();return;}
-   if(a==='day-start'){await changeTradingDay('start');return;}
-   if(a==='day-end'){closingConfirm=true;refresh();return;}
+   if(a==='day-start'){await changeTradingDay('start');closingConfirm='opening';refresh();return;}
+   if(a==='day-end'){closingConfirm='close';refresh();return;}
+   if(a==='cash-open'){closingConfirm=['opening','pay_in','cash_drop'].includes(target.dataset.mode)?target.dataset.mode:false;refresh();return;}
    if(a==='day-cancel'){closingConfirm=false;refresh();return;}
-   if(a==='day-confirm'){await changeTradingDay('end');return;}
    if(a==='category'){category=target.dataset.id;refresh();return;}
    if(a==='back'){selected='';panel='';refresh();return;}
    if(a==='refresh'){await load();refresh();return;}
@@ -374,6 +374,16 @@
     if(min!==null&&max!==null&&min>max)throw Error('Minimum amount exceeds maximum.');
     ledgerFilters={...v,min_cents:min,max_cents:max,offset:0};
     ledgerSelected='';await loadLedger();return;
+   }
+   if(a.startsWith('cash-')){
+    if(!data?.can_manage)throw Error('Manager permission required for cash controls.');
+    const cents=value=>{const text=String(value||'').trim();if(!/^\d{1,9}(\.\d{1,2})?$/.test(text))throw Error('Enter a valid cash amount.');return Math.round(Number(text)*100)};
+    let command;
+    if(a==='cash-opening')command={action:'opening_float',amount_cents:cents(v.amount)};
+    else if(a==='cash-movement')command={action:'movement',kind:f.dataset.kind,amount_cents:cents(v.amount),reason:String(v.reason||'').trim()};
+    else command={action:'reconcile_close',counted_cents:cents(v.counted),reason:String(v.reason||'').trim()};
+    await rpc('crm_pos_cash_command',{p_key:root.crypto.randomUUID(),p_command:command});
+    closingConfirm=false;ledgerFilters={...ledgerFilters,offset:0};await loadLedger();return;
    }
    if(a.startsWith('menu-')){
     if(!data?.can_manage)throw Error('Manager permission required');
