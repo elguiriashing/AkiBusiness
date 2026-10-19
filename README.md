@@ -1,76 +1,26 @@
-# AkiBusiness
+# AkiBusiness · Independent operations suite
 
-Independent AkiSuite management application extracted from `elguiriashing/akipasa`
-master `080ea0ffb2dd6612436acd04c25b4daf8ff71129`. Canonical domain:
-`https://akibusiness.com`. This source does not modify or replace AkiPasa.
+Canonical website: **https://akibusiness.com** · Source owner: **elguiriashing/AkiBusiness**.
 
-The application preserves the complete venue workspace (claims, profile/media,
-menus, events, promotions, analytics, roles and teams), AkiDuermo property inventory,
-room-night rates/reservations and AkiCoches rental-company/fleet management.
-Historical `akiconduzco` database/function identifiers remain compatible.
+This repository contains the standalone AkiBusiness operations application, including its static app, PoS, kitchen/bar queues, printers, inventory, CRM, staff and multi-tenant workflows. The original operational system was transferred from the historical `akihq` source branch and lives in this isolated migration branch pending acceptance.
 
-## Development
+## Running and testing
 
-Use Node 22+, `npm ci`, copy `.env.example` to an ignored `.env.local` and supply
-shared Supabase public configuration securely. Run `npm run dev` and visit
-`http://localhost:3000/es/business` or `/en/business`. `npm run check` runs lint,
-TypeScript, scoped regression suites and production compilation. Dependencies are
-pinned in package-lock; no imports point into another checkout. The MapLibre
-security backport is verified during postinstall and every build.
+Serve this directory as static assets (for example `python3 -m http.server 8080`). The application uses `index.html` with `assets/`, `config.js`, `manifest.webmanifest` and `sw.js`. Use `config.example.js` for local public Supabase client configuration. Do not commit production secrets. The Cloudflare integration gateway lives in `cloudflare/` and uses its own tests.
 
-`GET /api/health` exposes product liveness without database/customer details.
-Public placeholder Supabase configuration permits build-only verification; it
-cannot establish login, real provider integration or production readiness.
+The original repository is retained in Git history; no runtime GitHub checkout or frontend proxy to AkiHQ is required. AkiHQ's free management hub is a separate product in `elguiriashing/akihq`. Both may use the existing Supabase backend and authorized cross-product navigation.
 
-## Application boundary
+The recovered PoS stack and its immutable upstream heads are recorded in
+[`docs/POS-RECOVERY-20261019.md`](docs/POS-RECOVERY-20261019.md). Its local plan
+catalogue is informational and deliberately has no checkout or payment capture;
+prices and activation remain staged pending an approved commercial release.
 
-The business application runs on canonical, localhost and preview hosts without
-relying on the legacy hostname. Middleware permits business, authentication,
-terms/privacy and the management API allowlist. Consumer/account/membership links
-return to AkiPasa with locale/query preserved. Unknown mutation routes and unrelated
-APIs return 404. Every workspace retains server-side authorization and shared RLS.
-No staff/admin UI, consumer discovery, public booking API or Stripe webhook is
-exposed. All responses are noindex; private responses are not cached.
+## Deployment separation
 
-The same Supabase project retains user IDs, memberships, ownership and billing
-identities. Sessions use host-only cookies. Each domain signs into the same user
-account independently; this extraction does not pretend cookies can be shared
-between root domains or implement seamless cross-domain SSO. Before release,
-allowlist exact EN/ES callback and recovery URLs in Supabase and verify OAuth,
-password sign-in/out, magic link, recovery and expired sessions on the actual host.
-Register exact preview origins in `AKISUITE_ALLOWED_PREVIEW_ORIGINS`; arbitrary
-forwarded-host/Origin headers cannot redirect callbacks to another application.
+Target: existing Cloudflare Pages project **akibusiness-operations-preview**, whose custom domain currently serves **akibusiness.com**. Its current GitHub source is the historical `akihq` repository; reconnect to `elguiriashing/AkiBusiness` `main` only after verified CI/preview acceptance. Cloudflare Pages build command should remain empty and output directory the repository root.
 
-## Deployment and ownership
+Release gates: static asset/deep-link checks; sign-in, Google OAuth and redirects; PoS checkout, table transfer, printer handling, offline/retry, tenant isolation, inventory and staff permissions, EN/ES, mobile/tablet layout, and rollback. Spanish invoicing/tax features are **not** represented as certified until independent compliance approval. Preserve all existing production data and settings.
 
-`npm run build:cloudflare` packages a clean committed source and stamps its SHA;
-`npx wrangler deploy --dry-run` validates bindings without provider writes.
-`wrangler.jsonc` targets **akibusiness-preview** with workers.dev and no production
-custom domains. Configure shared Supabase public vars and secrets securely first.
-The existing `AKIHQ_GATEWAY` service binding must be available in the target account.
-CI independently verifies this repository and never deploys on a push.
+## Staging (19 October 2026)
 
-No cron handler/schedule, billing webhook, subscription renewal or queue dispatcher
-is copied into the deployment. AkiPasa remains their single operational owner.
-Immediate existing action-driven mail behavior remains gated by existing provider
-credentials; no mail, payment or database operations were run during extraction.
-Shared migration history is reference-only: **never run a reset, seed or blanket
-migration from this repository against the existing project**.
-
-After preview deployment, perform authenticated EN/ES owner/editor/other-tenant,
-claims, media, menu/event, property inventory/request and fleet workflows; verify
-AkiHQ authorization, subscription gates, mobile/desktop, certificates and source SHA.
-Only then attach the canonical domain, verify it and redirect legacy domains.
-Keep the existing business hostname serving AkiPasa throughout acceptance. Rollback
-removes new routing/redirects or restores the prior new Worker version; it requires
-no deletion or rewriting of users, venue ownership, billing or shared database data.
-
-Shared source is copied initially for deploy independence. Track updates against
-the recorded upstream SHA and move stable auth, permissions, catalogue and UI into
-reviewed versioned packages with contract tests before further products diverge.
-See `docs/EXTRACTION.md` for verification and release gates.
-
-Incoming remote migration groundwork (`aa672aa`) has been merged with unrelated
-local extraction ancestry preserved. Its auth allowlist contract is retained in
-[docs/SUPABASE_AUTH_REDIRECTS.md](docs/SUPABASE_AUTH_REDIRECTS.md). Hosted settings
-remain unverified and must preserve the existing Site URL/redirect entries.
+Cloudflare Pages staging project `akibusiness-selfowned-staging` reads **this repository** directly from `migration/standalone-akibusiness-operations-20261019`; it does not serve any production hostname. Preview at `https://akibusiness-selfowned-staging.pages.dev` after the first successful Cloudflare build. Keep the old production project and custom domain unchanged until independent acceptance and rollback readiness.
