@@ -51,3 +51,16 @@ test("actual static bootstrap withholds workspace data and preserves restricted 
  dom.window.document.getElementById("eligibilitySignOut").click();await new Promise(r=>setImmediate(r));
  assert.equal(signout?.scope,"local");assert.equal(rendered,true);
 });
+
+test("operating completion retains only the fixed workspace task and language",()=>{
+ const completion=new URL(browser.completionUrl("es","?workspace=target&token=secret&next=https://evil.test&locale=en"));
+ const next=new URL(completion.searchParams.get("next"),"https://akipasa.com");
+ assert.equal(next.pathname,"/es/account-resume");
+ assert.equal(next.searchParams.get("product"),"business");
+ assert.equal(next.searchParams.get("path"),"/?workspace=target");
+ assert.equal(completion.toString().includes("secret"),false);
+ for(const bad of ["?workspace=one&workspace=two","?workspace=https://evil.test","?workspace=%0d%0a"]) {
+   const url=new URL(browser.completionUrl("en",bad));
+   assert.equal(new URL(url.searchParams.get("next"),"https://akipasa.com").searchParams.get("path"),"/");
+ }
+});
