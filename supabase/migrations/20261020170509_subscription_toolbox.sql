@@ -43,6 +43,8 @@ create table akibusiness_private.toolboxes (
  billing_revision bigint not null,
  revision bigint not null default 1,
  enabled boolean not null default false,
+ reconciliation_attempts integer not null default 0,
+ retry_after timestamptz not null default '-infinity',
  updated_at timestamptz not null default now(),
  check(akibusiness_private.valid_tools(tier,active_tools)),
  check(akibusiness_private.valid_tools(tier,saved_tools)),
@@ -263,10 +265,21 @@ create function akibusiness_private.due() returns jsonb
 language sql stable security definer set search_path='' as $$
  select coalesce(jsonb_agg(to_jsonb(b)),'[]') from
  (select workspace_id,subscription_id,source,tier,anchor,billing_revision,active_tools,paid_until from akibusiness_private.toolboxes
-  where enabled and billing_status in ('active','trialing','past_due') and akibusiness_private.anniversary(anchor,rotation+1)<=now()
+  where enabled and retry_after<=now() and (source='stripe' or paid_until>now())
+   and billing_status in ('active','trialing','past_due') and akibusiness_private.anniversary(anchor,rotation+1)<=now()
   order by updated_at limit 100) b
 $$;
 create function public.crm_toolbox_due() returns jsonb language sql stable security invoker set search_path='' as $$select akibusiness_private.due()$$;
+
+create function akibusiness_private.attempt(p_workspace text,p_success boolean) returns void
+language sql security definer set search_path='' as $$
+ update akibusiness_private.toolboxes set
+  retry_after=now()+make_interval(secs=>case when p_success then 60 else least(1800,60*power(2,least(reconciliation_attempts,5))::integer) end),
+  reconciliation_attempts=case when p_success then 0 else least(reconciliation_attempts+1,1000) end,
+  updated_at=now() where workspace_id=p_workspace
+$$;
+create function public.crm_toolbox_attempt(p_workspace text,p_success boolean) returns void
+language sql security invoker set search_path='' as $$select akibusiness_private.attempt(p_workspace,p_success)$$;
 
 revoke all on all functions in schema akibusiness_private from public,anon,authenticated;
 grant execute on function akibusiness_private.owner(text),akibusiness_private.licensed(text,text),akibusiness_private.snapshot(text),
@@ -282,4 +295,6 @@ revoke all on function public.crm_toolbox_team(text) from public,anon;
 grant execute on function public.crm_toolbox_team(text) to authenticated;
 revoke all on function public.crm_toolbox_due() from public,anon,authenticated;
 grant execute on function public.crm_toolbox_due() to service_role;
+revoke all on function public.crm_toolbox_attempt(text,boolean) from public,anon,authenticated;
+grant execute on function public.crm_toolbox_attempt(text,boolean) to service_role;
 commit;

@@ -88,3 +88,11 @@ test('upgrade immediate, effective downgrade fits lower capacity; duplicate/stal
  await enroll('basico',tools,anchor,undefined,3);assert.equal(await scalar("select public.crm_has_tool('w','pos')"),false);
  await enroll('pro',all,anchor,undefined,2);assert.equal((await snap()).tier,'basico');
 });
+
+test('failed first hundred workspaces cannot starve subsequent due workspaces',async()=>{
+ const a='2025-01-31T10:00:00Z';
+ for(let n=0;n<101;n++){await db.query("insert into public.crm_workspaces values($1,'active',$2)",['due-'+n,owner]);await db.query("insert into akibusiness_private.toolboxes(workspace_id,tier,active_tools,saved_tools,anchor,paid_until,billing_status,source,subscription_id,billing_revision,enabled) values($1,'basico',$2,$2,$3,'2030-01-01','active','stripe',$4,1,true)",['due-'+n,tools,a,'sub_'+n]);}
+ const first=await scalar('select public.crm_toolbox_due()');assert.equal(first.length,100);for(const row of first)await db.query('select public.crm_toolbox_attempt($1,false)',[row.workspace_id]);
+ const next=await scalar('select public.crm_toolbox_due()');assert.equal(next.length,1);assert.ok(!first.some(row=>row.workspace_id===next[0].workspace_id));
+ await db.exec('set role authenticated');await assert.rejects(db.exec("select public.crm_toolbox_attempt('w',true)"),/permission denied/);
+});
