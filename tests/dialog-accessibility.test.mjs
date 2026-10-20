@@ -29,7 +29,7 @@ async function fixture() {
   w.scrollTo = () => {};
   w.fetch = () => { throw new Error('Network is forbidden in this fixture'); };
   w.HTMLElement.prototype.getClientRects = function () { return this.hidden || this.style.display === 'none' ? [] : [{ width: 100, height: 44 }]; };
-  for (const file of ['support-desk.js', 'company-manager.js', 'checkout-session.js']) w.eval(await readFile(new URL('../assets/' + file, import.meta.url), 'utf8'));
+  for (const file of ['suite-navigation.js', 'support-desk.js', 'company-manager.js', 'checkout-session.js']) w.eval(await readFile(new URL('../assets/' + file, import.meta.url), 'utf8'));
   w.eval(source.replace(/  boot\(\);\s*\}\)\(\);\s*$/, seam));
   return { dom, w, d: w.document, audit: w.__dialogAudit };
 }
