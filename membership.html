@@ -5,37 +5,72 @@
   <base href="/" />
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
   <meta name="robots" content="noindex,nofollow" />
-  <meta name="theme-color" content="#8058f8" />
+  <meta name="theme-color" content="#071124" />
   <title>AkiBusiness plans</title>
   <link rel="icon" href="assets/icons/icon.svg" type="image/svg+xml" />
-  <link rel="stylesheet" href="assets/membership.css?v=1" />
+  <link rel="stylesheet" href="assets/membership.css?v=2" />
 </head>
 <body>
   <main class="plans-shell">
     <header class="plans-header">
-      <a class="brand" href="/"><img src="assets/logo.svg" alt="" /><span>AkiBusiness<small data-copy="suite">by AkiPasa</small></span></a>
-      <div class="header-actions">
-        <button type="button" id="language" aria-label="Change language">ES</button>
-        <a href="/" data-copy="back">Back to operations</a>
-      </div>
+      <a class="brand" data-operations-back href="/"><img src="assets/logo.svg" alt="" /><span>AkiBusiness<small data-copy="suite">by AkiPasa</small></span></a>
+      <nav class="header-actions" aria-label="Page controls">
+        <button type="button" id="theme">Light</button>
+        <button type="button" id="language">ES</button>
+        <a data-operations-back href="/" data-copy="back">Back to operations</a>
+      </nav>
     </header>
-    <section class="hero">
-      <p class="eyebrow" data-copy="eyebrow">PAID OPERATIONS SUITE</p>
-      <h1 data-copy="title">Run service, stock and teams from one place.</h1>
-      <p data-copy="intro">Plans are shown for product planning. Billing is not active here yet, and viewing a plan never creates a subscription or captures payment.</p>
-      <div class="billing" aria-label="Billing preview">
+    <section class="hero" aria-labelledby="plans-title">
+      <p class="eyebrow" data-copy="eyebrow">YOUR BUSINESS. YOUR TOOLBOX.</p>
+      <h1 id="plans-title" data-copy="title">The tools you need.<br>One operating workspace.</h1>
+      <p data-copy="intro">Choose your tools for each operating location. AkiHQ stays free for company and listing management; AkiBusiness runs your daily operations.</p>
+      <div class="billing" role="group" aria-label="Price comparison">
         <button type="button" data-cycle="monthly" aria-pressed="true" data-copy="monthly">Monthly</button>
-        <button type="button" data-cycle="yearly" aria-pressed="false"><span data-copy="yearly">Yearly</span> <small data-copy="saving">save 20%</small></button>
+        <button type="button" data-cycle="yearly" aria-pressed="false"><span data-copy="yearly">Annual comparison</span> <small data-copy="saving">20% less</small></button>
       </div>
+      <p class="billing-note" id="billing-note" role="status"></p>
     </section>
     <section class="plan-grid" aria-label="AkiBusiness plans">
-      <article class="plan" data-plan="standard"><p class="plan-kind" data-copy="location">Per operating location</p><h2>Standard</h2><p class="price"><strong data-monthly="24.99" data-yearly="19.99">€24.99</strong><span data-copy="permonth">/month</span></p><ul><li data-copy="standard1">PoS and table service</li><li data-copy="standard2">Core stock and staff controls</li><li data-copy="standard3">Operational reports</li></ul><button disabled data-staged data-copy="staged">Staged — not available to buy</button></article>
-      <article class="plan featured" data-plan="plus"><p class="plan-kind" data-copy="recommended">RECOMMENDED</p><h2>Plus</h2><p class="price"><strong data-monthly="44.99" data-yearly="35.99">€44.99</strong><span data-copy="permonth">/month</span></p><ul><li data-copy="plus1">Everything in Standard</li><li data-copy="plus2">KDS, courses and advanced inventory</li><li data-copy="plus3">CRM and multi-station workflows</li></ul><button disabled data-staged data-copy="staged">Staged — not available to buy</button></article>
-      <article class="plan" data-plan="pro"><p class="plan-kind" data-copy="location">Per operating location</p><h2>Pro</h2><p class="price"><strong data-monthly="64.99" data-yearly="51.99">€64.99</strong><span data-copy="permonth">/month</span></p><ul><li data-copy="pro1">Everything in Plus</li><li data-copy="pro2">Advanced permissions and reporting</li><li data-copy="pro3">Priority operational support</li></ul><button disabled data-staged data-copy="staged">Staged — not available to buy</button></article>
+      <article class="plan" data-plan="basico">
+        <p class="plan-kind" data-copy="location">Per operating location</p><h2>Básico</h2>
+        <p class="price" aria-live="polite"><strong data-monthly="24.99" data-yearly="239.90">€24.99</strong><span data-copy="period">/month</span></p>
+        <p class="tool-count"><strong>4<span>/12</span></strong><span data-copy="chooseTools">tools of your choice</span></p>
+        <ul><li data-copy="basicRotation">1 tool replacement at each monthly rotation</li><li data-copy="savedNext">Save your next toolbox without changing this month's tools</li><li data-copy="instantStaff">Change staff access to active tools immediately</li></ul>
+      </article>
+      <article class="plan featured" data-plan="standard">
+        <p class="plan-kind" data-copy="moreFlexibility">MORE FLEXIBILITY</p><h2>Standard</h2>
+        <p class="price" aria-live="polite"><strong data-monthly="44.99" data-yearly="431.90">€44.99</strong><span data-copy="period">/month</span></p>
+        <p class="tool-count"><strong>8<span>/12</span></strong><span data-copy="chooseTools">tools of your choice</span></p>
+        <ul><li data-copy="standardRotation">2 tool replacements at each monthly rotation</li><li data-copy="savedNext">Save your next toolbox without changing this month's tools</li><li data-copy="instantStaff">Change staff access to active tools immediately</li></ul>
+      </article>
+      <article class="plan" data-plan="pro">
+        <p class="plan-kind" data-copy="completeToolbox">THE COMPLETE TOOLBOX</p><h2>Pro</h2>
+        <p class="price" aria-live="polite"><strong data-monthly="64.99" data-yearly="623.90">€64.99</strong><span data-copy="period">/month</span></p>
+        <p class="tool-count"><strong>12<span>/12</span></strong><span data-copy="allTools">all tools available</span></p>
+        <ul><li data-copy="proRotation">Unrestricted tool access; no monthly selection needed</li><li data-copy="allTogether">Keep every operating tool available together</li><li data-copy="instantStaff">Change staff access to active tools immediately</li></ul>
+      </article>
     </section>
-    <aside class="notice" role="note" data-copy="notice">AkiHQ remains the free company-management hub. AkiBusiness plans cover paid operating tools and do not grant listing or personal Premium subscriptions.</aside>
+    <section class="toolbox-rules" aria-labelledby="toolbox-heading">
+      <header><p class="eyebrow" data-copy="clearRules">A CLEAR MONTHLY RHYTHM</p><h2 id="toolbox-heading" data-copy="howTitle">Available now. Ready for next month.</h2></header>
+      <div class="rules-grid">
+        <article><span class="step">01</span><h3 data-copy="activeTitle">Active toolbox</h3><p data-copy="activeBody">These are the tools your location can use now. Saving a different selection does not activate it early.</p></article>
+        <article><span class="step">02</span><h3 data-copy="nextTitle">Saved next toolbox</h3><p data-copy="nextBody">Your saved selection starts at the next eligible monthly rotation. A replacement removes one active tool and adds another; repeated saves do not increase your allowance.</p></article>
+        <article><span class="step">03</span><h3 data-copy="staffTitle">Your team, without the wait</h3><p data-copy="staffBody">Grant or revoke staff access to your active tools whenever you need. Permissions stay scoped to the location and never unlock an unlicensed tool.</p></article>
+      </div>
+      <p class="fine-print" data-copy="annualRotation">Annual subscribers also rotate monthly. Billing frequency does not lock a toolbox for a year. Access changes after a confirmed upgrade follow the purchased package; downgrades take effect on the applicable billing date. Existing tool data is retained.</p>
+    </section>
+    <details class="catalogue">
+      <summary data-copy="catalogueTitle">Explore the 12 operating tools</summary>
+      <p data-copy="catalogueBody">Básico and Standard choose from this same catalogue. Pro includes all twelve. Individual tools still follow their applicable setup and permissions.</p>
+      <ul class="tool-catalogue" id="tool-catalogue"></ul>
+    </details>
+    <section class="subscription-handoff" aria-labelledby="review-title">
+      <div><h2 id="review-title" data-copy="reviewTitle">Review your operating subscription</h2><p data-copy="reviewBody">Your account checks the location you own, existing subscriptions and billing availability before offering a purchase or change. Opening it does not charge you.</p></div>
+      <a id="operations-subscription-link" class="primary-link" href="https://akipasa.com/en/account/subscription/operations" data-copy="reviewAction">Manage operating subscription</a>
+    </section>
+    <aside class="notice" role="note"><strong data-copy="separateTitle">Free management. Separate listing upgrades.</strong><p data-copy="notice">AkiHQ is the free hub for organisations, locations, listings and ownership. An AkiBusiness operating subscription does not include personal Premium or Premium listing upgrades for AkiPasa, AkiDuermo or AkiCoches.</p><a id="free-management-link" href="https://akihq.app/en/business" data-copy="freeManagement">Open free AkiHQ</a></aside>
   </main>
   <script src="assets/suite-navigation.js?v=1"></script>
-<script src="assets/membership.js?v=2"></script>
+  <script src="assets/membership.js?v=3"></script>
 </body>
 </html>
