@@ -32,3 +32,12 @@ Initial working alpha release.
 - Added optional Supabase snapshot sync schema.
 - Added optional Cloudflare Worker integration gateway.
 - Added PWA manifest, offline shell, Pages headers and deployment documentation.
+
+## 20 October 2026 — Gated paid operational reports
+
+- Added source-authorized location reports for recorded PoS sales, historical
+  stock cost and team actions, equal calendar-period comparisons and bounded
+  JSON export. Unknown costs remain unknown; no profit or discovery attribution
+  is fabricated. Default-off rollout preserves existing operations.
+- Added SQL/RLS-shaped permission fixtures and a bilingual responsive browser
+  acceptance workflow. Hosted/production acceptance remains separate.

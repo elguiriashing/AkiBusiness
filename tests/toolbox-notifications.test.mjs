@@ -1,0 +1,6 @@
+import test from 'node:test';import assert from 'node:assert/strict';import {createRequire} from 'node:module';const require=createRequire(import.meta.url);const {format}=require('../assets/toolbox-notifications.js');
+const row={history_id:4,active_tools:['crm','pos','calendar','inventory'],created_at:'2026-10-20T00:00:00Z',affected_staff:[{label:'Stock manager'}]};
+test('same durable event formats EN/ES and describes actual retained active selection and staff',()=>{for(const locale of ['en','es']){const n=format([row],locale)[0];assert.equal(n.id,'toolbox:4');assert.equal(n.route,'settings');assert(n.body.includes('Stock manager'));assert(n.body.includes(locale==='es'?'TPV':'Point of sale'));assert(n.title.includes(locale==='es'?'actualizadas':'updated'));}});
+test('legacy unknown impact never invents zero and malformed events are ignored',()=>{assert(format([{...row,affected_staff:null}],'en')[0].body.includes('unavailable'));assert.deepEqual(format([{...row,active_tools:['unknown']}],'es'),[]);assert.deepEqual(format(null,'en'),[]);});
+
+test('large affected teams keep bell previews bounded without inventing counts',()=>{const n=format([{...row,affected_staff:Array.from({length:100},(_,i)=>({label:'Staff'+i}))}],'en')[0];assert(n.body.includes('and 92 more'));assert(!n.body.includes('Staff8,'));});

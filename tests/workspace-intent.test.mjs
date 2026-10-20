@@ -36,7 +36,7 @@ test('OAuth intent stores only requested IDs and restores them only on auth retu
 });
 test('denied explicit target exits before activating or loading any workspace', async () => {
   let activated = false, pending = false;
-  const context = { initialSearchParams: new URLSearchParams('workspace=unlicensed'), localStorage: { getItem: () => 'saved' },
+  const context = { window: { AKIHQ_CONFIG: { ONBOARDING_SCHEMA_READY: false } }, initialSearchParams: new URLSearchParams('workspace=unlicensed'), localStorage: { getItem: () => 'saved' },
     availableWorkspaces: [], authUser: null, authRole: null,
     getSupabaseClient: () => ({ from: () => ({ select: () => ({ eq: () => ({ maybeSingle: async () => ({ data: { app_role: 'user' } }) }) }) }) }),
     loadAccessibleWorkspaces: async () => workspaces,

@@ -72,3 +72,14 @@ Never safe in frontend:
 - Bot tokens
 - Webhook signing secrets
 - Master API tokens
+
+## 20 October 2026 — Operational analytics candidate
+
+The paid AkiBusiness analytics workspace has a default-off source-backed report
+module. `crm_operational_analytics` rechecks current location membership and each
+underlying PoS/Inventory/Employees tool before returning bounded aggregates.
+Exports recheck the existing separate export authority. This extends the current
+shared database; it does not add a local snapshot authority, a selectable
+Analytics tool, fake profit, or organisation-wide discovery attribution.
+See `OPERATIONAL-ANALYTICS-20261020.md` for precise sources, migration dependencies,
+validation and release gates. No live activation is implied by this entry.

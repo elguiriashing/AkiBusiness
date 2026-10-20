@@ -1699,7 +1699,28 @@
     }
   }
 
+  let toolboxNoticeCache = {key:"", at:0, rows:[], pending:false};
+  async function refreshToolboxNotifications() {
+    if (window.AKIHQ_CONFIG?.TOOLBOX_NOTIFICATIONS_ENABLED !== true || !authUser || !state.workspace?.id || !window.AkiToolboxNotifications) return;
+    const key = `${authUser.id}:${state.workspace.id}`;
+    if (toolboxNoticeCache.key !== key) toolboxNoticeCache = {key, at:0, rows:[], pending:false};
+    if (toolboxNoticeCache.pending || Date.now()-toolboxNoticeCache.at<30000) return;
+    const cache=toolboxNoticeCache, client=getSupabaseClient();
+    if (!client) return;
+    cache.pending=true;
+    try {
+      const {data,error}=await client.rpc("crm_toolbox_owner_notifications", {p_workspace:state.workspace.id});
+      if (toolboxNoticeCache!==cache || `${authUser?.id}:${state.workspace?.id}`!==key) return;
+      cache.rows=error?[]:(Array.isArray(data)?data:[]);
+      cache.at=Date.now();
+      requestBackgroundRender();
+    } catch { if(toolboxNoticeCache===cache){cache.rows=[];cache.at=Date.now();} }
+    finally {cache.pending=false;}
+  }
+  setInterval(() => void refreshToolboxNotifications(), 30000);
+
   function liveNotifications() {
+    void refreshToolboxNotifications();
     state.notificationReadIds ||= [];
     const readIds = new Set(state.notificationReadIds);
     const mail = canUseTool("inbox") ? mailboxMessages().filter(message => message.direction === "inbound").map(message => ({
@@ -1723,7 +1744,9 @@
       at: item.at
     }));
     const support = supportDesk.notifications().map(item => ({ ...item, seen: readIds.has(item.id) }));
-    return [...support, ...mail, ...activity].sort((a, b) => Date.parse(b.at || 0) - Date.parse(a.at || 0)).slice(0, 30);
+    const noticeKey = `${authUser?.id}:${state.workspace?.id}`;
+    const toolbox = toolboxNoticeCache.key === noticeKey ? (window.AkiToolboxNotifications?.format(toolboxNoticeCache.rows, state.settings.locale) || []).map(item => ({...item, seen:readIds.has(item.id)})) : [];
+    return [...toolbox, ...support, ...mail, ...activity].sort((a, b) => Date.parse(b.at || 0) - Date.parse(a.at || 0)).slice(0, 30);
   }
 
   async function markAllLiveNotificationsRead() {
@@ -1780,7 +1803,26 @@
     await pushWorkspaceSnapshot(workspaceMutationVersion);
   }
 
+  let operationalReportController = null;
+  function operationalReportsEnabled() { return window.AKIHQ_CONFIG?.OPERATIONAL_ANALYTICS_ENABLED === true; }
+  function getOperationalReports() {
+    if (!window.AkiBusinessOperationalAnalytics?.create) throw new Error(state.settings.locale === "es" ? "Los informes no se han podido cargar. Recarga la página." : "Reports could not load. Reload this page.");
+    if (!operationalReportController) operationalReportController = window.AkiBusinessOperationalAnalytics.create({
+      client: getSupabaseClient,
+      getScope: () => ({ workspace: state.workspace.id, name: state.workspace.name, user: authUser?.id, days: Number(ui.analyticsRange || 30), through: ui.operationalThrough || "", locale: state.settings.locale, enabled: operationalReportsEnabled() }),
+      changed: () => { if (ui.route === "analytics") render(); }, download: downloadBlob
+    });
+    return operationalReportController;
+  }
+
   async function loadAnalyticsOverview(showToast = false) {
+    if (!isPlatformWorkspace()) {
+      if (operationalReportsEnabled()) {
+        try { await getOperationalReports().load(); }
+        catch (error) { if(showToast) toast(state.settings.locale === "es" ? "Informe no disponible" : "Report unavailable", error.message, "danger"); }
+      }
+      return;
+    }
     if (!isPlatformWorkspace() || authRole !== "administrator" || analyticsLoading) return;
     analyticsLoading = true;
     analyticsError = "";
@@ -2328,6 +2370,7 @@
       case "knowledge":
         return `<span class="context-spacer"></span><button class="action-btn primary" data-action="open-form" data-entity="article">${icon("plus")} Article</button>`;
       case "analytics":
+        if (!isPlatformWorkspace() && operationalReportsEnabled()) return "";
         return `
           <select class="filter-select" data-change="analytics-range" aria-label="Analytics date range">
             ${[["7", "Last 7 days"], ["30", "Last 30 days"], ["90", "Last 90 days"], ["365", "Last 12 months"]].map(([value, label]) => `<option value="${value}" ${ui.analyticsRange === value ? "selected" : ""}>${label}</option>`).join("")}
@@ -3666,6 +3709,10 @@
 
   function renderAnalytics() {
     if (!isPlatformWorkspace()) {
+      if (operationalReportsEnabled()) {
+        try { return getOperationalReports().render(); }
+        catch { return `<section class="panel empty-state"><p role="status">${state.settings.locale === "es" ? "Los informes no están disponibles. Recarga la página." : "Reports are unavailable. Reload this page."}</p></section>`; }
+      }
       const completedSales = posSales.filter(sale => sale.status === "completed");
       const revenueCents = completedSales.reduce((sum, sale) => sum + Number(sale.total_cents || 0), 0);
       const activeTasks = state.tasks.filter(task => !["done", "completed"].includes(String(task.status || "").toLowerCase())).length;
@@ -4085,6 +4132,7 @@
           <div class="form-field full"><div class="flex"><button class="action-btn primary ml-auto" type="submit">Save workspace</button></div></div>
         </form>
       </section>
+      <section class="panel settings-section"><h2>${state.settings.locale === 'es' ? 'Herramientas de la ubicación' : 'Location toolbox'}</h2><a class="action-btn" href="/toolbox.html?workspace=${encodeURIComponent(state.workspace.id)}&locale=${state.settings.locale === 'es' ? 'es' : 'en'}">${state.settings.locale === 'es' ? 'Configurar herramientas y permisos' : 'Configure tools and staff permissions'}</a></section>
       <section class="panel settings-section"><h2>Workspace statistics</h2><p>Shared records currently stored in the Supabase workspace.</p>
         <div class="page-grid grid-4">
           <div class="detail-block"><div class="detail-label">CRM records</div><div class="detail-value">${state.deals.length + state.leads.length + state.contacts.length + state.companies.length}</div></div>
@@ -5148,9 +5196,9 @@
 
   function renderDropdown() {
     if (ui.dropdown === "notifications") {
-      return `<div class="dropdown" style="right:64px;top:58px">
-        <div class="dropdown-head"><strong>Notifications</strong><button data-action="mark-notifications">Mark all read</button></div>
-        ${liveNotifications().slice(0, 12).map(notification => `<div class="dropdown-item ${notification.seen ? "" : "unseen"}" data-action="open-notification" data-id="${escapeHtml(notification.id)}"><div class="activity-icon">${icon(notification.icon || "bell")}</div><div class="dropdown-copy"><strong>${escapeHtml(notification.title)}</strong><br>${escapeHtml(notification.body)}<time>${escapeHtml(relativeTime(notification.at))}</time></div></div>`).join("") || `<div class="panel-empty"><div><strong>All clear</strong><span>No new email or workspace activity.</span></div></div>`}
+      return `<div class="dropdown" style="right:min(64px,3vw);top:58px;width:min(310px,calc(100vw - 24px))">
+        <div class="dropdown-head"><strong>${state.settings.locale === "es" ? "Notificaciones" : "Notifications"}</strong><button style="min-height:44px" data-action="mark-notifications">${state.settings.locale === "es" ? "Marcar como leídas" : "Mark all read"}</button></div>
+        ${liveNotifications().slice(0, 12).map(notification => `<button type="button" style="width:100%;border:0;text-align:left;background:transparent;min-height:44px" class="dropdown-item ${notification.seen ? "" : "unseen"}" data-action="open-notification" data-id="${escapeHtml(notification.id)}"><div class="activity-icon">${icon(notification.icon || "bell")}</div><div class="dropdown-copy" style="overflow-wrap:anywhere"><strong>${escapeHtml(notification.title)}</strong><br>${escapeHtml(notification.body)}<time>${escapeHtml(relativeTime(notification.at))}</time></div></button>`).join("") || `<div class="panel-empty"><div><strong>All clear</strong><span>No new email or workspace activity.</span></div></div>`}
       </div>`;
     }
     if (ui.dropdown === "profile") {
@@ -5482,6 +5530,15 @@
         break;
       case "refresh-analytics":
         loadAnalyticsOverview(true);
+        break;
+      case "operational-analytics-tab":
+        if (!isPlatformWorkspace() && operationalReportsEnabled()) getOperationalReports().section(target.dataset.tab);
+        break;
+      case "operational-analytics-export":
+        if (!isPlatformWorkspace() && operationalReportsEnabled()) {
+          try { await getOperationalReports().exportReport(); }
+          catch { toast(state.settings.locale === "es" ? "No se pudo exportar" : "Export failed", state.settings.locale === "es" ? "Revisa tus permisos actuales y vuelve a intentarlo." : "Check your current permissions and try again.", "danger"); }
+        }
         break;
       case "reset-analytics-tuning":
         ui.analyticsTuningDraft = null;
@@ -6279,6 +6336,12 @@
     } else if (change === "social-range") {
       ui.socialRange = target.value;
       loadSocialOverview(false);
+    } else if (change === "operational-analytics-days" || change === "operational-analytics-through") {
+      if (!operationalReportsEnabled() || isPlatformWorkspace()) return;
+      if (change === "operational-analytics-days") ui.analyticsRange = ["7","30","90","365"].includes(target.value) ? target.value : "30";
+      else ui.operationalThrough = /^\d{4}-\d{2}-\d{2}$/.test(target.value) ? target.value : "";
+      getOperationalReports().reset();
+      loadAnalyticsOverview(false);
     } else if (change === "analytics-range") {
       ui.analyticsRange = target.value;
       analyticsOverview = null;
@@ -7868,6 +7931,7 @@
   }
 
   function activateWorkspace(workspace) {
+    if (typeof operationalReportController !== "undefined") operationalReportController?.reset();
     companyManager.reset();
     supportDesk.reset();
     store = new StateStore(`akihq:workspace-cache:v3:${authUser.id}:${workspace.id}`);
@@ -7966,6 +8030,27 @@
   async function bootWithSession(session) {
     const client = getSupabaseClient();
     if (!session?.user || !client) { renderLoginScreen(); return; }
+
+    if (window.AKIHQ_CONFIG?.ONBOARDING_SCHEMA_READY === true) {
+      try {
+        if (!window.AkiAccountEligibility) throw new Error("Account eligibility is temporarily unavailable.");
+        if (!(await window.AkiAccountEligibility.allowed(client, true))) {
+          const es = (initialSearchParams.get("lang") || state.settings?.locale) === "es";
+          const completion = window.AkiAccountEligibility.completionUrl(es ? "es" : "en");
+          appRoot.className = "login-mode";
+          appRoot.innerHTML = `<div class="login-screen"><section class="login-card" role="status"><h1>${es ? "Completa tu cuenta" : "Complete your account"}</h1><p>${es ? "Las herramientas de cuenta están restringidas. Completa tu perfil o revisa tu acceso en AkiPasa." : "Account tools are restricted. Complete your profile or review your access in AkiPasa."}</p><p><a class="action-btn" href="${completion}">${es ? "Continuar en AkiPasa" : "Continue in AkiPasa"}</a></p><p><a href="${completion}/privacy">${es ? "Privacidad, exportación y eliminación" : "Privacy, export and deletion"}</a></p><button class="action-btn" id="eligibilitySignOut" type="button">${es ? "Cerrar sesión" : "Sign out"}</button></section></div>`;
+          portal.innerHTML = "";
+          document.getElementById("eligibilitySignOut").addEventListener("click", async () => {
+            await client.auth.signOut({ scope: "local" });
+            renderLoginScreen();
+          });
+          return;
+        }
+      } catch {
+        renderLoginScreen((initialSearchParams.get("lang") || state.settings?.locale) === "es" ? "El acceso a la cuenta no se puede comprobar ahora. Inténtalo de nuevo." : "Account eligibility is temporarily unavailable. Please try again.");
+        return;
+      }
+    }
 
     // Fetch profile to check role strictly
     let role = null;
@@ -8089,7 +8174,7 @@
     if (ui.route === "crm" && ui.crmTab === "social") loadSocialOverview(false);
     if (ui.route === "telegram") loadTelegramOverview(true, true);
     if (ui.route === "crm" && ui.crmTab === "ai-team" && authRole === "administrator") loadAITeamOverview(false);
-    if (ui.route === "analytics" && authRole === "administrator") loadAnalyticsOverview(false);
+    if (ui.route === "analytics") loadAnalyticsOverview(false);
     if (ui.route === "business-workspaces" && isPlatformWorkspace()) loadBusinessWorkspaceOverview(false);
     if (ui.route === "marketing" && ui.marketingTab === "media") loadMediaOverview(true);
     if (initialSocialResult === "connected") toast("Social account connected", "Refresh metrics to collect the latest available account and content data.", "success");

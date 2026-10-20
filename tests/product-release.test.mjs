@@ -21,7 +21,8 @@ for (const enabled of [false, true]) {
       assert.match(await read('index.html'), /<base href="\/"\s*\/>/);
       assert.equal(JSON.parse(await read('manifest.webmanifest')).name, product);
       assert.match(await read('membership.html'), /data-plan="standard"/);
-      assert.match(await read('membership.html'), /disabled data-staged/);
+      assert.match(await read('membership.html'), /id="operations-subscription-link"/);
+      assert.match(await read('membership.html'), /data-plan="basico"/);
       assert.equal(JSON.parse(await read('release-source.json')).roleSwap, enabled);
       assert.equal(typeof JSON.parse(await read('release-source.json')).sourceTreeDirty, 'boolean');
       if (enabled) assert.doesNotMatch(source, /void client\.rpc\("queue_suite_portal_welcome"/);
