@@ -40,3 +40,10 @@ checks pass (15 total). Static operational packaging passed with the new helper
 included and exact role transformations retained. Worker/app/helper syntax checks
 passed. Full gateway CI, production clean-source artifact, direct Supabase
 operational coverage and authenticated browser/tenant acceptance remain required.
+
+Hosted verification initially exposed two pre-existing VM bootstrap fixtures that
+omitted the newly referenced browser configuration object. Those fixtures now
+explicitly model the disabled readiness flag, retaining all logout/tenant-denial
+assertions; the separate enabled-state bootstrap test remains. All 42 relevant
+onboarding, suite controls, logout isolation, workspace intent, release packaging,
+membership navigation and ledger tests pass locally after that fixture repair.
