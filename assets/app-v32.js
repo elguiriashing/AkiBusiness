@@ -4083,6 +4083,7 @@
           <div class="form-field full"><div class="flex"><button class="action-btn primary ml-auto" type="submit">Save workspace</button></div></div>
         </form>
       </section>
+      <section class="panel settings-section"><h2>${state.settings.locale === 'es' ? 'Herramientas de la ubicación' : 'Location toolbox'}</h2><a class="action-btn" href="/toolbox.html?workspace=${encodeURIComponent(state.workspace.id)}&locale=${state.settings.locale === 'es' ? 'es' : 'en'}">${state.settings.locale === 'es' ? 'Configurar herramientas y permisos' : 'Configure tools and staff permissions'}</a></section>
       <section class="panel settings-section"><h2>Workspace statistics</h2><p>Shared records currently stored in the Supabase workspace.</p>
         <div class="page-grid grid-4">
           <div class="detail-block"><div class="detail-label">CRM records</div><div class="detail-value">${state.deals.length + state.leads.length + state.contacts.length + state.companies.length}</div></div>

@@ -2,6 +2,7 @@ import { parseProspectWorkbook } from "./prospect-import.js";
 import PostalMime from "postal-mime";
 import { handleSupport, ingestSupportEmail, processSupportQueue } from "./support.js";
 import { handlePrivacy } from "./privacy.js";
+import { processToolboxRotations } from "./toolbox.js";
 
 /**
  * AkiHQ optional integration gateway for Cloudflare Workers.
@@ -204,6 +205,9 @@ export default {
     }
   },
   async scheduled(_controller, env, ctx) {
+    if (env.AKIBUSINESS_TOOLBOX_ENABLED === "true") {
+      ctx.waitUntil(processToolboxRotations(env).catch(() => console.error("Toolbox reconciliation failed; retained for retry.")));
+    }
     if (String(env.SUPPORT_INGEST_ENABLED) === "true") {
       ctx.waitUntil(processSupportQueue(env).catch(() => console.error("Support queue processing failed; retained for review.")));
     }
