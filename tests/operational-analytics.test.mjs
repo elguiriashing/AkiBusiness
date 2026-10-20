@@ -334,7 +334,7 @@ test("production source includes both report assets without changing release tra
     new URL("../config.js", import.meta.url),
     "utf8",
   );
-  assert.match(config, /OPERATIONAL_ANALYTICS_ENABLED: false/);
+  assert.match(config, /OPERATIONAL_ANALYTICS_ENABLED: true/);
 });
 
 test("management handoff uses the canonical locale contract and preserves referral context when installed", () => {

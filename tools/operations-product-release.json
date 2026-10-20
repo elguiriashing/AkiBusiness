@@ -115,8 +115,8 @@
       "to": "  <noscript>AkiBusiness needs JavaScript enabled.</noscript>\n"
     },
     {
-      "from": "  <script src=\"config.js?v=42\"></script>\n",
-      "to": "  <script src=\"config.js?v=43\"></script>\n"
+      "from": "  <script src=\"config.js?v=44\"></script>\n",
+      "to": "  <script src=\"config.js?v=45\"></script>\n"
     },
     {
       "from": "  <script src=\"assets/app-v32.js?v=43\"></script>\n",
@@ -131,16 +131,16 @@
   ],
   "sw.js": [
     {
-      "from": "const CACHE = \"akihq-v136\";\n",
-      "to": "const CACHE = \"akihq-v137\";\n"
+      "from": "const CACHE = \"akihq-v138\";\n",
+      "to": "const CACHE = \"akihq-v139\";\n"
     },
     {
       "from": "  \"./assets/app-v32.js?v=43\",\n",
       "to": "  \"./assets/app-v32.js?v=47\",\n"
     },
     {
-      "from": "  \"./config.js?v=42\",\n",
-      "to": "  \"./config.js?v=43\",\n"
+      "from": "  \"./config.js?v=44\",\n",
+      "to": "  \"./config.js?v=45\",\n"
     }
   ],
   "config.js": [
