@@ -7,7 +7,7 @@ This candidate preserves the ancestry of toolbox PR29, shared-account eligibilit
 - Retained both account eligibility and operational analytics configuration and scripts, loaded before the main application. Existing suite navigation remains intact.
 - Retained the authoritative toolbox scheduler and added billing reconciliation adapter. All onboarding, operational analytics, toolbox and billing activation gates retain their existing disabled/default behavior.
 - Retained the single account-owned operations checkout handoff; no local purchase flow or financial write was introduced.
-- Reconciled source service-worker cache 132 to paid cache 133, paid application asset 46 and the four PoS CI cache assertions. Shared source application asset 43 remains valid because the entire offline cache advances. Both role release modes must build successfully.
+- Reconciled source service-worker cache 136 to paid cache 137, paid application asset 47 and the four PoS CI cache assertions. Shared source application asset 43 remains valid because the entire offline cache advances. Both role release modes must build successfully.
 - No production database migration, billing configuration, live subscription, payout or fulfilment changed. The billing migration manifest is a prospective sealed review mechanism, including explicit approved monthly metadata; it is not automatically applied.
 
 ## Validation
@@ -20,4 +20,4 @@ Run the full gateway `npm run check` in `cloudflare`, plus `node --test tests/in
 
 Build using `NEXT_PUBLIC_AKISUITE_ROLE_SWAP=true node tools/build-product-release.mjs <new-empty-directory>` from a clean exact commit and verify its `release-source.json`. Confirm this repository's AkiBusiness production mapping before deployment. Database migrations require the separately documented staged acceptance and runtime gates; browser success alone must not enable them.
 
-Rollback the application by redeploying the previous accepted artifact and advancing the offline cache above 133 if needed. Retain historical database data and existing subscription records. Do not reverse database changes destructively or restore obsolete role mappings. Feature-specific rollback details remain in each feature's release document.
+Rollback the application by redeploying the previous accepted artifact and advancing the offline cache above 137 if needed. Retain historical database data and existing subscription records. Do not reverse database changes destructively or restore obsolete role mappings. Feature-specific rollback details remain in each feature's release document.

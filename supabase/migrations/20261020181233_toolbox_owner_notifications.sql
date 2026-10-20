@@ -8,7 +8,7 @@ insert into akibusiness_private.toolbox_notification_settings values(true,false)
 alter table akibusiness_private.toolbox_notification_settings enable row level security;
 create table akibusiness_private.toolbox_owner_inbox (
  history_id bigint not null references akibusiness_private.toolbox_history(id),
- recipient uuid not null references public.profiles(id),workspace_id text not null,
+ recipient uuid not null references public.profiles(id) on delete cascade,workspace_id text not null,
  active_tools text[] not null,removed_tools text[] not null,affected_staff jsonb not null,
  created_at timestamptz not null default now(),primary key(history_id,recipient)
 );

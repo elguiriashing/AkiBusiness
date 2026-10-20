@@ -1,4 +1,4 @@
-const CACHE = "akihq-v134";
+const CACHE = "akihq-v136";
 const ASSETS = [
   "./assets/suite-navigation.js?v=1",
   "./assets/operational-analytics.js?v=1",
@@ -26,7 +26,7 @@ const ASSETS = [
   "./index.html",
   "./membership.html",
   "./assets/membership.css?v=2",
-  "./assets/membership.js?v=3",
+  "./assets/membership.js?v=4",
   "./assets/styles.css?v=60",
   "./assets/account-eligibility.js?v=2",
   "./assets/toolbox-notifications.js?v=1",

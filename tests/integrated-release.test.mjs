@@ -12,8 +12,8 @@ test('integrated app preserves eligibility, analytics and suite scripts before m
 });
 test('integrated release advances offline caches without enabling paid or account gates',()=>{
  const manifest=JSON.parse(read('tools/operations-product-release.json'));
- assert.equal(read('sw.js').match(/const CACHE = "([^"]+)"/)[1],'akihq-v134');
- assert(manifest['sw.js'].some(x=>x.from.includes('akihq-v134')&&x.to.includes('akihq-v135')));
+ assert.equal(read('sw.js').match(/const CACHE = "([^"]+)"/)[1],'akihq-v136');
+ assert(manifest['sw.js'].some(x=>x.from.includes('akihq-v136')&&x.to.includes('akihq-v137')));
  assert(read('config.js').includes('OPERATIONAL_ANALYTICS_ENABLED: false'));
  assert(read('config.example.js').includes('ONBOARDING_SCHEMA_READY: false'));
  assert(read('config.example.js').includes('OPERATIONAL_ANALYTICS_ENABLED: false'));

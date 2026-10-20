@@ -10,7 +10,7 @@ The AkiBusiness membership page now describes the approved operating-location pa
 | Standard | 44.99 | 8 of 12 | 2 |
 | Pro | 64.99 | All 12 | Unrestricted; no selection needed |
 
-The annual comparison retains the existing storefront's 20% comparison policy: monthly price × 12 × 0.8, rounded once to EUR cents. Displayed annual totals are EUR 239.90, 431.90 and 623.90. This comparison does not create annual Stripe prices or promise annual checkout availability. Approved monthly prices do not imply an approved tax treatment.
+Only the three approved monthly amounts are displayed. New annual prices and annual Stripe products remain unapproved and unavailable; no annual comparison, discount or computed annual total is offered. Existing annual subscribers still receive monthly toolbox rotations. Approved monthly prices do not imply an approved tax treatment.
 
 The canonical parent catalogue is `crm`, `inbox`, `tasks`, `calendar`, `inventory`, `pos`, `sales`, `marketing`, `automation`, `collaboration`, `employees`, `knowledge`. Support, sites and social CRM remain subtools rather than additional selectable tools.
 
@@ -21,11 +21,11 @@ There is one neutral account-management handoff to `https://akipasa.com/{locale}
 ## Validation
 
 - `node --test tests/membership-toolbox.test.mjs tests/membership-navigation.test.mjs tests/product-release.test.mjs`: 16 passed.
-- `BROWSER_PATH=/tmp/akisuite-chromium node tests/membership-browser.cjs`: 16 real Chromium cases; EN/ES, light/dark, 360×800, 768×1024, 1024×768 and 1440×900. Checked exact prices, annual totals, tool counts, keyboard controls, bounded navigation, no horizontal overflow, no page errors and no external requests. Screenshots are generated locally under ignored `test-results/membership-toolbox`.
+- `BROWSER_PATH=/tmp/akisuite-chromium node tests/membership-browser.cjs`: 16 real Chromium cases; EN/ES, light/dark, 360×800, 768×1024, 1024×768 and 1440×900. Checked exact approved monthly prices, tool counts, keyboard controls, bounded navigation, no horizontal overflow, no page errors and no external requests. Screenshots are generated locally under ignored `test-results/membership-toolbox`.
 - Run `npm run check` in `cloudflare` as the full gateway release gate.
 
-Source service-worker cache 130 and paid-role cache 131 invalidate the changed membership assets. Both isolated release modes are covered by the existing product-release tests. No production settings, subscriptions, Stripe objects, database records or live payments are changed by this patch.
+Source service-worker cache 136 and paid-role cache 137 invalidate the changed membership assets. Both isolated release modes are covered by the existing product-release tests. No production settings, subscriptions, Stripe objects, database records or live payments are changed by this patch.
 
 ## Rollback
 
-Revert this commit and rebuild the appropriate isolated role release using the normal deployment pipeline. Advance the service-worker cache if deploying a rollback after clients have installed cache 131. This is a presentation-only change; no financial or database rollback is needed. Production billing activation and live customer journey acceptance remain separate gates owned by the billing release.
+Revert this commit and rebuild the appropriate isolated role release using the normal deployment pipeline. Advance the service-worker cache if deploying a rollback after clients have installed cache 137. This is a presentation-only change; no financial or database rollback is needed. Production billing activation and live customer journey acceptance remain separate gates owned by the billing release.

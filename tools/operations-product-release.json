@@ -131,8 +131,8 @@
   ],
   "sw.js": [
     {
-      "from": "const CACHE = \"akihq-v134\";\n",
-      "to": "const CACHE = \"akihq-v135\";\n"
+      "from": "const CACHE = \"akihq-v136\";\n",
+      "to": "const CACHE = \"akihq-v137\";\n"
     },
     {
       "from": "  \"./assets/app-v32.js?v=43\",\n",
