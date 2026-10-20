@@ -20,11 +20,11 @@ before(async()=>{
  grant usage on schema auth to authenticated,anon,service_role;grant execute on function auth.uid() to authenticated,anon,service_role;
  create table public.profiles(id uuid primary key,app_role text,display_name text,username text);
  create table public.crm_workspaces(id text primary key,status text,owner_profile_id uuid);
- create table public.crm_workspace_members(workspace_id text,profile_id uuid,status text,role text,role_template_id uuid,primary key(workspace_id,profile_id));
+ create table public.crm_workspace_members(workspace_id text,profile_id uuid,status text check(status in ('active','suspended')),role text,role_template_id uuid,primary key(workspace_id,profile_id));
  create table public.crm_role_templates(id uuid primary key,workspace_id text);
  create table public.crm_role_template_tools(template_id uuid,tool_key text);
  create table public.crm_tool_catalog(tool_key text primary key,active boolean);
- create table public.crm_workspace_entitlements(workspace_id text,tool_key text,active boolean,source text,starts_at timestamptz,ends_at timestamptz,primary key(workspace_id,tool_key));
+ create table public.crm_workspace_entitlements(workspace_id text,tool_key text,active boolean,source text constraint crm_workspace_entitlements_source_check check(source in ('plan','trial','purchase','manual','platform')),starts_at timestamptz,ends_at timestamptz,primary key(workspace_id,tool_key));
  create function public.has_active_entitlement(uuid,text) returns boolean language sql stable as $$select true$$;
  create function public.crm_can_access_workspace(text) returns boolean language sql stable as $$select true$$;
  create function public.crm_has_tool(text,text) returns boolean language sql stable as $$select true$$;
@@ -70,7 +70,7 @@ test('instant individual restriction is intersected with active licence and role
  await enroll();await login(staff);assert.equal(await scalar("select public.crm_has_tool('w','crm')"),true);assert.equal(await scalar("select public.crm_has_tool('w','pos')"),false);
  await login();await db.query('select public.crm_toolbox_delegate($1,$2,$3)',['w',staff,[]]);await login(staff);assert.equal(await scalar("select public.crm_has_tool('w','crm')"),false);
  await login();await db.query('select public.crm_toolbox_delegate($1,$2,$3)',['w',staff,['crm']]);await login(staff);assert.equal(await scalar("select public.crm_has_tool('w','crm')"),true);assert.equal(await scalar("select public.crm_has_tool('other','crm')"),false);
- await db.query("update public.crm_workspace_members set status='removed' where profile_id=$1",[staff]);assert.equal(await scalar("select public.crm_has_tool('w','crm')"),false);
+ await db.query("update public.crm_workspace_members set status='suspended' where profile_id=$1",[staff]);assert.equal(await scalar("select public.crm_has_tool('w','crm')"),false);
 });
 test('unauthenticated/employee cannot save, sync, rotate or alter private data',async()=>{
  await enroll();await login(staff);await db.exec('set role authenticated');await assert.rejects(save(tools,1),/Owner access/);
@@ -103,4 +103,9 @@ test('central onboarding helper when installed gates direct operations without l
  assert.equal(await scalar("select public.crm_has_tool('w','crm')"),false);
  await db.exec("create or replace function public.account_features_allowed() returns boolean language sql stable as $$select true$$");
  assert.equal(await scalar("select public.crm_has_tool('w','crm')"),true);await db.exec('drop function public.account_features_allowed()');
+});
+
+for(const [source,expected] of [['stripe','purchase'],['trial','trial'],['promotion','manual'],['admin','manual'],['grandfathered','manual']])test(`historical entitlement source CHECK accepts ${source} as ${expected}`,async()=>{
+ await db.query('select public.crm_toolbox_billing_sync($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)',['w','basico',tools,testAnchor,new Date(Date.now()+366*86400000).toISOString(),'active',source,source==='stripe'?'sub_test':null,1,'approved-source-proof',true]);
+ assert.deepEqual((await db.query('select distinct source from public.crm_workspace_entitlements')).rows,[{source:expected}]);
 });

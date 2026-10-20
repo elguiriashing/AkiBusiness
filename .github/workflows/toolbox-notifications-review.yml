@@ -1,0 +1,41 @@
+name: Toolbox owner notification acceptance
+on:
+  pull_request:
+    paths:
+      - 'assets/app-v32.js'
+      - 'assets/toolbox-notifications.js'
+      - 'cloudflare/toolbox-notifications*'
+      - 'cloudflare/worker.js'
+      - 'supabase/migrations/**toolbox**'
+      - 'tests/toolbox*'
+      - '.github/workflows/toolbox-notifications-review.yml'
+permissions:
+  contents: read
+jobs:
+  owner-inbox:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: npm ci --prefix cloudflare
+      - run: node --test tests/toolbox-db.test.mjs tests/toolbox-source-repair.test.mjs tests/toolbox-notifications-db.test.mjs tests/toolbox-notifications.test.mjs cloudflare/toolbox-notifications.test.js
+      - name: Install isolated browser tooling
+        run: |
+          npm install --prefix "$RUNNER_TEMP/notification-browser" playwright@1.57.0
+          "$RUNNER_TEMP/notification-browser/node_modules/.bin/playwright" install --with-deps chromium
+      - name: Owner bell bilingual responsive acceptance
+        env:
+          PLAYWRIGHT_MODULE: ${{ runner.temp }}/notification-browser/node_modules/playwright
+        run: node tests/toolbox-notifications-browser.cjs
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: toolbox-notifications-${{ github.event.pull_request.head.sha }}
+          path: test-results/toolbox-notifications/
+          retention-days: 7

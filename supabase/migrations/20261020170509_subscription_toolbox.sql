@@ -80,8 +80,10 @@ alter table akibusiness_private.toolboxes enable row level security;
 alter table akibusiness_private.toolbox_history enable row level security;
 alter table akibusiness_private.toolbox_notifications enable row level security;
 alter table akibusiness_private.member_tool_limits enable row level security;
-revoke all on all tables in schema akibusiness_private from public,anon,authenticated;
-grant select on all tables in schema akibusiness_private to service_role;
+revoke all on table akibusiness_private.toolboxes, akibusiness_private.toolbox_history,
+ akibusiness_private.toolbox_notifications, akibusiness_private.member_tool_limits from public,anon,authenticated;
+grant select on table akibusiness_private.toolboxes, akibusiness_private.toolbox_history,
+ akibusiness_private.toolbox_notifications, akibusiness_private.member_tool_limits to service_role;
 
 create function akibusiness_private.owner(p_workspace text) returns boolean
 language sql stable security definer set search_path='' as $$
@@ -197,7 +199,7 @@ begin
   -- Toolbox is an additional entitlement intersection, not a replacement for the
   -- established checks. Reuse their stable tool identifiers and retain all data.
   insert into public.crm_workspace_entitlements(workspace_id,tool_key,active,source,starts_at,ends_at)
-  select p_workspace,c.tool_key,true,'toolbox',p_anchor,p_paid_until from public.crm_tool_catalog c
+  select p_workspace,c.tool_key,true,case p_source when 'stripe' then 'purchase' when 'trial' then 'trial' else 'manual' end,p_anchor,p_paid_until from public.crm_tool_catalog c
    where c.active and (akibusiness_private.parent_tool(c.tool_key)=any(akibusiness_private.catalogue())
     or c.tool_key in ('dashboard','integrations','analytics'))
   on conflict(workspace_id,tool_key) do update set active=true,starts_at=excluded.starts_at,ends_at=excluded.ends_at;

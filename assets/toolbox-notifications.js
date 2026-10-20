@@ -1,0 +1,8 @@
+(function(root,factory){const api=factory();if(typeof module==='object'&&module.exports)module.exports=api;else root.AkiToolboxNotifications=api;})(typeof window==='object'?window:globalThis,()=>{
+ const names={en:{crm:'CRM',inbox:'Inbox',tasks:'Tasks',calendar:'Calendar',inventory:'Inventory',pos:'Point of sale',sales:'Sales',marketing:'Marketing',automation:'Automation',collaboration:'Team chat',employees:'Staff',knowledge:'Knowledge'},es:{crm:'CRM',inbox:'Bandeja',tasks:'Tareas',calendar:'Calendario',inventory:'Inventario',pos:'TPV',sales:'Ventas',marketing:'Marketing',automation:'Automatización',collaboration:'Chat del equipo',employees:'Personal',knowledge:'Conocimiento'}};
+ function format(rows,locale){const es=locale==='es',labels=names[es?'es':'en'];return (Array.isArray(rows)?rows:[]).slice(0,30).filter(n=>Number.isSafeInteger(n.history_id)&&Array.isArray(n.active_tools)&&n.active_tools.every(t=>Object.hasOwn(labels,t))).map(n=>{
+ const affected=Array.isArray(n.affected_staff)?n.affected_staff.map(x=>String(x?.label|| (es?'Miembro del equipo':'Team member')).slice(0,80)):null;
+ return {id:`toolbox:${n.history_id}`,title:es?'Herramientas activas actualizadas':'Active toolbox updated',body:`${es?'Activas':'Active'}: ${n.active_tools.map(t=>labels[t]).join(', ')}. ${affected===null?(es?'Impacto histórico en el equipo no disponible.':'Historical staff impact unavailable.'):(es?'Equipo afectado':'Affected staff')+': '+(affected.length?affected.slice(0,8).join(', ')+(affected.length>8?(es?' y ':' and ')+(affected.length-8)+(es?' más':' more'):''):(es?'Ninguno':'None'))+'.'}`,route:'settings',icon:'bell',at:n.created_at};
+ });}
+ return {format};
+});

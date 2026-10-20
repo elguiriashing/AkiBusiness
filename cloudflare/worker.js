@@ -1,3 +1,4 @@
+import { processToolboxNotifications } from "./toolbox-notifications.js";
 import { requireGatewayAccountEligibility } from "./account-eligibility.js";
 import { parseProspectWorkbook } from "./prospect-import.js";
 import PostalMime from "postal-mime";
@@ -208,6 +209,9 @@ export default {
     }
   },
   async scheduled(_controller, env, ctx) {
+    if (env.AKIBUSINESS_TOOLBOX_NOTIFICATIONS_ENABLED === "true") {
+      ctx.waitUntil(processToolboxNotifications(env).catch(() => console.error("Toolbox notification delivery retained for retry.")));
+    }
     if (env.AKIBUSINESS_TOOLBOX_ENABLED === "true") {
       ctx.waitUntil(processToolboxRotations(env).catch(() => console.error("Toolbox reconciliation failed; retained for retry.")));
     }

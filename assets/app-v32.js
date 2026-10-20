@@ -1699,7 +1699,28 @@
     }
   }
 
+  let toolboxNoticeCache = {key:"", at:0, rows:[], pending:false};
+  async function refreshToolboxNotifications() {
+    if (window.AKIHQ_CONFIG?.TOOLBOX_NOTIFICATIONS_ENABLED !== true || !authUser || !state.workspace?.id || !window.AkiToolboxNotifications) return;
+    const key = `${authUser.id}:${state.workspace.id}`;
+    if (toolboxNoticeCache.key !== key) toolboxNoticeCache = {key, at:0, rows:[], pending:false};
+    if (toolboxNoticeCache.pending || Date.now()-toolboxNoticeCache.at<30000) return;
+    const cache=toolboxNoticeCache, client=getSupabaseClient();
+    if (!client) return;
+    cache.pending=true;
+    try {
+      const {data,error}=await client.rpc("crm_toolbox_owner_notifications", {p_workspace:state.workspace.id});
+      if (toolboxNoticeCache!==cache || `${authUser?.id}:${state.workspace?.id}`!==key) return;
+      cache.rows=error?[]:(Array.isArray(data)?data:[]);
+      cache.at=Date.now();
+      requestBackgroundRender();
+    } catch { if(toolboxNoticeCache===cache){cache.rows=[];cache.at=Date.now();} }
+    finally {cache.pending=false;}
+  }
+  setInterval(() => void refreshToolboxNotifications(), 30000);
+
   function liveNotifications() {
+    void refreshToolboxNotifications();
     state.notificationReadIds ||= [];
     const readIds = new Set(state.notificationReadIds);
     const mail = canUseTool("inbox") ? mailboxMessages().filter(message => message.direction === "inbound").map(message => ({
@@ -1723,7 +1744,9 @@
       at: item.at
     }));
     const support = supportDesk.notifications().map(item => ({ ...item, seen: readIds.has(item.id) }));
-    return [...support, ...mail, ...activity].sort((a, b) => Date.parse(b.at || 0) - Date.parse(a.at || 0)).slice(0, 30);
+    const noticeKey = `${authUser?.id}:${state.workspace?.id}`;
+    const toolbox = toolboxNoticeCache.key === noticeKey ? (window.AkiToolboxNotifications?.format(toolboxNoticeCache.rows, state.settings.locale) || []).map(item => ({...item, seen:readIds.has(item.id)})) : [];
+    return [...toolbox, ...support, ...mail, ...activity].sort((a, b) => Date.parse(b.at || 0) - Date.parse(a.at || 0)).slice(0, 30);
   }
 
   async function markAllLiveNotificationsRead() {
@@ -5173,9 +5196,9 @@
 
   function renderDropdown() {
     if (ui.dropdown === "notifications") {
-      return `<div class="dropdown" style="right:64px;top:58px">
-        <div class="dropdown-head"><strong>Notifications</strong><button data-action="mark-notifications">Mark all read</button></div>
-        ${liveNotifications().slice(0, 12).map(notification => `<div class="dropdown-item ${notification.seen ? "" : "unseen"}" data-action="open-notification" data-id="${escapeHtml(notification.id)}"><div class="activity-icon">${icon(notification.icon || "bell")}</div><div class="dropdown-copy"><strong>${escapeHtml(notification.title)}</strong><br>${escapeHtml(notification.body)}<time>${escapeHtml(relativeTime(notification.at))}</time></div></div>`).join("") || `<div class="panel-empty"><div><strong>All clear</strong><span>No new email or workspace activity.</span></div></div>`}
+      return `<div class="dropdown" style="right:min(64px,3vw);top:58px;width:min(310px,calc(100vw - 24px))">
+        <div class="dropdown-head"><strong>${state.settings.locale === "es" ? "Notificaciones" : "Notifications"}</strong><button style="min-height:44px" data-action="mark-notifications">${state.settings.locale === "es" ? "Marcar como leídas" : "Mark all read"}</button></div>
+        ${liveNotifications().slice(0, 12).map(notification => `<button type="button" style="width:100%;border:0;text-align:left;background:transparent;min-height:44px" class="dropdown-item ${notification.seen ? "" : "unseen"}" data-action="open-notification" data-id="${escapeHtml(notification.id)}"><div class="activity-icon">${icon(notification.icon || "bell")}</div><div class="dropdown-copy" style="overflow-wrap:anywhere"><strong>${escapeHtml(notification.title)}</strong><br>${escapeHtml(notification.body)}<time>${escapeHtml(relativeTime(notification.at))}</time></div></button>`).join("") || `<div class="panel-empty"><div><strong>All clear</strong><span>No new email or workspace activity.</span></div></div>`}
       </div>`;
     }
     if (ui.dropdown === "profile") {

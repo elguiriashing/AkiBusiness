@@ -3,6 +3,7 @@
 window.AKIHQ_CONFIG = {
   // UI readiness only; server/database eligibility remain authoritative.
   ONBOARDING_SCHEMA_READY: false,
+  TOOLBOX_NOTIFICATIONS_ENABLED: false, // Enable only after owner-inbox acceptance.
   OPERATIONAL_ANALYTICS_ENABLED: false, // Enable only after guarded RPC and acceptance.
   SUPABASE_URL: "https://YOUR_PROJECT.supabase.co",
   SUPABASE_ANON_KEY: "YOUR_SUPABASE_ANON_KEY"
