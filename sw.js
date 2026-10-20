@@ -1,6 +1,8 @@
 const CACHE = "akihq-v128";
 const ASSETS = [
   "./assets/suite-navigation.js?v=1",
+  "./assets/operational-analytics.js?v=1",
+  "./assets/operational-analytics.css?v=1",
   "./assets/pos-courses.js?v=1",
   "./assets/pos-variants.js?v=1",
   "./assets/pos-variants.css?v=1",

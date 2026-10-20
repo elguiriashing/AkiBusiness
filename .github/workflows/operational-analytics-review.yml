@@ -1,0 +1,53 @@
+name: Operational analytics acceptance
+on:
+  pull_request:
+    paths:
+      [
+        "assets/operational-analytics*",
+        "assets/app-v32.js",
+        "supabase/migrations/*operational_analytics.sql",
+        "tests/operational-analytics*",
+        "tests/fixtures/operational-analytics.html",
+        ".github/workflows/operational-analytics-review.yml",
+      ]
+permissions:
+  contents: read
+concurrency:
+  group: operational-analytics-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+jobs:
+  source-and-sql:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - run: npm ci --prefix cloudflare
+      - run: node --check assets/operational-analytics.js && node --check assets/app-v32.js
+      - run: node --test tests/operational-analytics.test.mjs tests/operational-analytics-db.test.mjs multi-tenant.test.mjs tests/product-release.test.mjs
+  browser:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - run: npm install --no-save --package-lock=false playwright@1.57.0
+      - run: npx playwright install --with-deps chromium
+      - run: node tests/operational-analytics-browser.mjs
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: operational-analytics-${{ github.event.pull_request.head.sha }}
+          path: artifacts/operational-analytics/
+          retention-days: 7
+          if-no-files-found: warn

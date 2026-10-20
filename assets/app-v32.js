@@ -1780,7 +1780,26 @@
     await pushWorkspaceSnapshot(workspaceMutationVersion);
   }
 
+  let operationalReportController = null;
+  function operationalReportsEnabled() { return window.AKIHQ_CONFIG?.OPERATIONAL_ANALYTICS_ENABLED === true; }
+  function getOperationalReports() {
+    if (!window.AkiBusinessOperationalAnalytics?.create) throw new Error(state.settings.locale === "es" ? "Los informes no se han podido cargar. Recarga la página." : "Reports could not load. Reload this page.");
+    if (!operationalReportController) operationalReportController = window.AkiBusinessOperationalAnalytics.create({
+      client: getSupabaseClient,
+      getScope: () => ({ workspace: state.workspace.id, name: state.workspace.name, user: authUser?.id, days: Number(ui.analyticsRange || 30), through: ui.operationalThrough || "", locale: state.settings.locale, enabled: operationalReportsEnabled() }),
+      changed: () => { if (ui.route === "analytics") render(); }, download: downloadBlob
+    });
+    return operationalReportController;
+  }
+
   async function loadAnalyticsOverview(showToast = false) {
+    if (!isPlatformWorkspace()) {
+      if (operationalReportsEnabled()) {
+        try { await getOperationalReports().load(); }
+        catch (error) { if(showToast) toast(state.settings.locale === "es" ? "Informe no disponible" : "Report unavailable", error.message, "danger"); }
+      }
+      return;
+    }
     if (!isPlatformWorkspace() || authRole !== "administrator" || analyticsLoading) return;
     analyticsLoading = true;
     analyticsError = "";
@@ -2328,6 +2347,7 @@
       case "knowledge":
         return `<span class="context-spacer"></span><button class="action-btn primary" data-action="open-form" data-entity="article">${icon("plus")} Article</button>`;
       case "analytics":
+        if (!isPlatformWorkspace() && operationalReportsEnabled()) return "";
         return `
           <select class="filter-select" data-change="analytics-range" aria-label="Analytics date range">
             ${[["7", "Last 7 days"], ["30", "Last 30 days"], ["90", "Last 90 days"], ["365", "Last 12 months"]].map(([value, label]) => `<option value="${value}" ${ui.analyticsRange === value ? "selected" : ""}>${label}</option>`).join("")}
@@ -3666,6 +3686,10 @@
 
   function renderAnalytics() {
     if (!isPlatformWorkspace()) {
+      if (operationalReportsEnabled()) {
+        try { return getOperationalReports().render(); }
+        catch { return `<section class="panel empty-state"><p role="status">${state.settings.locale === "es" ? "Los informes no están disponibles. Recarga la página." : "Reports are unavailable. Reload this page."}</p></section>`; }
+      }
       const completedSales = posSales.filter(sale => sale.status === "completed");
       const revenueCents = completedSales.reduce((sum, sale) => sum + Number(sale.total_cents || 0), 0);
       const activeTasks = state.tasks.filter(task => !["done", "completed"].includes(String(task.status || "").toLowerCase())).length;
@@ -5483,6 +5507,15 @@
       case "refresh-analytics":
         loadAnalyticsOverview(true);
         break;
+      case "operational-analytics-tab":
+        if (!isPlatformWorkspace() && operationalReportsEnabled()) getOperationalReports().section(target.dataset.tab);
+        break;
+      case "operational-analytics-export":
+        if (!isPlatformWorkspace() && operationalReportsEnabled()) {
+          try { await getOperationalReports().exportReport(); }
+          catch { toast(state.settings.locale === "es" ? "No se pudo exportar" : "Export failed", state.settings.locale === "es" ? "Revisa tus permisos actuales y vuelve a intentarlo." : "Check your current permissions and try again.", "danger"); }
+        }
+        break;
       case "reset-analytics-tuning":
         ui.analyticsTuningDraft = null;
         render();
@@ -6279,6 +6312,12 @@
     } else if (change === "social-range") {
       ui.socialRange = target.value;
       loadSocialOverview(false);
+    } else if (change === "operational-analytics-days" || change === "operational-analytics-through") {
+      if (!operationalReportsEnabled() || isPlatformWorkspace()) return;
+      if (change === "operational-analytics-days") ui.analyticsRange = ["7","30","90","365"].includes(target.value) ? target.value : "30";
+      else ui.operationalThrough = /^\d{4}-\d{2}-\d{2}$/.test(target.value) ? target.value : "";
+      getOperationalReports().reset();
+      loadAnalyticsOverview(false);
     } else if (change === "analytics-range") {
       ui.analyticsRange = target.value;
       analyticsOverview = null;
@@ -7868,6 +7907,7 @@
   }
 
   function activateWorkspace(workspace) {
+    if (typeof operationalReportController !== "undefined") operationalReportController?.reset();
     companyManager.reset();
     supportDesk.reset();
     store = new StateStore(`akihq:workspace-cache:v3:${authUser.id}:${workspace.id}`);
@@ -8089,7 +8129,7 @@
     if (ui.route === "crm" && ui.crmTab === "social") loadSocialOverview(false);
     if (ui.route === "telegram") loadTelegramOverview(true, true);
     if (ui.route === "crm" && ui.crmTab === "ai-team" && authRole === "administrator") loadAITeamOverview(false);
-    if (ui.route === "analytics" && authRole === "administrator") loadAnalyticsOverview(false);
+    if (ui.route === "analytics") loadAnalyticsOverview(false);
     if (ui.route === "business-workspaces" && isPlatformWorkspace()) loadBusinessWorkspaceOverview(false);
     if (ui.route === "marketing" && ui.marketingTab === "media") loadMediaOverview(true);
     if (initialSocialResult === "connected") toast("Social account connected", "Refresh metrics to collect the latest available account and content data.", "success");
