@@ -43,6 +43,8 @@ create table akibusiness_private.toolboxes (
  billing_revision bigint not null,
  revision bigint not null default 1,
  enabled boolean not null default false,
+ reconciliation_attempts integer not null default 0,
+ retry_after timestamptz not null default '-infinity',
  updated_at timestamptz not null default now(),
  check(akibusiness_private.valid_tools(tier,active_tools)),
  check(akibusiness_private.valid_tools(tier,saved_tools)),
@@ -95,6 +97,18 @@ language sql stable security definer set search_path='' as $$
     or p_tool in ('dashboard','integrations','analytics','business-admin')))
 $$;
 
+-- Backwards compatible migration order. Once the central onboarding migration
+-- exists, direct operations APIs share its caller-only authoritative soft lock.
+create function akibusiness_private.account_allowed() returns boolean
+language plpgsql stable security definer set search_path='' as $$
+declare permitted boolean;
+begin
+ if auth.uid() is null then return false; end if;
+ if to_regprocedure('public.account_features_allowed()') is null then return true; end if;
+ execute 'select public.account_features_allowed()' into permitted;
+ return coalesce(permitted,false);
+end $$;
+
 create or replace function public.crm_can_access_workspace(p_workspace text) returns boolean
 language sql stable security definer set search_path='' as $$
  select auth.uid() is not null and (
@@ -111,7 +125,7 @@ $$;
 -- active toolbox intersection. Inactive delegation rows never confer access.
 create or replace function public.crm_has_tool(p_workspace text,p_tool text) returns boolean
 language sql stable security definer set search_path='' as $$
- select auth.uid() is not null and public.crm_can_access_workspace(p_workspace)
+ select auth.uid() is not null and akibusiness_private.account_allowed() and public.crm_can_access_workspace(p_workspace)
   and exists(select 1 from public.crm_workspaces w where w.id=p_workspace and w.status in ('active','trial'))
   and exists(select 1 from public.crm_workspace_entitlements e join public.crm_tool_catalog c on c.tool_key=e.tool_key and c.active
     where e.workspace_id=p_workspace and e.tool_key=p_tool and e.active and e.starts_at<=now() and (e.ends_at is null or e.ends_at>now()))
@@ -263,10 +277,21 @@ create function akibusiness_private.due() returns jsonb
 language sql stable security definer set search_path='' as $$
  select coalesce(jsonb_agg(to_jsonb(b)),'[]') from
  (select workspace_id,subscription_id,source,tier,anchor,billing_revision,active_tools,paid_until from akibusiness_private.toolboxes
-  where enabled and billing_status in ('active','trialing','past_due') and akibusiness_private.anniversary(anchor,rotation+1)<=now()
+  where enabled and retry_after<=now() and (source='stripe' or paid_until>now())
+   and billing_status in ('active','trialing','past_due') and akibusiness_private.anniversary(anchor,rotation+1)<=now()
   order by updated_at limit 100) b
 $$;
 create function public.crm_toolbox_due() returns jsonb language sql stable security invoker set search_path='' as $$select akibusiness_private.due()$$;
+
+create function akibusiness_private.attempt(p_workspace text,p_success boolean) returns void
+language sql security definer set search_path='' as $$
+ update akibusiness_private.toolboxes set
+  retry_after=now()+make_interval(secs=>case when p_success then 60 else least(1800,60*power(2,least(reconciliation_attempts,5))::integer) end),
+  reconciliation_attempts=case when p_success then 0 else least(reconciliation_attempts+1,1000) end,
+  updated_at=now() where workspace_id=p_workspace
+$$;
+create function public.crm_toolbox_attempt(p_workspace text,p_success boolean) returns void
+language sql security invoker set search_path='' as $$select akibusiness_private.attempt(p_workspace,p_success)$$;
 
 revoke all on all functions in schema akibusiness_private from public,anon,authenticated;
 grant execute on function akibusiness_private.owner(text),akibusiness_private.licensed(text,text),akibusiness_private.snapshot(text),
@@ -282,4 +307,6 @@ revoke all on function public.crm_toolbox_team(text) from public,anon;
 grant execute on function public.crm_toolbox_team(text) to authenticated;
 revoke all on function public.crm_toolbox_due() from public,anon,authenticated;
 grant execute on function public.crm_toolbox_due() to service_role;
+revoke all on function public.crm_toolbox_attempt(text,boolean) from public,anon,authenticated;
+grant execute on function public.crm_toolbox_attempt(text,boolean) to service_role;
 commit;
