@@ -38,3 +38,12 @@ origin OAuth callback behavior.
 Before release: run each repository's complete checks/build, CI at the exact
 commit, responsive keyboard/browser acceptance and authenticated canonical-domain
 smoke. Rollback is a source/deployment revert; no data rollback is required.
+
+Local validation follow-up: the complete operations gateway check passed 532
+checks with one pre-existing skip (533 total). Existing VM/jsdom fixtures now load
+suite-navigation before the actual app, matching production script order; cache
+assertions track this release. `BROWSER_PATH=/tmp/akisuite-chromium node
+tests/suite-navigation-browser.cjs` passed eight inert real-Chromium cases across
+EN/ES and mobile, tablet portrait/landscape and desktop. It validates actual
+suite destinations, public invitation links and membership language/back links.
+No live authentication, backend writes or payments were exercised.

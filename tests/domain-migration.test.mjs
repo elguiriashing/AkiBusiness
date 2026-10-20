@@ -20,7 +20,7 @@ for (const origin of ['https://akibusiness.com', 'https://akihq.app', 'https://c
     });
     const context = {
       appRoot: {}, portal: {}, state: { settings: { locale: 'en' } }, applySettings() {}, escapeHtml: String,
-      window: { location: { origin }, scrollTo() {} },
+      window: { AkiSuiteNavigation: { href: (product, locale) => `https://akipasa.com/${locale}/auth` }, location: { origin }, scrollTo() {} },
       document: { getElementById: id => elements.get(id) }, requestAnimationFrame: fn => fn(),
       getSupabaseClient: () => ({ auth: { signInWithOAuth: async options => { oauth = options; return {}; } } })
     };
