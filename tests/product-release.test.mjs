@@ -41,13 +41,13 @@ for (const enabled of [false, true]) {
         let oauth;
         const elements = new Map(['google-login-btn', 'login-form'].map(id => [id, { addEventListener: (event, fn) => { handlers[`${id}:${event}`] = fn; }, querySelector: () => ({ textContent: '' }) }]));
         const context = { appRoot: {}, portal: {}, state: { settings: { locale: 'en' } }, applySettings() {}, escapeHtml: String,
-          window: { location: { origin }, scrollTo() {} }, document: { getElementById: id => elements.get(id) }, requestAnimationFrame: fn => fn(),
+          window: { AkiSuiteNavigation: { href: (product, locale) => product === "pasa" ? `https://akipasa.com/${locale}/auth` : `https://akihq.app/${locale}/business` }, location: { origin }, scrollTo() {} }, document: { getElementById: id => elements.get(id) }, requestAnimationFrame: fn => fn(),
           getSupabaseClient: () => ({ auth: { signInWithOAuth: async options => { oauth = options; return {}; } } }) };
         const login = source.slice(source.indexOf('  function renderLoginScreen('), source.indexOf('  function renderAccessDenied('));
         vm.runInNewContext(`${login}\nrenderLoginScreen();`, context);
         assert.match(context.appRoot.innerHTML, new RegExp(`Sign in to ${product}`));
         assert.match(context.appRoot.innerHTML, /suite-product-card active" href="\/"/);
-        if (enabled) assert.match(context.appRoot.innerHTML, /href="https:\/\/akihq.app\/"/);
+        if (enabled) assert.match(context.appRoot.innerHTML, /href="https:\/\/akihq.app\/en\/business"/);
         await handlers['google-login-btn:click']();
         assert.equal(oauth.options.redirectTo, origin);
       }

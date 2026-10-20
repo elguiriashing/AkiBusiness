@@ -390,6 +390,7 @@
 
   let store = new StateStore();
   let state = store.load();
+  state.settings.locale = window.AkiSuiteNavigation.locale(state.settings.locale);
 
   // ── Supabase client helper ──────────────────────────────────────────────────
   function getSupabaseClient() {
@@ -2114,7 +2115,7 @@
               <span class="nav-icon">${icon("settings")}</span>
               <span class="nav-text">${state.settings?.locale === "es" ? "Planes AkiBusiness" : "AkiBusiness plans"}</span>
             </a>
-            <a class="nav-item" href="https://akipasa.com" target="_blank" rel="noopener noreferrer" title="Open public website (akipasa.com)" style="text-decoration:none;">
+            <a class="nav-item" href="${window.AkiSuiteNavigation.href("pasa", state.settings.locale)}" target="_blank" rel="noopener noreferrer" title="Open public website (akipasa.com)" style="text-decoration:none;">
               <span class="nav-icon">${icon("external")}</span>
               <span class="nav-text">AkiPasa Web</span>
             </a>
@@ -2174,11 +2175,12 @@
             </summary>
             <nav class="suite-app-panel" aria-label="AkiSuite applications">
               <strong class="suite-app-heading">AkiSuite apps</strong>
-              <a href="https://akipasa.com"><img src="https://akipasa.com/pwa/akipasa-512.png" alt="" width="34" height="34"><span>AkiPasa</span></a>
-              <a href="https://akiduermo.com"><img src="https://akipasa.com/brand/duermo-icon.png" alt="" width="34" height="34"><span>AkiDuermo</span></a>
-              <a href="https://akicoches.com"><img src="https://akipasa.com/brand/conduzco-icon.svg" alt="" width="34" height="34"><span>AkiCoches</span></a>
-              <a href="https://akihq.app"><img src="https://akipasa.com/brand/hq-mark.svg" alt="" width="34" height="34"><span>AkiHQ</span></a>
-              <a href="https://akibusiness.com" aria-current="page"><img src="assets/icons/icon.svg" alt="" width="34" height="34"><span>AkiBusiness</span><small>Current</small></a>
+              <a href="${window.AkiSuiteNavigation.href("pasa", state.settings.locale)}"><img src="https://akipasa.com/pwa/akipasa-512.png" alt="" width="34" height="34"><span>AkiPasa</span></a>
+              <a href="${window.AkiSuiteNavigation.href("duermo", state.settings.locale)}"><img src="https://akipasa.com/brand/duermo-icon.png" alt="" width="34" height="34"><span>AkiDuermo</span></a>
+              <a href="${window.AkiSuiteNavigation.href("coches", state.settings.locale)}"><img src="https://akipasa.com/brand/conduzco-icon.svg" alt="" width="34" height="34"><span>AkiCoches</span></a>
+              <a href="${window.AkiSuiteNavigation.href("hq", state.settings.locale)}"><img src="https://akipasa.com/brand/hq-mark.svg" alt="" width="34" height="34"><span>AkiHQ</span></a>
+              <a href="${window.AkiSuiteNavigation.href("business", state.settings.locale)}" aria-current="page"><img src="assets/icons/icon.svg" alt="" width="34" height="34"><span>AkiBusiness</span><small>Current</small></a>
+              ${window.AkiSuiteNavigation.referralCode() ? `<a href="${window.AkiSuiteNavigation.href("pasa", state.settings.locale, { path: "/referrals" })}">${state.settings.locale === "es" ? "Aplicar invitación de referido" : "Apply referral invitation"}</a>` : ""}
               <div class="suite-app-actions">
                 <button type="button" class="suite-app-action" data-action="navigate" data-route="settings">${state.settings?.locale === "es" ? "Ajustes" : "Settings"}</button>
                 <button type="button" class="suite-app-action" data-action="crm-signout">${state.settings?.locale === "es" ? "Cerrar sesión" : "Sign out"}</button>
@@ -6290,6 +6292,7 @@
       persist();
     } else if (change === "locale") {
       state.settings.locale = target.value;
+      window.AkiSuiteNavigation.remember(target.value);
       persist();
     }
   }
@@ -7623,7 +7626,7 @@
             <h1>Run the<br>business.</h1>
             <div class="suite-product-label">Choose your workspace</div>
             <nav class="suite-product-switcher" aria-label="AkiPasa products">
-              <a class="suite-product-card" href="https://akipasa.com/es/auth">
+              <a class="suite-product-card" href="${window.AkiSuiteNavigation.href("pasa", state.settings.locale, { path: "/auth" })}">
                 <i class="suite-product-dot suite-product-dot-akipasa"></i>
                 <span><strong>AkiPasa</strong></span>
               </a>
@@ -7869,6 +7872,7 @@
     supportDesk.reset();
     store = new StateStore(`akihq:workspace-cache:v3:${authUser.id}:${workspace.id}`);
     state = store.load();
+    state.settings.locale = window.AkiSuiteNavigation.locale(state.settings.locale);
     state.workspace = { ...state.workspace, ...workspace };
     state.currentUserId = authUser.id;
     clearDeniedCollections();
@@ -7954,7 +7958,7 @@
   function renderRequestedWorkspaceUnavailable() {
     applySettings();
     appRoot.className = "login-mode";
-    const managementUrl = window.AKIHQ_CONFIG?.CRM_URL === "https://akibusiness.com" ? "https://akihq.app/" : "https://akibusiness.com/";
+    const managementUrl = window.AkiSuiteNavigation.href("hq", state.settings.locale);
     appRoot.innerHTML = `<div class="login-screen"><section class="login-card" role="status"><h1>Location access pending</h1><p>The requested location is unavailable for this account or has no enabled operations capabilities. Your company administrator must verify its membership and applicable plan.</p><p>No other location has been opened.</p><p><a class="action-btn" href="${managementUrl}">Manage your company and locations</a></p><a class="action-btn" href="/">Choose an available workspace</a></section></div>`;
     portal.innerHTML = "";
   }
