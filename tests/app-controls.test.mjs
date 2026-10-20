@@ -5,6 +5,7 @@ import { readFile } from 'node:fs/promises';
 
 const require = createRequire(new URL('../cloudflare/package.json',import.meta.url));
 const { JSDOM } = require('jsdom');
+const navigationSource = await readFile(new URL('../assets/suite-navigation.js',import.meta.url),'utf8');
 const appSource = await readFile(new URL('../assets/app-v32.js',import.meta.url),'utf8');
 const sessionSource = await readFile(new URL('../assets/checkout-session.js',import.meta.url),'utf8');
 const user='00000000-0000-4000-8000-000000000001';
@@ -114,7 +115,7 @@ function setup(t,handler,{locks=lockManager(),sharedStorage,queryHandler}={}) {
   if(sharedStorage) Object.defineProperty(window,'localStorage',{value:sharedStorage});
   Object.defineProperty(window.navigator,'locks',{value:locks,configurable:true});
   window.__effects={renders:0,loads:0,toasts:[],commerceLoads:0,saves:0,downloads:[]};
-  window.eval(sessionSource); window.eval(testSource);
+  window.eval(navigationSource); window.eval(sessionSource); window.eval(testSource);
   const calls=[];
   const client={rpc:async(name,payload)=>{
     calls.push({name,payload:plain(payload)});
