@@ -2,7 +2,7 @@
 
 ## Authorisation and commercial contract
 
-Alex explicitly authorised implementation, tested merges, safe production deployment and existing-customer migration. Follow-up confirmed the new monthly operating-location prices: Básico €24.99 (4/12 tools, one monthly replacement); Standard €44.99 (8/12, two); Pro €64.99 (12/12). No immediate charges, payouts, physical orders or destructive migrations are authorised. Existing media and operating data must survive entitlement removal. Customer billing changes require validated scope and acceptance, not permanent grandfathering by default.
+Alex explicitly authorised implementation, tested merges, safe production deployment and existing-customer migration. Follow-up confirmed the new monthly operating-location prices: Básico €24.99 (4/12 tools, one monthly replacement); Standard €44.99 (8/12, two); Pro €64.99 (12/12). No immediate charges, payouts, physical orders or destructive migrations are authorised. Existing media and operating data must survive entitlement removal. Customer billing changes require validated scope and acceptance, not permanent grandfathering by default. Alex subsequently chose ALL three legacy business/business_pro customers to move to Básico operations (€24.99 per location) at renewal, with free listings; personal Premium is not an operations customer.
 
 ## Verified starting state
 

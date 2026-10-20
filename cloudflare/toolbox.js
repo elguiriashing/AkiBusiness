@@ -19,7 +19,7 @@ export async function processToolboxRotations(env, fetcher=fetch) {
   const invoice=s.latest_invoice;
   const line=invoice?.lines?.data?.find(l=>(l.subscription_item===item.id||l.parent?.subscription_item_details?.subscription_item===item.id)&&l.period?.end);
   let until=b.paid_until;
-  if(invoice?.status==='paid'&&invoice.paid===true&&line&&Number(line.period.end)*1000>Date.parse(until))until=new Date(Number(line.period.end)*1000).toISOString();
+  if(invoice?.status==='paid'&&invoice.paid!==false&&line&&Number(line.period.end)*1000>Date.parse(until))until=new Date(Number(line.period.end)*1000).toISOString();
   await rpc('crm_toolbox_billing_sync',{p_workspace:b.workspace_id,p_tier:tier,p_tools:b.active_tools,p_anchor:b.anchor,p_paid_until:until,p_status:s.status,p_source:'stripe',p_subscription:s.id,p_billing_revision:revision,p_evidence:`stripe-refresh:${invoice?.id||s.id}`,p_enabled:true});
   await rpc('crm_toolbox_rotate',{p_workspace:b.workspace_id});completed++;
  }catch{failed++; /* Keep entitlement expiry and retry next cron. Do not log customer data. */}}
