@@ -5,6 +5,7 @@ import { readFile } from 'node:fs/promises';
 
 const require = createRequire(new URL('../cloudflare/package.json', import.meta.url));
 const { JSDOM } = require('jsdom');
+const navigationSource = await readFile(new URL('../assets/suite-navigation.js',import.meta.url),'utf8');
 const source = await readFile(new URL('../assets/app-v32.js', import.meta.url), 'utf8');
 const boot = /  boot\(\);\s*\}\)\(\);\s*$/;
 assert.ok(boot.test(source), 'test seam must replace only the final boot call');
@@ -42,6 +43,7 @@ function setup(t) {
   window.createCompanyManager = () => ({reset(){}});
   window.createSupportDesk = () => ({reset(){}});
   window.setInterval = () => 0;
+  window.eval(navigationSource);
   window.eval(testSource);
   return { api:window.__chat, document:window.document };
 }

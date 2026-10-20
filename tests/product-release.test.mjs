@@ -41,13 +41,13 @@ for (const enabled of [false, true]) {
         let oauth;
         const elements = new Map(['google-login-btn', 'login-form'].map(id => [id, { addEventListener: (event, fn) => { handlers[`${id}:${event}`] = fn; }, querySelector: () => ({ textContent: '' }) }]));
         const context = { appRoot: {}, portal: {}, state: { settings: { locale: 'en' } }, applySettings() {}, escapeHtml: String,
-          window: { location: { origin }, scrollTo() {} }, document: { getElementById: id => elements.get(id) }, requestAnimationFrame: fn => fn(),
+          window: { AkiSuiteNavigation: { href: (product, locale) => product === "pasa" ? `https://akipasa.com/${locale}/auth` : `https://akihq.app/${locale}/business` }, location: { origin }, scrollTo() {} }, document: { getElementById: id => elements.get(id) }, requestAnimationFrame: fn => fn(),
           getSupabaseClient: () => ({ auth: { signInWithOAuth: async options => { oauth = options; return {}; } } }) };
         const login = source.slice(source.indexOf('  function renderLoginScreen('), source.indexOf('  function renderAccessDenied('));
         vm.runInNewContext(`${login}\nrenderLoginScreen();`, context);
         assert.match(context.appRoot.innerHTML, new RegExp(`Sign in to ${product}`));
         assert.match(context.appRoot.innerHTML, /suite-product-card active" href="\/"/);
-        if (enabled) assert.match(context.appRoot.innerHTML, /href="https:\/\/akihq.app\/"/);
+        if (enabled) assert.match(context.appRoot.innerHTML, /href="https:\/\/akihq.app\/en\/business"/);
         await handlers['google-login-btn:click']();
         assert.equal(oauth.options.redirectTo, origin);
       }
@@ -59,4 +59,14 @@ test('release builder refuses to overwrite any existing directory', async () => 
   const temporary = await mkdtemp(path.join(tmpdir(), 'akisuite-release-'));
   try { await assert.rejects(buildProductRelease(temporary, true), /new directory/); }
   finally { await rm(temporary, { recursive: true, force: true }); }
+});
+
+
+test('PoS review workflows assert the current paid-release cache', async () => {
+  const rules = JSON.parse(await readFile(new URL('../tools/operations-product-release.json', import.meta.url), 'utf8'));
+  const paid = rules['sw.js'].find(rule => rule.from.startsWith('const CACHE = ')).to.match(/akihq-v[0-9]+/)[0];
+  for (const workflow of ['pos-kitchen-review.yml', 'pos-course-review.yml', 'pos-service-review.yml', 'pos-variants-review.yml']) {
+    const source = await readFile(new URL('../.github/workflows/' + workflow, import.meta.url), 'utf8');
+    assert.ok(source.includes(`includes('${paid}')`), `${workflow} must verify the actual paid-product cache`);
+  }
 });

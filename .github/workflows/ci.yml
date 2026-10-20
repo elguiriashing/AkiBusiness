@@ -29,7 +29,7 @@ jobs:
           test -f manifest.webmanifest
           test -f assets/hospitality-pos.js
           test -f assets/akibusiness-brand.css
-          node --test commerce-export.test.mjs inventory-ops.test.mjs multi-tenant.test.mjs tests/product-release.test.mjs
+          node --test commerce-export.test.mjs inventory-ops.test.mjs multi-tenant.test.mjs tests/product-release.test.mjs tests/suite-navigation.test.mjs
       - name: Build AkiBusiness production assets without deploying
         run: |
           NEXT_PUBLIC_AKISUITE_ROLE_SWAP=true node tools/build-product-release.mjs dist-product
