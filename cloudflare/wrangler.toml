@@ -26,6 +26,9 @@ SUPPORT_INGEST_ENABLED = "false"
 # AI is off by default. Set SUPPORT_AI_MODEL and the OPENAI_API_KEY secret,
 # then approve answers and enable Draft/Automatic mode per workspace in Support.
 SUPPORT_AI_MODEL = ""
+AKIBUSINESS_TOOLBOX_ENABLED = "false"
+# Exact approved Stripe price ID -> basico/standard/pro. Never infer from names.
+AKIBUSINESS_TOOLBOX_PRICE_MAP = "{}"
 
 [[kv_namespaces]]
 binding = "SOCIAL_STORE"

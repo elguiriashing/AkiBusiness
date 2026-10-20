@@ -2,7 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 
-test("AkiBusiness links to its local staged plan catalogue in EN/ES", () => {
+test("AkiBusiness links to its local approved toolbox catalogue in EN/ES", () => {
   const source = readFileSync(new URL("../assets/app-v32.js", import.meta.url), "utf8");
   assert.match(source, /\/membership\.html\?locale=/);
   assert.match(source, /Planes AkiBusiness/);
@@ -10,22 +10,24 @@ test("AkiBusiness links to its local staged plan catalogue in EN/ES", () => {
   assert.match(source, /state\.settings\?\.locale === "es"/);
 });
 
-test("staged plans cannot capture payment or imply an active subscription", () => {
+test("plans use the authoritative account handoff and never collect payment locally", () => {
   const page = readFileSync(new URL("../membership.html", import.meta.url), "utf8");
   const script = readFileSync(new URL("../assets/membership.js", import.meta.url), "utf8");
   assert.match(page, /data-plan="standard"/);
-  assert.match(page, /data-plan="plus"/);
+  assert.match(page, /data-plan="basico"/);
+  assert.doesNotMatch(page, /data-plan="plus"/);
   assert.match(page, /data-plan="pro"/);
-  assert.match(page, /disabled data-staged/);
-  assert.doesNotMatch(page + script, /checkout|payment_intent|stripe/i);
+  assert.match(page, /id="operations-subscription-link"/);
+  assert.match(script, /account\/subscription\/operations/);
+  assert.doesNotMatch(page + script, /checkout\.sessions|payment_intent|stripe\.com|<form|fetch\(/i);
 });
 
 test("the membership navigation bundle has a fresh and consistent offline cache key", () => {
   const html = readFileSync(new URL("../index.html", import.meta.url), "utf8");
   const sw = readFileSync(new URL("../sw.js", import.meta.url), "utf8");
   assert.match(sw, /\.\/membership\.html/);
-  assert.match(sw, /\.\/assets\/membership\.js\?v=2/);
-  assert.match(sw, /\.\/assets\/membership\.css\?v=1/);
+  assert.match(sw, /\.\/assets\/membership\.js\?v=3/);
+  assert.match(sw, /\.\/assets\/membership\.css\?v=2/);
   assert.match(html, /app-v32\.js\?v=43/);
   assert.match(sw, /app-v32\.js\?v=43/);
   const cache = sw.match(/^const CACHE = "akihq-v(\d+)";/m);

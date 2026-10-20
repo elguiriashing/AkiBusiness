@@ -1,0 +1,71 @@
+name: Subscription toolbox acceptance
+on:
+  pull_request:
+    paths: ['assets/toolbox.*', 'toolbox.html', 'cloudflare/toolbox*', 'supabase/migrations/*toolbox*', 'tests/toolbox*', '.github/workflows/toolbox-review.yml']
+permissions:
+  contents: read
+concurrency:
+  group: toolbox-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+jobs:
+  postgres-concurrency:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: local-test-only
+          POSTGRES_DB: toolbox_test
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      PGHOST: 127.0.0.1
+      PGPORT: '5432'
+      PGUSER: postgres
+      PGPASSWORD: local-test-only
+      PGDATABASE: toolbox_test
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: node tests/toolbox-postgres-schema.mjs > "$RUNNER_TEMP/toolbox.sql"
+      - run: psql -X -v ON_ERROR_STOP=1 -f "$RUNNER_TEMP/toolbox.sql"
+      - run: python3 tests/toolbox-postgres.py
+  toolbox:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: npm ci --prefix cloudflare
+      - run: node --test tests/toolbox-db.test.mjs cloudflare/toolbox.test.js
+      - name: Install isolated browser tooling
+        run: |
+          npm install --prefix "$RUNNER_TEMP/toolbox-browser" playwright@1.62.1
+          "$RUNNER_TEMP/toolbox-browser/node_modules/.bin/playwright" install --with-deps chromium
+      - name: Bilingual phone, tablet, desktop and theme acceptance
+        env:
+          AKIBUSINESS_PLAYWRIGHT_PATH: ${{ runner.temp }}/toolbox-browser/node_modules/playwright
+          AKIBUSINESS_BROWSER_ARTIFACTS: ${{ runner.temp }}
+        run: node tests/toolbox-browser.cjs
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: toolbox-${{ github.event.pull_request.head.sha }}
+          path: ${{ runner.temp }}/toolbox-*.png
+          retention-days: 7

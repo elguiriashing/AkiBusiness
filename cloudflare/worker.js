@@ -1,7 +1,9 @@
+import { requireGatewayAccountEligibility } from "./account-eligibility.js";
 import { parseProspectWorkbook } from "./prospect-import.js";
 import PostalMime from "postal-mime";
 import { handleSupport, ingestSupportEmail, processSupportQueue } from "./support.js";
 import { handlePrivacy } from "./privacy.js";
+import { processToolboxRotations } from "./toolbox.js";
 
 /**
  * AkiHQ optional integration gateway for Cloudflare Workers.
@@ -69,6 +71,8 @@ export default {
     }
 
     try {
+      const eligibilityResponse = await requireGatewayAccountEligibility(request, env);
+      if (eligibilityResponse) return withCors(eligibilityResponse, cors);
       if (request.method === "GET" && url.pathname === "/api/health") {
         return json({ ok: true, service: "akihq-integration-gateway", capabilities: { support: 1, privacy: 1 }, time: new Date().toISOString() }, 200, { ...cors, "cache-control": "no-store" });
       }
@@ -204,6 +208,9 @@ export default {
     }
   },
   async scheduled(_controller, env, ctx) {
+    if (env.AKIBUSINESS_TOOLBOX_ENABLED === "true") {
+      ctx.waitUntil(processToolboxRotations(env).catch(() => console.error("Toolbox reconciliation failed; retained for retry.")));
+    }
     if (String(env.SUPPORT_INGEST_ENABLED) === "true") {
       ctx.waitUntil(processSupportQueue(env).catch(() => console.error("Support queue processing failed; retained for review.")));
     }
