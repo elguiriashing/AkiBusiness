@@ -25,6 +25,7 @@ const ASSETS = [
   "./assets/membership.css?v=1",
   "./assets/membership.js?v=1",
   "./assets/styles.css?v=60",
+  "./assets/account-eligibility.js?v=1",
   "./assets/app-v32.js?v=42",
   "./assets/commerce-export.js?v=3",
   "./assets/checkout-session.js?v=2",

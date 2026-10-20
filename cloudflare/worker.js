@@ -1,3 +1,4 @@
+import { requireGatewayAccountEligibility } from "./account-eligibility.js";
 import { parseProspectWorkbook } from "./prospect-import.js";
 import PostalMime from "postal-mime";
 import { handleSupport, ingestSupportEmail, processSupportQueue } from "./support.js";
@@ -69,6 +70,8 @@ export default {
     }
 
     try {
+      const eligibilityResponse = await requireGatewayAccountEligibility(request, env);
+      if (eligibilityResponse) return withCors(eligibilityResponse, cors);
       if (request.method === "GET" && url.pathname === "/api/health") {
         return json({ ok: true, service: "akihq-integration-gateway", capabilities: { support: 1, privacy: 1 }, time: new Date().toISOString() }, 200, { ...cors, "cache-control": "no-store" });
       }

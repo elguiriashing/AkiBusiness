@@ -7963,6 +7963,27 @@
     const client = getSupabaseClient();
     if (!session?.user || !client) { renderLoginScreen(); return; }
 
+    if (window.AKIHQ_CONFIG?.ONBOARDING_SCHEMA_READY === true) {
+      try {
+        if (!window.AkiAccountEligibility) throw new Error("Account eligibility is temporarily unavailable.");
+        if (!(await window.AkiAccountEligibility.allowed(client, true))) {
+          const es = (initialSearchParams.get("lang") || state.settings?.locale) === "es";
+          const completion = window.AkiAccountEligibility.completionUrl(es ? "es" : "en");
+          appRoot.className = "login-mode";
+          appRoot.innerHTML = `<div class="login-screen"><section class="login-card" role="status"><h1>${es ? "Completa tu cuenta" : "Complete your account"}</h1><p>${es ? "Las herramientas de cuenta están restringidas. Completa tu perfil o revisa tu acceso en AkiPasa." : "Account tools are restricted. Complete your profile or review your access in AkiPasa."}</p><p><a class="action-btn" href="${completion}">${es ? "Continuar en AkiPasa" : "Continue in AkiPasa"}</a></p><p><a href="${completion}/privacy">${es ? "Privacidad, exportación y eliminación" : "Privacy, export and deletion"}</a></p><button class="action-btn" id="eligibilitySignOut" type="button">${es ? "Cerrar sesión" : "Sign out"}</button></section></div>`;
+          portal.innerHTML = "";
+          document.getElementById("eligibilitySignOut").addEventListener("click", async () => {
+            await client.auth.signOut({ scope: "local" });
+            renderLoginScreen();
+          });
+          return;
+        }
+      } catch {
+        renderLoginScreen((initialSearchParams.get("lang") || state.settings?.locale) === "es" ? "El acceso a la cuenta no se puede comprobar ahora. Inténtalo de nuevo." : "Account eligibility is temporarily unavailable. Please try again.");
+        return;
+      }
+    }
+
     // Fetch profile to check role strictly
     let role = null;
     let profileName = null;
