@@ -1,0 +1,33 @@
+name: Mobile store metadata preflight
+on:
+  pull_request:
+    paths:
+      - "mobile/**"
+      - ".github/workflows/mobile-store-preflight.yml"
+  push:
+    branches: [main]
+    paths:
+      - "mobile/**"
+      - ".github/workflows/mobile-store-preflight.yml"
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  validate-metadata:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Validate mobile store metadata
+        run: node mobile/validate-store-release.mjs
+      - name: Test association-file generation guards
+        run: node --test mobile/mobile-release.test.mjs
+      - name: Confirm strict ship gate remains closed
+        run: |
+          if node mobile/validate-store-release.mjs --ship; then
+            echo "Strict ship gate unexpectedly passed"
+            exit 1
+          fi
+

@@ -1,0 +1,49 @@
+{
+  "schemaVersion": 1,
+  "status": "PREPARATION_ONLY_NOT_SUBMITTABLE",
+  "product": "AkiBusiness",
+  "webOrigin": "https://akibusiness.com",
+  "startPath": "/",
+  "proposedIdentifiers": {
+    "androidApplicationId": "com.akipasa.business",
+    "iosBundleId": "com.akipasa.business",
+    "warning": "Proposals only. Confirm identifiers before creating either store record."
+  },
+  "platformRequirements": {
+    "googlePlayTargetApiMinimum": 36,
+    "iosBuildWithXcodeMajorMinimum": 26
+  },
+  "listingDraft": {
+    "primaryLocale": "es-ES",
+    "secondaryLocale": "en-GB",
+    "categoryCandidate": "Business",
+    "shortDescriptionEs": "Herramientas profesionales para operar tu negocio.",
+    "shortDescriptionEn": "Professional tools for running your business.",
+    "fullDescriptionEs": "AkiBusiness reúne herramientas operativas para negocios. Accede a punto de venta, inventario, clientes y operaciones de equipo según el plan y las funciones habilitadas para tu empresa. Trabaja con permisos y ubicaciones separados. Algunas herramientas requieren una suscripción o configuración adicional.",
+    "fullDescriptionEn": "AkiBusiness brings business operations together. Access point-of-sale, inventory, customer and team operations where your plan and workspace support them. Use location-scoped tools and user permissions. Some functions require an eligible subscription or additional setup.",
+    "privacyPolicyUrl": "",
+    "supportUrl": "",
+    "marketingUrl": "https://akibusiness.com"
+  },
+  "sourceObservation": "Production akibusiness.com is served by Cloudflare Pages project akibusiness-selfowned-staging from elguiriashing/AkiBusiness main. Verified deployment 71c045c5-b1d3-45f1-b513-19fc5fca5bba serves cdc763997b0a78b006d5744b495be161d28800b6.",
+  "gates": {
+    "sourceAndLiveProductMappingVerified": true,
+    "nativeAndroidBuildVerified": false,
+    "nativeIosBuildVerified": false,
+    "realDeviceAuthAndDeepLinksPassed": false,
+    "nativeAppExperienceReviewed": false,
+    "appAccountDeletionPassed": false,
+    "privacyDataSafetyDeclared": false,
+    "storeBillingCompliant": false,
+    "appIconsAndScreenshotsReviewed": false,
+    "reviewerDemoCredentialsPrepared": false,
+    "signingAndStoreAccountsConfigured": false,
+    "ageRatingAndContentDeclarationsComplete": false
+  },
+  "delivery": {
+    "android": "Signed Android App Bundle not generated",
+    "ios": "Signed IPA/TestFlight archive not generated",
+    "intendedTracks": ["Play internal testing", "TestFlight internal testing"]
+  }
+}
+
