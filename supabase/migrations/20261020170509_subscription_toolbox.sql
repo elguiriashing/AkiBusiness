@@ -97,6 +97,18 @@ language sql stable security definer set search_path='' as $$
     or p_tool in ('dashboard','integrations','analytics','business-admin')))
 $$;
 
+-- Backwards compatible migration order. Once the central onboarding migration
+-- exists, direct operations APIs share its caller-only authoritative soft lock.
+create function akibusiness_private.account_allowed() returns boolean
+language plpgsql stable security definer set search_path='' as $$
+declare permitted boolean;
+begin
+ if auth.uid() is null then return false; end if;
+ if to_regprocedure('public.account_features_allowed()') is null then return true; end if;
+ execute 'select public.account_features_allowed()' into permitted;
+ return coalesce(permitted,false);
+end $$;
+
 create or replace function public.crm_can_access_workspace(p_workspace text) returns boolean
 language sql stable security definer set search_path='' as $$
  select auth.uid() is not null and (
@@ -113,7 +125,7 @@ $$;
 -- active toolbox intersection. Inactive delegation rows never confer access.
 create or replace function public.crm_has_tool(p_workspace text,p_tool text) returns boolean
 language sql stable security definer set search_path='' as $$
- select auth.uid() is not null and public.crm_can_access_workspace(p_workspace)
+ select auth.uid() is not null and akibusiness_private.account_allowed() and public.crm_can_access_workspace(p_workspace)
   and exists(select 1 from public.crm_workspaces w where w.id=p_workspace and w.status in ('active','trial'))
   and exists(select 1 from public.crm_workspace_entitlements e join public.crm_tool_catalog c on c.tool_key=e.tool_key and c.active
     where e.workspace_id=p_workspace and e.tool_key=p_tool and e.active and e.starts_at<=now() and (e.ends_at is null or e.ends_at>now()))

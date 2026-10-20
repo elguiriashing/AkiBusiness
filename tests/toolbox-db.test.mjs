@@ -96,3 +96,11 @@ test('failed first hundred workspaces cannot starve subsequent due workspaces',a
  const next=await scalar('select public.crm_toolbox_due()');assert.equal(next.length,1);assert.ok(!first.some(row=>row.workspace_id===next[0].workspace_id));
  await db.exec('set role authenticated');await assert.rejects(db.exec("select public.crm_toolbox_attempt('w',true)"),/permission denied/);
 });
+
+test('central onboarding helper when installed gates direct operations without locking exempt accounts',async()=>{
+ await enroll();assert.equal(await scalar("select public.crm_has_tool('w','crm')"),true);
+ await db.exec("create function public.account_features_allowed() returns boolean language sql stable as $$select false$$");
+ assert.equal(await scalar("select public.crm_has_tool('w','crm')"),false);
+ await db.exec("create or replace function public.account_features_allowed() returns boolean language sql stable as $$select true$$");
+ assert.equal(await scalar("select public.crm_has_tool('w','crm')"),true);await db.exec('drop function public.account_features_allowed()');
+});
