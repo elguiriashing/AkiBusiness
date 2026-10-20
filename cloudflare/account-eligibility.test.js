@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import { createRequire } from "node:module";
 import { requireGatewayAccountEligibility } from "./account-eligibility.js";
 const require=createRequire(import.meta.url);
+require("../assets/suite-navigation.js");
 const browser=require("../assets/account-eligibility.js");
 const env={AKISUITE_ONBOARDING_SCHEMA_READY:"true",SUPABASE_URL:"https://example.supabase.co",SUPABASE_PUBLISHABLE_KEY:"publishable-test"};
 const request=(path="/api/social/overview",token="caller-test-token")=>new Request(`https://gateway.test${path}`,{headers:token?{authorization:`Bearer ${token}`}:{}});
@@ -64,3 +65,11 @@ test("operating completion retains only the fixed workspace task and language",(
    assert.equal(new URL(url.searchParams.get("next"),"https://akipasa.com").searchParams.get("path"),"/");
  }
 });
+
+for(const locale of ['en','es'])test(`referral intent survives static ${locale} completion without credentials`,()=>{
+ const completion=new URL(browser.completionUrl(locale,'?workspace=workspace_1&ref=AKI12345&next=https://evil.invalid&token=secret'));
+ const next=new URL(completion.searchParams.get('next'),completion.origin);assert.equal(completion.pathname,`/${locale}/onboarding`);assert.equal(next.pathname,`/${locale}/account-resume`);assert.equal(next.searchParams.get('product'),'business');assert.equal(next.searchParams.get('path'),'/?workspace=workspace_1&ref=AKI12345');assert(!completion.toString().includes('secret'));assert(!completion.toString().includes('evil'));
+});
+for(const query of ['ref=AKI12345&ref=AKI12345','ref=AKI12345&ref=OTHER123','ref=aki12345','ref=SHORT','ref='+ 'A'.repeat(25),'ref=https://evil.invalid','ref=//evil.invalid'])test(`static completion rejects malformed referral ${query}`,()=>{const completion=new URL(browser.completionUrl('en','?'+query));const next=new URL(completion.searchParams.get('next'),completion.origin);assert.equal(next.searchParams.get('path'),'/');});
+
+for(const locale of ['en','es'])test(`static ${locale} completion accepts maximum-length referral code`,()=>{const code='A'.repeat(24);const completion=new URL(browser.completionUrl(locale,'?ref='+code));const next=new URL(completion.searchParams.get('next'),completion.origin);assert.equal(next.searchParams.get('path'),'/?ref='+code);assert.equal(next.pathname,`/${locale}/account-resume`);});

@@ -25,3 +25,23 @@ Verification includes the five-product/both-language URL matrix, hostile paths,
 duplicate/secret query removal, email/OAuth completion-envelope roundtrip, direct
 pending/underage resume denial and complete/exempt resume. Real provider sessions
 and five-domain deployment acceptance remain release requirements.
+
+## 2026-10-20 | Validated referral task completion
+
+Account completion preserves a single public referral code matching the existing
+uppercase alphanumeric 8–24 character navigation bound. The canonical public
+`/{locale}/referrals?ref=CODE` task returns to AkiPasa's explicit confirmation page;
+other allowed product tasks retain their validated code and EN/ES choice through
+the same fixed-origin resume envelope. Duplicate, URL-shaped, lowercase and
+out-of-range codes are discarded. Direct unprefixed AkiPasa referral completion
+uses this same sanitizer rather than falling back to Account.
+
+This changes navigation only: pending/underage restrictions, legal and tracking
+choices, first-attribution immutability and the explicit confirmation action remain
+authoritative. No automatic attribution, referral cookie, identity transfer, schema,
+financial incentive or production write is introduced. Shared contract copies and
+role-controller regressions cover all five products and both languages. Hosted CI
+and exact-source release checks remain required; unit fixtures do not establish
+authenticated production browser acceptance.
+
+Static navigation asset2 and eligibility asset3 share the existing referral sanitizer. Source cache140/paid141 invalidates prior helpers. Existing read-only reader activation and all backend financial/delivery flags remain unchanged.

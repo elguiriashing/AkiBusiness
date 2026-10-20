@@ -25,7 +25,8 @@
       }
     } catch {}
   }
-  function referralCode() {
+  function referralCode(value) {
+    if (value !== undefined) return typeof value === "string" && /^[A-Z0-9]{8,24}$/.test(value) ? value : undefined;
     const codes = new URLSearchParams(root.location?.search || "").getAll("ref");
     return codes.length === 1 && /^[A-Z0-9]{8,24}$/.test(codes[0]) ? codes[0] : undefined;
   }

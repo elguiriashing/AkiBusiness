@@ -15,7 +15,11 @@
     // Never forward an auth code, token, external destination or fragment.
     const incoming = new URLSearchParams(search.startsWith("/?") ? search.slice(2) : search.replace(/^\?/, ""));
     const workspace = incoming.getAll("workspace").length === 1 ? incoming.get("workspace") : null;
-    const path = workspace && /^[A-Za-z0-9_-]{1,128}$/.test(workspace) ? `/?${new URLSearchParams({workspace})}` : "/";
+    const task = new URLSearchParams();
+    if (workspace && /^[A-Za-z0-9_-]{1,128}$/.test(workspace)) task.set("workspace", workspace);
+    const ref = incoming.getAll("ref").length === 1 ? root.AkiSuiteNavigation?.referralCode(incoming.get("ref")) : undefined;
+    if (ref) task.set("ref", ref);
+    const path = task.size ? `/?${task}` : "/";
     const next = `/${language}/account-resume?${new URLSearchParams({product:"business",path})}`;
     return `${base}?${new URLSearchParams({next})}`;
   }
