@@ -60,3 +60,13 @@ test('release builder refuses to overwrite any existing directory', async () => 
   try { await assert.rejects(buildProductRelease(temporary, true), /new directory/); }
   finally { await rm(temporary, { recursive: true, force: true }); }
 });
+
+
+test('PoS review workflows assert the current paid-release cache', async () => {
+  const rules = JSON.parse(await readFile(new URL('../tools/operations-product-release.json', import.meta.url), 'utf8'));
+  const paid = rules['sw.js'].find(rule => rule.from.startsWith('const CACHE = ')).to.match(/akihq-v[0-9]+/)[0];
+  for (const workflow of ['pos-kitchen-review.yml', 'pos-course-review.yml', 'pos-service-review.yml', 'pos-variants-review.yml']) {
+    const source = await readFile(new URL('../.github/workflows/' + workflow, import.meta.url), 'utf8');
+    assert.ok(source.includes(`includes('${paid}')`), `${workflow} must verify the actual paid-product cache`);
+  }
+});
