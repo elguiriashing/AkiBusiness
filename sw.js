@@ -1,4 +1,4 @@
-const CACHE = "akihq-v136";
+const CACHE = "akihq-v138";
 const ASSETS = [
   "./assets/suite-navigation.js?v=1",
   "./assets/operational-analytics.js?v=1",
@@ -43,7 +43,7 @@ const ASSETS = [
   "./assets/vendor/xlsx-0.20.3.min.js",
   "./assets/support-desk.js?v=2",
   "./assets/support-desk.css?v=1",
-  "./config.js?v=42",
+  "./config.js?v=44",
   "./assets/supabase.js?v=40",
   "./assets/logo.svg",
   "./assets/icons/favicon.ico",

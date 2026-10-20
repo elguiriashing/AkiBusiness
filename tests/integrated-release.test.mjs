@@ -10,11 +10,14 @@ test('integrated app preserves eligibility, analytics and suite scripts before m
  }
  assert(html.includes('operational-analytics.css?v=1'));assert(read('assets/app-v32.js').includes('toolbox.html'));
 });
-test('integrated release advances offline caches without enabling paid or account gates',()=>{
+test('integrated release advances offline caches while enabling accepted read-only views and preserving backend gates',()=>{
  const manifest=JSON.parse(read('tools/operations-product-release.json'));
- assert.equal(read('sw.js').match(/const CACHE = "([^"]+)"/)[1],'akihq-v136');
- assert(manifest['sw.js'].some(x=>x.from.includes('akihq-v136')&&x.to.includes('akihq-v137')));
- assert(read('config.js').includes('OPERATIONAL_ANALYTICS_ENABLED: false'));
+ assert.equal(read('sw.js').match(/const CACHE = "([^"]+)"/)[1],'akihq-v138');
+ assert(manifest['sw.js'].some(x=>x.from.includes('akihq-v138')&&x.to.includes('akihq-v139')));
+ assert(read('config.js').includes('OPERATIONAL_ANALYTICS_ENABLED: true'));
+ assert(read('config.js').includes('TOOLBOX_NOTIFICATIONS_ENABLED: true'));
+ assert(read('cloudflare/wrangler.toml').includes('AKIBUSINESS_TOOLBOX_NOTIFICATIONS_ENABLED = \"false\"'));
+ assert(read('cloudflare/wrangler.toml').includes('AKIBUSINESS_TOOLBOX_ENABLED = \"false\"'));
  assert(read('config.example.js').includes('ONBOARDING_SCHEMA_READY: false'));
  assert(read('config.example.js').includes('OPERATIONAL_ANALYTICS_ENABLED: false'));
  assert(read('cloudflare/toolbox.js').includes('reconcileOperationsBinding'));

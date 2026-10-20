@@ -4,8 +4,8 @@ window.AKIHQ_CONFIG = Object.assign({
   CRM_URL:           "https://akihq.app",
   PRIVACY_GATEWAY_URL:"https://vhpbvcfkcteswlsdjrfl.supabase.co/functions/v1/akihq-privacy",
   SOCIAL_GATEWAY_URL:"https://akihq-integration-gateway.alexashing1.workers.dev",
-  TOOLBOX_NOTIFICATIONS_ENABLED: false, // Enable only after owner-inbox acceptance.
-  OPERATIONAL_ANALYTICS_ENABLED: false, // Enable only after guarded RPC and acceptance.
+  TOOLBOX_NOTIFICATIONS_ENABLED: true, // Read-only owner RPC accepted; delivery remains independently gated.
+  OPERATIONAL_ANALYTICS_ENABLED: true, // Guarded scoped reporting RPC accepted; never grants tool access.
   SUPABASE_URL:      "https://vhpbvcfkcteswlsdjrfl.supabase.co",
   SUPABASE_ANON_KEY: "sb_publishable_Mm4CJvGyIaLOWbU3g1sxIQ_Wv2jrKt1"
 }, window.AKIHQ_CONFIG || {});
