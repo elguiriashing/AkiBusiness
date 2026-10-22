@@ -26,9 +26,9 @@ for (const origin of ['https://akibusiness.com', 'https://akihq.app', 'https://c
     };
     const login = source.slice(source.indexOf('  function renderLoginScreen('), source.indexOf('  function renderAccessDenied('));
     vm.runInNewContext(`${login}\nrenderLoginScreen();`, context);
-    assert.match(context.appRoot.innerHTML, /suite-product-card active" href="\/"/);
+    assert.match(context.appRoot.innerHTML, /suite-product-card active" href="\/login"/);
     await handlers['google-login-btn:click']();
-    assert.equal(oauth.options.redirectTo, origin);
+    assert.equal(oauth.options.redirectTo, origin + '/login');
     assert.equal(oauth.provider, 'google');
   });
 }
