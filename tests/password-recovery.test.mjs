@@ -9,7 +9,7 @@ const source = readFileSync(new URL('../assets/app-v32.js', import.meta.url), 'u
 const recovery = source.slice(source.indexOf('  function renderPasswordRecovery('), source.indexOf('  function renderAccessDenied('));
 
 function fixture({ auth = {}, locale = 'en', active = false } = {}) {
-  const dom = new JSDOM('<div id="app"></div><div id="portal"></div>', { url: 'https://akihq.app/' });
+  const dom = new JSDOM('<div id="app"></div><div id="portal"></div>', { url: 'https://akihq.app/login' });
   const handlers = new Map();
   const document = dom.window.document;
   const originalGet = document.getElementById.bind(document);
