@@ -9,7 +9,7 @@ const source = readFileSync(new URL('../assets/app-v32.js', import.meta.url), 'u
 const recovery = source.slice(source.indexOf('  function renderPasswordRecovery('), source.indexOf('  function renderAccessDenied('));
 
 function fixture({ auth = {}, locale = 'en', active = false } = {}) {
-  const dom = new JSDOM('<div id="app"></div><div id="portal"></div>', { url: 'https://akihq.app/' });
+  const dom = new JSDOM('<div id="app"></div><div id="portal"></div>', { url: 'https://akihq.app/login' });
   const handlers = new Map();
   const document = dom.window.document;
   const originalGet = document.getElementById.bind(document);
@@ -39,7 +39,7 @@ test('recovery emails return only to the current HQ origin and disclose no accou
   f.render(false); f.fill('recovery-email', 'operator@example.invalid');
   await f.submit();
   assert.equal(request[0], 'operator@example.invalid');
-  assert.equal(request[1].redirectTo, 'https://akihq.app/');
+  assert.equal(request[1].redirectTo, 'https://akihq.app/login');
   assert.match(f.message(), /If an account exists/);
   assert.equal(f.dom.window.document.getElementById('recovery-submit').disabled, false);
 });
@@ -74,7 +74,7 @@ test('verified password recovery updates the current user, explicitly revokes al
   f.render(true); f.fill('recovery-password', 'password-A'); f.fill('recovery-confirm', 'password-A'); await f.submit();
   assert.deepEqual(calls, ['verify', ['update', 'password-A'], ['signout', 'global']]);
   assert.equal(f.context.passwordRecoveryActive, false); assert.match(f.context.login, /Password updated/);
-  assert.equal(f.dom.window.location.href, 'https://akihq.app/');
+  assert.equal(f.dom.window.location.href, 'https://akihq.app/login');
 });
 
 test('failed recovery-session closure preserves recovery guard', async () => {

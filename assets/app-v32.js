@@ -7679,6 +7679,8 @@
 
   // ── Auth gate boot sequence ────────────────────────────────────────────────
   function renderLoginScreen(errorMsg) {
+    // The public site lives at /. Keep unauthenticated users on /login.
+    try { if (location.pathname !== "/login") history.replaceState(null, "", "/login"); } catch {}
     applySettings();
     appRoot.className = "login-mode";
     appRoot.innerHTML = `
@@ -7697,7 +7699,7 @@
                 <i class="suite-product-dot suite-product-dot-business"></i>
                 <span><strong>AkiBusiness</strong></span>
               </a>
-              <a class="suite-product-card active" href="/">
+              <a class="suite-product-card active" href="/login">
                 <i class="suite-product-dot suite-product-dot-hq"></i>
                 <span><strong>AkiHQ</strong></span>
               </a>
@@ -7752,7 +7754,7 @@
         const span = btn.querySelector("span");
         if (span) span.textContent = "Redirecting to Google…";
       }
-      const redirectTarget = window.location.origin;
+      const redirectTarget = window.location.origin + "/login";
       const { error } = await client.auth.signInWithOAuth({
         provider: "google",
         options: {
@@ -7828,7 +7830,7 @@
       try {
         if (!hasRecoverySession) {
           const email = document.getElementById("recovery-email").value.trim();
-          const { error } = await client.auth.resetPasswordForEmail(email, { redirectTo: window.location.origin + "/" });
+          const { error } = await client.auth.resetPasswordForEmail(email, { redirectTo: window.location.origin + "/login" });
           if (error) throw new Error(text("Could not send a recovery link. Please try again shortly.", "No se ha podido enviar el enlace. Inténtalo de nuevo en unos instantes."));
           status.textContent = text("If an account exists, a recovery link has been sent. Open it in this browser.", "Si existe una cuenta, hemos enviado un enlace. Ábrelo en este navegador.");
         } else {
@@ -8095,10 +8097,8 @@
     await syncDurableRecordsPull();
     state.currentUserId = authUser.id;
 
-    // Clean OAuth tokens from address bar if present
-    if (window.location.search || window.location.hash.includes("access_token=")) {
-      try { history.replaceState(null, "", window.location.pathname + "#/" + (ui.route || "dashboard")); } catch {}
-    }
+    // Only after membership and workspace checks pass, expose the operations URL.
+    try { history.replaceState(null, "", "/app#/" + (ui.route || "dashboard")); } catch {}
 
     // Ensure authenticated user has their own unique employee entry in state.employees
     const userEmail = (authUser.email || "").toLowerCase();

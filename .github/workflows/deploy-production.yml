@@ -1,0 +1,135 @@
+name: AkiBusiness verified production release
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/deploy-production.yml"
+permissions:
+  contents: read
+concurrency:
+  group: akibusiness-production
+  cancel-in-progress: false
+
+jobs:
+  package:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: cloudflare/package-lock.json
+      - name: Install pinned dependencies
+        run: npm ci --prefix cloudflare
+      - name: Verify operating suite and landing/login contracts
+        run: |
+          npm run check --prefix cloudflare
+          node --test tests/public-landing.test.mjs tests/domain-migration.test.mjs tests/password-recovery.test.mjs tests/product-release.test.mjs
+          node tests/pos-v4-smoke.cjs
+          node tests/pos-mobile-checkout.cjs
+      - name: Package the exact paid AkiBusiness build
+        env:
+          NEXT_PUBLIC_AKISUITE_ROLE_SWAP: "true"
+        run: |
+          node tools/build-product-release.mjs dist-product
+          node --input-type=module <<'NODE'
+          import assert from "node:assert/strict";
+          import { readFileSync } from "node:fs";
+          const read = name => readFileSync("dist-product/" + name, "utf8");
+          const stamp = JSON.parse(read("release-source.json"));
+          assert.equal(stamp.sourceCommit, process.env.GITHUB_SHA);
+          assert.equal(stamp.sourceTreeDirty, false);
+          assert.equal(stamp.product, "AkiBusiness");
+          assert.equal(stamp.roleSwap, true);
+          assert.equal(stamp.canonicalOrigin, "https://akibusiness.com");
+          assert.match(read("index.html"), /AkiBusiness \| Run the day/);
+          assert.match(read("login.html"), /<title>AkiBusiness<\/title>/);
+          assert.match(read("_redirects"), /^\/login \/login\.html 200/m);
+          assert.match(read("_redirects"), /^\/app \/login\.html 200/m);
+          assert.match(read("sw.js"), /akihq-v143/);
+          NODE
+      - uses: actions/upload-artifact@v4
+        with:
+          name: akibusiness-production-${{ github.sha }}
+          path: dist-product/
+          if-no-files-found: error
+          retention-days: 14
+
+  publish:
+    needs: package
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      CLOUDFLARE_ACCOUNT_ID: 501bc9434d8ae555a6ac984a26dd2725
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: cloudflare/package-lock.json
+      - uses: actions/download-artifact@v4
+        with:
+          name: akibusiness-production-${{ github.sha }}
+          path: dist-product
+      - name: Verify exact target project and production domain
+        run: |
+          node --input-type=module <<'NODE'
+          import assert from "node:assert/strict";
+          import { readFileSync } from "node:fs";
+          const token = process.env.CLOUDFLARE_API_TOKEN;
+          assert.ok(token, "Missing CLOUDFLARE_API_TOKEN GitHub Actions secret; production not changed");
+          const account = process.env.CLOUDFLARE_ACCOUNT_ID;
+          const res = await fetch("https://api.cloudflare.com/client/v4/accounts/" + account + "/pages/projects/akibusiness-operations-preview", {
+            headers: { Authorization: "Bearer " + token }, signal: AbortSignal.timeout(20000)
+          });
+          const payload = await res.json();
+          assert.ok(res.ok && payload.success, "Unable to verify the existing AkiBusiness Pages project");
+          const project = payload.result;
+          assert.equal(project.name, "akibusiness-operations-preview");
+          assert.ok(project.domains?.includes("akibusiness.com"), "Refusing to deploy: akibusiness.com not attached to project");
+          assert.equal(project.production_branch, "main", "Refusing deployment to non-main production branch");
+          const stamp = JSON.parse(readFileSync("dist-product/release-source.json", "utf8"));
+          assert.equal(stamp.sourceCommit, process.env.GITHUB_SHA);
+          assert.equal(stamp.product, "AkiBusiness");
+          console.log("Verified akibusiness.com Pages target and source " + stamp.sourceCommit);
+          if (project.source?.config?.repo_name !== "AkiBusiness") {
+            console.warn("Pages Git source differs from AkiBusiness; direct upload will not reconfigure automatic Git deployments.");
+          }
+          NODE
+      - name: Install pinned Wrangler
+        run: npm ci --prefix cloudflare
+      - name: Publish exact main build to existing AkiBusiness Pages
+        run: |
+          ./cloudflare/node_modules/.bin/wrangler pages deploy dist-product --project-name akibusiness-operations-preview --branch main --commit-hash "$GITHUB_SHA" --commit-message "AkiBusiness landing and login release"
+      - name: Verify production home, login and stamped source
+        run: |
+          node --input-type=module <<'NODE'
+          import assert from "node:assert/strict";
+          const base = "https://akibusiness.com";
+          for (let attempt = 0; attempt < 10; attempt++) {
+            try {
+              const [home, login, source] = await Promise.all(["/", "/login", "/release-source.json"].map(async path => {
+                const response = await fetch(base + path + "?release=" + process.env.GITHUB_SHA, { cache: "no-store", signal: AbortSignal.timeout(15000) });
+                assert.ok(response.ok, path + " returned " + response.status);
+                return response.text();
+              }));
+              assert.match(home, /AkiBusiness \| Run the day/);
+              assert.match(login, /<title>AkiBusiness<\/title>/);
+              assert.equal(JSON.parse(source).sourceCommit, process.env.GITHUB_SHA);
+              console.log("Verified AkiBusiness production at " + process.env.GITHUB_SHA);
+              process.exit(0);
+            } catch (error) {
+              if (attempt === 9) throw error;
+              await new Promise(resolve => setTimeout(resolve, 5000));
+            }
+          }
+          NODE

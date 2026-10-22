@@ -136,11 +136,11 @@ test('ledger display escapes product, operator and account details',()=>{
  assert.doesNotMatch(html,/<script>/);
 });
 test('cash reconciliation runtime assets have exact cache versions',()=>{
- const html=readFileSync(new URL('../index.html',import.meta.url),'utf8');
+ const html=readFileSync(new URL('../login.html',import.meta.url),'utf8');
  const sw=readFileSync(new URL('../sw.js',import.meta.url),'utf8');
  for(const asset of ['pos-ledger.js?v=2','pos-ledger.css?v=2','hospitality-pos.js?v=19']){
   assert.match(html,new RegExp(asset.replace(/[.?]/g,'\\$&')));
   assert.match(sw,new RegExp(asset.replace(/[.?]/g,'\\$&')));
  }
- assert.match(sw,/const CACHE = "akihq-v140"/);
+ assert.match(sw,/const CACHE = "akihq-v142"/);
 });

@@ -26,12 +26,17 @@ jobs:
       - name: Static operations app smoke
         run: |
           test -f index.html
+          test -f login.html
+          test -f assets/landing.css
+          test -f assets/landing.js
           test -f manifest.webmanifest
           test -f assets/hospitality-pos.js
           test -f assets/akibusiness-brand.css
-          node --test commerce-export.test.mjs inventory-ops.test.mjs multi-tenant.test.mjs tests/product-release.test.mjs tests/suite-navigation.test.mjs
+          node --test commerce-export.test.mjs inventory-ops.test.mjs multi-tenant.test.mjs tests/product-release.test.mjs tests/public-landing.test.mjs tests/domain-migration.test.mjs tests/membership-navigation.test.mjs tests/password-recovery.test.mjs tests/suite-navigation.test.mjs
       - name: Build AkiBusiness production assets without deploying
         run: |
           NEXT_PUBLIC_AKISUITE_ROLE_SWAP=true node tools/build-product-release.mjs dist-product
           node --input-type=module -e 'import {readFileSync} from "node:fs"; const j=JSON.parse(readFileSync("dist-product/release-source.json")); if(j.product!=="AkiBusiness"||!j.roleSwap||j.sourceTreeDirty)process.exit(1);'
-          grep -q '<title>AkiBusiness</title>' dist-product/index.html
+          grep -q '<title>AkiBusiness</title>' dist-product/login.html
+          grep -q 'AkiBusiness' dist-product/index.html
+          test -f dist-product/_redirects

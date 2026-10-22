@@ -2,7 +2,7 @@
   "name": "AkiHQ",
   "short_name": "AkiHQ",
   "description": "Open-source business operating system for CRM, projects, operations and collaboration.",
-  "start_url": "./index.html",
+  "start_url": "/app",
   "display": "standalone",
   "background_color": "#090e28",
   "theme_color": "#8058F8",

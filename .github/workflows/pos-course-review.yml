@@ -39,7 +39,7 @@ jobs:
           NEXT_PUBLIC_AKISUITE_ROLE_SWAP: 'true'
         run: |
           node tools/build-product-release.mjs "$RUNNER_TEMP/akibusiness-course-release"
-          node --input-type=module -e "import {readFileSync as read} from 'node:fs';const p=process.env.RUNNER_TEMP+'/akibusiness-course-release/';const meta=JSON.parse(read(p+'release-source.json'));if(meta.product!=='AkiBusiness'||meta.sourceTreeDirty)throw Error('Release metadata mismatch');for(const name of ['pos-courses.js?v=1','pos-courses.css?v=1','hospitality-pos.js?v=19','pos-service.js?v=3','pos-kds.js?v=2','pos-v4-dialogs.js?v=2'])if(!read(p+'index.html','utf8').includes(name)||!read(p+'sw.js','utf8').includes(name))throw Error('Missing release asset '+name);if(!read(p+'sw.js','utf8').includes('akihq-v141'))throw Error('Wrong release cache');"
+          node --input-type=module -e "import {readFileSync as read} from 'node:fs';const p=process.env.RUNNER_TEMP+'/akibusiness-course-release/';const meta=JSON.parse(read(p+'release-source.json'));if(meta.product!=='AkiBusiness'||meta.sourceTreeDirty)throw Error('Release metadata mismatch');for(const name of ['pos-courses.js?v=1','pos-courses.css?v=1','hospitality-pos.js?v=19','pos-service.js?v=3','pos-kds.js?v=2','pos-v4-dialogs.js?v=2'])if(!read(p+'login.html','utf8').includes(name)||!read(p+'sw.js','utf8').includes(name))throw Error('Missing release asset '+name);if(!read(p+'sw.js','utf8').includes('akihq-v143'))throw Error('Wrong release cache');"
   postgres-concurrency:
     runs-on: ubuntu-latest
     timeout-minutes: 10
@@ -78,7 +78,9 @@ jobs:
         run: python3 tests/pos-courses-postgres.py
   browser:
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 20
+    container:
+      image: mcr.microsoft.com/playwright/python:v1.57.0-noble
     strategy:
       fail-fast: false
       matrix:
@@ -100,7 +102,6 @@ jobs:
         with:
           python-version: '3.12'
       - run: python -m pip install playwright==1.57.0
-      - run: python -m playwright install --with-deps chromium
       - name: Fullscreen geometry, rapid course entry, native recovery and accessibility
         env:
           POS_BROWSER_SIZES: ${{ matrix.sizes }}

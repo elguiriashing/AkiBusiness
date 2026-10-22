@@ -2,7 +2,7 @@
 const {readFileSync}=require("node:fs");
 const assert=require("node:assert/strict");
 const css=readFileSync("assets/pos-responsive.css","utf8");
-const html=readFileSync("index.html","utf8");
+const html=readFileSync("login.html","utf8");
 const sw=readFileSync("sw.js","utf8");
 const rules=[
   "@media (max-width:900px)",

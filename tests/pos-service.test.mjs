@@ -99,7 +99,7 @@ test('native POS navigation does not reuse cross-site or account menu actions',(
 });
 test('new assets are versioned in both document and service worker',()=>{
  for(const asset of ['pos-service.js?v=3','pos-service.css?v=1','hospitality-pos.js?v=19','pos-v4.js?v=3']){
-  assert.ok(read('index.html').includes(asset));assert.ok(read('sw.js').includes(asset));
+  assert.ok(read('login.html').includes(asset));assert.ok(read('sw.js').includes(asset));
  }
 });
 test('service revision uses the existing command and expected version, not a new write channel',async()=>{

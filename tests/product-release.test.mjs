@@ -15,7 +15,8 @@ for (const enabled of [false, true]) {
       const source = await read('assets/app-v32.js');
       const original = await readFile(new URL('../assets/app-v32.js', import.meta.url), 'utf8');
       const product = enabled ? 'AkiBusiness' : 'AkiHQ';
-      assert.match(await read('index.html'), new RegExp(`<title>${product}</title>`));
+      assert.match(await read('index.html'), /<title>AkiBusiness/);
+      assert.match(await read('login.html'), new RegExp(`<title>${product}</title>`));
       // Cloudflare Pages SPA rewrites nested routes back to index.html; base URL
       // must stay rooted so /es/business loads /assets and /config.js.
       assert.match(await read('index.html'), /<base href="\/"\s*\/>/);
@@ -27,7 +28,10 @@ for (const enabled of [false, true]) {
       assert.equal(typeof JSON.parse(await read('release-source.json')).sourceTreeDirty, 'boolean');
       if (enabled) assert.doesNotMatch(source, /void client\.rpc\("queue_suite_portal_welcome"/);
       else assert.match(source, /void client\.rpc\("queue_suite_portal_welcome"/);
-      // Cloudflare Pages detects SPA routes automatically when no top-level 404.html exists.\n      // The historic catch-all rewrite to /index.html is rejected as a loop.\n      await assert.rejects(read('_redirects'), { code: 'ENOENT' });
+      // Explicit /login and /app rewrites preserve authentication without an SPA wildcard.
+      const rewrites = await read('_redirects');
+      assert.match(rewrites, new RegExp('^/login /login\\.html 200$', 'm'));
+      assert.doesNotMatch(rewrites, /\/\* \/index\.html/);
       assert.match(await read('config.js'), new RegExp(`CRM_URL: +"https://${enabled ? 'akibusiness.com' : 'akihq.app'}"`));
       // Permissions, workspace selection and operational implementations are byte-identical.
       const operations = text => text.slice(text.indexOf('  async function loadAccessibleWorkspaces('), text.indexOf('  async function loadAccessibleWorkspaces(') + 3800);
@@ -35,7 +39,7 @@ for (const enabled of [false, true]) {
       for (const file of ['assets/hospitality-pos.js', 'assets/inventory-ops.js', 'assets/checkout-session.js', 'assets/supabase.js']) {
         assert.equal(await read(file), await readFile(new URL('../' + file, import.meta.url), 'utf8'));
       }
-      const version = (await read('index.html')).match(/app-v32.js\?v=\d+/)[0];
+      const version = (await read('login.html')).match(/app-v32.js\?v=\d+/)[0];
       assert.ok((await read('sw.js')).includes(version));
       for (const origin of ['https://akibusiness.com', 'https://akihq.app', 'https://crm.akipasa.com', 'https://exact-preview.pages.dev']) {
         const handlers = {};
@@ -47,10 +51,10 @@ for (const enabled of [false, true]) {
         const login = source.slice(source.indexOf('  function renderLoginScreen('), source.indexOf('  function renderAccessDenied('));
         vm.runInNewContext(`${login}\nrenderLoginScreen();`, context);
         assert.match(context.appRoot.innerHTML, new RegExp(`Sign in to ${product}`));
-        assert.match(context.appRoot.innerHTML, /suite-product-card active" href="\/"/);
+        assert.match(context.appRoot.innerHTML, /suite-product-card active" href="\/login"/);
         if (enabled) assert.match(context.appRoot.innerHTML, /href="https:\/\/akihq.app\/en\/business"/);
         await handlers['google-login-btn:click']();
-        assert.equal(oauth.options.redirectTo, origin);
+        assert.equal(oauth.options.redirectTo, origin + '/login');
       }
     } finally { await rm(temporary, { recursive: true, force: true }); }
   });
