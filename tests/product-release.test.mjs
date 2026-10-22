@@ -32,8 +32,6 @@ for (const enabled of [false, true]) {
       const rewrites = await read('_redirects');
       assert.match(rewrites, new RegExp('^/login /login\\.html 200$', 'm'));
       assert.doesNotMatch(rewrites, /\/\* \/index\.html/);
-      assert.match(rewrites, /^\\/login \\/login\\.html 200/m);
-      assert.doesNotMatch(rewrites, /\\/\\* \\/index\\.html/);
       assert.match(await read('config.js'), new RegExp(`CRM_URL: +"https://${enabled ? 'akibusiness.com' : 'akihq.app'}"`));
       // Permissions, workspace selection and operational implementations are byte-identical.
       const operations = text => text.slice(text.indexOf('  async function loadAccessibleWorkspaces('), text.indexOf('  async function loadAccessibleWorkspaces(') + 3800);
