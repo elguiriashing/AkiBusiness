@@ -41,3 +41,28 @@ test("login uses same-origin OAuth and recovery; dashboard URL requires an autho
   assert.match(source, /history\.replaceState\(null, "", "\/app#\/" \+ \(ui\.route \|\| "dashboard"\)\)/);
   assert.ok(source.indexOf("const selectedWorkspace = selectInitialWorkspace(") < source.indexOf('history.replaceState(null, "", "/app#/"'));
 });
+
+test("public operating tools are exactly the twelve authoritative membership catalogue keys and labels", () => {
+  const page = read("index.html");
+  const membership = read("assets/membership.js");
+  const locale = read("assets/landing.js");
+  const catalogue = membership.match(/const tools = \[([\s\S]*?)\n  \];/);
+  assert.ok(catalogue, "Missing authoritative membership catalogue");
+  const tools = [...catalogue[1].matchAll(/\["([^"]+)",\s*"([^"]+)",\s*"([^"]+)"\]/g)];
+  assert.equal(tools.length, 12, "Expected all twelve parent tools, not subtools");
+  const landing = [...page.matchAll(/<article data-tool-key="([^"]+)">[\s\S]*?<h3 data-i18n="([^"]+)">([^<]+)<\/h3>/g)];
+  assert.equal(landing.length, 12, "Marketing must display exactly the twelve real operating tools");
+  assert.deepEqual(landing.map(entry => entry[1]), tools.map(entry => entry[1]));
+  assert.deepEqual(landing.map(entry => entry[3]), tools.map(entry => entry[2]));
+  for (const [, key, en, es] of tools) {
+    const card = landing.find(entry => entry[1] === key);
+    assert.ok(card);
+    assert.match(locale, new RegExp(card[2] + ':\\s*"' + es.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '"'));
+    assert.ok(en.length > 0 && es.length > 0);
+  }
+  assert.match(page, /next eligible monthly rotation/);
+  assert.match(page, /€24\.99/);
+  assert.match(page, /€44\.99/);
+  assert.match(page, /€64\.99/);
+  assert.doesNotMatch(page, /data-i18n="toolTogether"|data-i18n="toolReports"/);
+});
