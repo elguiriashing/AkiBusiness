@@ -1,4 +1,4 @@
-const CACHE = "akihq-v140";
+const CACHE = "akibusiness-v141";
 const ASSETS = [
   "./assets/suite-navigation.js?v=2",
   "./assets/operational-analytics.js?v=1",
@@ -24,6 +24,9 @@ const ASSETS = [
   "./assets/pos-v4.css?v=2",
   "./",
   "./index.html",
+  "./login.html",
+  "./assets/landing.css?v=1",
+  "./assets/landing.js?v=1",
   "./membership.html",
   "./assets/membership.css?v=2",
   "./assets/membership.js?v=4",
@@ -84,7 +87,7 @@ self.addEventListener("fetch", event => {
         const clone = response.clone();
         caches.open(CACHE).then(cache => cache.put(event.request, clone));
         return response;
-      }).catch(async () => (await caches.match(event.request)) || (isDocument ? caches.match("./index.html") : Response.error()))
+      }).catch(async () => (await caches.match(event.request)) || (isDocument ? caches.match(url.pathname.startsWith("/login") || url.pathname.startsWith("/app") ? "./login.html" : "./index.html") : Response.error()))
     );
     return;
   }
