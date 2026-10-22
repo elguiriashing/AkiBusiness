@@ -19,7 +19,7 @@ for (const enabled of [false, true]) {
       assert.match(await read('login.html'), new RegExp(`<title>${product}</title>`));
       // Cloudflare Pages SPA rewrites nested routes back to index.html; base URL
       // must stay rooted so /es/business loads /assets and /config.js.
-      assert.match(await read('index.html'), /<base href="\/login"\s*\/>/);
+      assert.match(await read('index.html'), /<base href="\/"\s*\/>/);
       assert.equal(JSON.parse(await read('manifest.webmanifest')).name, product);
       assert.match(await read('membership.html'), /data-plan="standard"/);
       assert.match(await read('membership.html'), /id="operations-subscription-link"/);
@@ -28,7 +28,10 @@ for (const enabled of [false, true]) {
       assert.equal(typeof JSON.parse(await read('release-source.json')).sourceTreeDirty, 'boolean');
       if (enabled) assert.doesNotMatch(source, /void client\.rpc\("queue_suite_portal_welcome"/);
       else assert.match(source, /void client\.rpc\("queue_suite_portal_welcome"/);
-      // Cloudflare Pages detects SPA routes automatically when no top-level 404.html exists.\n      // The historic catch-all rewrite to /index.html is rejected as a loop.\n      const rewrites = await read('_redirects');
+      // Explicit /login and /app rewrites preserve authentication without an SPA wildcard.
+      const rewrites = await read('_redirects');
+      assert.match(rewrites, new RegExp('^/login /login\\.html 200$', 'm'));
+      assert.doesNotMatch(rewrites, /\/\* \/index\.html/);
       assert.match(rewrites, /^\\/login \\/login\\.html 200/m);
       assert.doesNotMatch(rewrites, /\\/\\* \\/index\\.html/);
       assert.match(await read('config.js'), new RegExp(`CRM_URL: +"https://${enabled ? 'akibusiness.com' : 'akihq.app'}"`));
