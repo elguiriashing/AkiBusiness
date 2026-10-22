@@ -23,7 +23,7 @@ test("plans use the authoritative account handoff and never collect payment loca
 });
 
 test("the membership navigation bundle has a fresh and consistent offline cache key", () => {
-  const html = readFileSync(new URL("../index.html", import.meta.url), "utf8");
+  const html = readFileSync(new URL("../login.html", import.meta.url), "utf8");
   const sw = readFileSync(new URL("../sw.js", import.meta.url), "utf8");
   assert.match(sw, /\.\/membership\.html/);
   assert.match(sw, /\.\/assets\/membership\.js\?v=4/);
