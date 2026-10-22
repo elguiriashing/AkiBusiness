@@ -60,6 +60,8 @@ jobs:
   browser:
     runs-on: ubuntu-latest
     timeout-minutes: 20
+    container:
+      image: mcr.microsoft.com/playwright/python:v1.57.0-noble
     strategy:
       fail-fast: false
       matrix:
@@ -81,7 +83,6 @@ jobs:
         with:
           python-version: '3.12'
       - run: python -m pip install playwright==1.57.0
-      - run: python -m playwright install --with-deps chromium
       - name: Real Chromium layout and service interactions
         env:
           POS_BROWSER_SIZES: ${{ matrix.sizes }}
