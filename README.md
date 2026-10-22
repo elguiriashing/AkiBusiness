@@ -1,5 +1,17 @@
 # AkiBusiness · Independent operations suite
 
+## 22 October 2026 · Membership scope
+
+The AkiBusiness membership screen lists only Standard, Plus and Pro
+operating software (per operating location). Its EN/ES introductory copy
+distinguishes this paid software from free AkiHQ listing management and
+the separate AkiPasa, AkiDuermo and AkiCoches Premium listing upgrades.
+A dedicated AkiHQ membership link now sends users to those listing
+choices. No billing logic, prices, entitlements or checkout are changed.
+The page and service-worker asset version are updated together. Live
+release still requires full checks, host verification and source-SHA proof.
+
+
 Canonical website: **https://akibusiness.com** · Source owner: **elguiriashing/AkiBusiness**.
 
 This repository contains the standalone AkiBusiness operations application, including its static app, PoS, kitchen/bar queues, printers, inventory, CRM, staff and multi-tenant workflows. The original operational system was transferred from the historical `akihq` source branch and lives in this isolated migration branch pending acceptance.

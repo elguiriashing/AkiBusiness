@@ -4,7 +4,7 @@
     en: {
       suite: "by AkiPasa", back: "Back to operations", eyebrow: "YOUR BUSINESS. YOUR TOOLBOX.",
       title: "The tools you need. One operating workspace.",
-      intro: "Choose your tools for each operating location. AkiHQ stays free for company and listing management; AkiBusiness runs your daily operations.",
+      intro: "AkiBusiness is paid operating software for your locations. AkiHQ stays free for managing listings; listing Premium upgrades are separate.",
       monthly: "Monthly", location: "Per operating location", period: "/month", chooseTools: "tools of your choice", allTools: "all tools available",
       basicRotation: "1 tool replacement at each monthly rotation", standardRotation: "2 tool replacements at each monthly rotation", proRotation: "Unrestricted tool access; no monthly selection needed",
       savedNext: "Save your next toolbox without changing this month's tools", instantStaff: "Change staff access to active tools immediately", allTogether: "Keep every operating tool available together", moreFlexibility: "MORE FLEXIBILITY", completeToolbox: "THE COMPLETE TOOLBOX",
@@ -12,14 +12,14 @@
       annualRotation: "Annual subscribers also rotate monthly. Billing frequency does not lock a toolbox for a year. Access changes after a confirmed upgrade follow the purchased package; downgrades take effect on the applicable billing date. Existing tool data is retained.",
       catalogueTitle: "Explore the 12 operating tools", catalogueBody: "Standard and Plus choose from this same catalogue. Pro includes all twelve. Individual tools still follow their applicable setup and permissions.",
       reviewTitle: "Review your operating subscription", reviewBody: "Your account checks the location you own, existing subscriptions and billing availability before offering a purchase or change. Opening it does not charge you.", reviewAction: "Manage operating subscription",
-      separateTitle: "Free management. Separate listing upgrades.", notice: "AkiHQ is the free hub for organisations, locations, listings and ownership. An AkiBusiness operating subscription does not include personal Premium or Premium listing upgrades for AkiPasa, AkiDuermo or AkiCoches.", freeManagement: "Open free AkiHQ",
+      separateTitle: "Free management. Separate listing upgrades.", notice: "AkiHQ is the free hub for organisations, locations, listings and ownership. An AkiBusiness operating subscription does not include personal Premium or Premium listing upgrades for AkiPasa, AkiDuermo or AkiCoches.", freeManagement: "Open free AkiHQ", listingOptions: "Explore listing upgrades",
       monthlyNote: "Monthly prices per operating location. Review availability and billing terms in your account.",
       plansLabel: "AkiBusiness plans", pageControls: "Page controls", light: "Light", dark: "Dark", useLight: "Switch to light mode", useDark: "Switch to dark mode",
     },
     es: {
       suite: "de AkiPasa", back: "Volver a operaciones", eyebrow: "TU NEGOCIO. TUS HERRAMIENTAS.",
       title: "Las herramientas que necesitas. Un solo espacio de trabajo.",
-      intro: "Elige las herramientas de cada ubicación operativa. AkiHQ sigue siendo gratuito para gestionar empresas y fichas; AkiBusiness se ocupa de tus operaciones diarias.",
+      intro: "AkiBusiness es software de operaciones de pago por ubicación. AkiHQ sigue siendo gratuito para gestionar tus fichas; las mejoras Premium se contratan aparte.",
       monthly: "Mensual", location: "Por ubicación operativa", period: "/mes", chooseTools: "herramientas a tu elección", allTools: "todas las herramientas disponibles",
       basicRotation: "1 sustitución de herramienta en cada rotación mensual", standardRotation: "2 sustituciones de herramientas en cada rotación mensual", proRotation: "Acceso sin restricciones; no necesitas elegir herramientas cada mes",
       savedNext: "Guarda tu próxima selección sin cambiar las herramientas de este mes", instantStaff: "Cambia al instante el acceso del equipo a las herramientas activas", allTogether: "Mantén disponibles todas las herramientas operativas a la vez", moreFlexibility: "MÁS FLEXIBILIDAD", completeToolbox: "TODAS LAS HERRAMIENTAS",
@@ -27,7 +27,7 @@
       annualRotation: "Las suscripciones anuales también rotan mensualmente. La frecuencia de pago no bloquea las herramientas durante un año. Tras una mejora confirmada se aplican los accesos del nuevo paquete; las bajadas de plan entran en vigor en la fecha de facturación correspondiente. Los datos de las herramientas se conservan.",
       catalogueTitle: "Explora las 12 herramientas operativas", catalogueBody: "Standard y Plus eligen del mismo catálogo. Pro incluye las doce. Cada herramienta sigue su configuración y sus permisos aplicables.",
       reviewTitle: "Revisa tu suscripción operativa", reviewBody: "Tu cuenta comprueba la ubicación de tu propiedad, las suscripciones existentes y la disponibilidad de facturación antes de ofrecer una compra o un cambio. Abrirla no genera ningún cargo.", reviewAction: "Gestionar suscripción operativa",
-      separateTitle: "Gestión gratuita. Mejoras de fichas independientes.", notice: "AkiHQ es el centro gratuito para empresas, ubicaciones, fichas y titularidad. Una suscripción operativa de AkiBusiness no incluye Premium personal ni las mejoras Premium de fichas de AkiPasa, AkiDuermo o AkiCoches.", freeManagement: "Abrir AkiHQ gratis",
+      separateTitle: "Gestión gratuita. Mejoras de fichas independientes.", notice: "AkiHQ es el centro gratuito para empresas, ubicaciones, fichas y titularidad. Una suscripción operativa de AkiBusiness no incluye Premium personal ni las mejoras Premium de fichas de AkiPasa, AkiDuermo o AkiCoches.", freeManagement: "Abrir AkiHQ gratis", listingOptions: "Ver mejoras Premium de fichas",
       monthlyNote: "Precios mensuales por ubicación operativa. Consulta la disponibilidad y las condiciones de facturación en tu cuenta.",
       plansLabel: "Planes AkiBusiness", pageControls: "Controles de página", light: "Claro", dark: "Oscuro", useLight: "Cambiar a modo claro", useDark: "Cambiar a modo oscuro",
     },
@@ -76,6 +76,7 @@
     if (workspace) review.searchParams.set("workspace", workspace);
     document.getElementById("operations-subscription-link").href = review.toString();
     document.getElementById("free-management-link").href = window.AkiSuiteNavigation.href("hq", language);
+    document.getElementById("listing-plans-link").href = window.AkiSuiteNavigation.href("hq", language, { path: "/membership" });
     const back = new URL("/", location.origin);
     back.searchParams.set("locale", language);
     if (workspace) back.searchParams.set("workspace", workspace);

@@ -29,7 +29,7 @@ const ASSETS = [
   "./assets/landing.js?v=1",
   "./membership.html",
   "./assets/membership.css?v=2",
-  "./assets/membership.js?v=4",
+  "./assets/membership.js?v=5",
   "./assets/styles.css?v=60",
   "./assets/account-eligibility.js?v=3",
   "./assets/toolbox-notifications.js?v=1",
