@@ -1,63 +1,80 @@
 <!doctype html>
-<html lang="en" data-theme="dark" data-density="comfortable">
+<html lang="en" data-product="business">
 <head>
   <meta charset="utf-8" />
-  <!-- Resolve scripts/styles from the site root even on SPA deep links. -->
   <base href="/" />
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <meta name="theme-color" content="#8058F8" />
-  <meta name="description" content="AkiHQ — AkiPasa's secure workspace for business operations." />
-  <title>AkiHQ</title>
-  <link rel="manifest" href="manifest.webmanifest" />
-    <link rel="icon" href="assets/icons/icon.svg" type="image/svg+xml" sizes="any" />
-  <link rel="icon" type="image/png" sizes="32x32" href="assets/icons/icon-32.png" />
-  <link rel="icon" type="image/svg+xml" href="assets/icons/icon.svg" />
-  <link rel="apple-touch-icon" sizes="180x180" href="assets/icons/icon-180.png" />
-  <link rel="stylesheet" href="assets/styles.css?v=60" />
-  <link rel="stylesheet" href="assets/support-desk.css?v=1" />
-  <link rel="stylesheet" href="assets/company-manager.css?v=2" />
+  <meta name="theme-color" content="#090e28" />
+  <meta name="description" content="AkiBusiness: your point of sale, inventory, CRM, teams and reporting in one connected operations suite. Explore plans from €24.99 per operating location." />
+  <link rel="canonical" href="https://akibusiness.com/" />
+  <title>AkiBusiness | Run the day. Grow the business.</title>
+  <link rel="icon" href="assets/icons/icon.svg" type="image/svg+xml" />
+  <link rel="stylesheet" href="assets/landing.css?v=1" />
+  <script>
+    // Legacy OAuth callbacks and bookmarked hash routes must reach the preserved application.
+    // Do not store or send authentication tokens to analytics on this public page.
+    (function () {
+      const params = new URLSearchParams(location.search);
+      if (params.has("code") || params.has("access_token") || /(?:^#|&)(?:access_token|refresh_token|type=recovery)=/.test(location.hash)) {
+        location.replace("/login" + location.search + location.hash);
+      } else if (/^#\/(?:dashboard|pos|crm|inventory|staff|analytics|settings|support|marketing|sales|finance|tools)(?:\/|$)/.test(location.hash)) {
+        location.replace("/app" + location.search + location.hash);
+      }
+    })();
+  </script>
+  <script defer src="assets/landing.js?v=1"></script>
 </head>
 <body>
-  <noscript>AkiHQ needs JavaScript enabled.</noscript>
-  <div id="app" class="app-shell" aria-live="polite"></div>
-  <div id="portal"></div>
-  <input id="import-file" type="file" accept="application/json" hidden />
-  <input id="media-file" type="file" accept="image/*,video/*,audio/*,application/pdf" multiple hidden />
-  <script src="config.js?v=44"></script>
-  <script src="assets/supabase.js?v=40"></script>
-  <script src="assets/support-desk.js?v=2"></script>
-  <script src="assets/company-manager.js?v=11"></script>
-  <script src="assets/commerce-export.js?v=3"></script>
-  <script src="assets/checkout-session.js?v=2"></script>
-  <script src="assets/fiscal-core.js?v=2"></script>
-  <script src="assets/inventory-ops.js?v=2"></script>
-  <script src="assets/suite-controls.js?v=2"></script>
-  <link rel="stylesheet" href="assets/hospitality-pos.css?v=9">
-  <link rel="stylesheet" href="assets/pos-v4.css?v=2">
-  <link rel="stylesheet" href="assets/pos-printer-station.css?v=2">
-  <link rel="stylesheet" href="assets/pos-ledger.css?v=2">
-  <link rel="stylesheet" href="assets/pos-responsive.css?v=3">
-  <link rel="stylesheet" href="assets/pos-service.css?v=1">
-  <link rel="stylesheet" href="assets/pos-kds.css?v=1" />
-  <link rel="stylesheet" href="assets/akibusiness-brand.css?v=1">
-  <link rel="stylesheet" href="assets/suite-app-menu.css?v=1">
-  <script src="assets/floor-editor.js?v=2"></script>
-  <link rel="stylesheet" href="assets/pos-courses.css?v=1" />
-  <link rel="stylesheet" href="assets/pos-variants.css?v=1">
-  <script src="assets/pos-variants.js?v=1"></script>
-  <script src="assets/pos-courses.js?v=1"></script>
-  <script src="assets/pos-service.js?v=3"></script>
-  <script src="assets/pos-kds.js?v=2"></script>
-  <script src="assets/pos-v4.js?v=3"></script>
-  <script src="assets/pos-v4-dialogs.js?v=2"></script>
-  <script src="assets/pos-printer-station.js?v=2"></script>
-  <script src="assets/pos-ledger.js?v=2"></script>
-  <script src="assets/hospitality-pos.js?v=19"></script>
-  <script src="assets/suite-navigation.js?v=2"></script>
-  <script src="assets/account-eligibility.js?v=3"></script>
-  <script src="assets/toolbox-notifications.js?v=1"></script>
-  <link rel="stylesheet" href="assets/operational-analytics.css?v=1">
-  <script src="assets/operational-analytics.js?v=1"></script>
-  <script src="assets/app-v32.js?v=43"></script>
+<div class="ab-landing" id="top">
+  <header class="ab-header">
+    <a href="/" class="ab-brand" aria-label="AkiBusiness home"><img src="assets/logo.svg" width="41" height="41" alt=""/><span>Aki<strong>Business</strong><i>.</i></span></a>
+    <nav aria-label="Main navigation"><a href="#tools" data-i18n="navTools">Tools</a><a href="#pricing" data-i18n="navPlans">Pricing</a><a href="https://akihq.app" data-i18n="navHq">AkiHQ</a><button type="button" id="ab-language" aria-label="Switch language">ES</button><a class="ab-signin" data-login-link href="/login" data-i18n="signIn">Sign in ↗</a></nav>
+  </header>
+  <main>
+    <section class="ab-hero">
+      <div class="ab-hero-copy">
+        <span class="ab-eyebrow"><span class="ab-star">✳</span> <span data-i18n="eyebrow">THE OPERATING SYSTEM FOR YOUR BUSINESS</span></span>
+        <h1><span data-i18n="headline1">Run the day.</span><br><em data-i18n="headline2">Grow the business.</em></h1>
+        <p data-i18n="heroIntro">Point of sale, inventory, teams, customers and performance. Your operational tools, working together, without the usual chaos of seventeen different tabs.</p>
+        <div class="ab-hero-buttons"><a class="ab-btn ab-btn-primary" href="#pricing"><span data-i18n="seePlans">Explore plans</span><span aria-hidden="true">↗</span></a><a class="ab-btn ab-btn-secondary" data-login-link href="/login"><span data-i18n="openWorkspace">Open workspace</span> ↗</a></div>
+        <div class="ab-proof"><span>✦ <span data-i18n="locationPlans">Plans per operating location</span></span><span>✓ <span data-i18n="oneAccount">Connected to your AkiSuite account</span></span></div>
+      </div>
+      <div class="ab-preview-wrap" aria-label="Illustrative AkiBusiness operations interface">
+        <div class="ab-preview">
+          <div class="ab-preview-top"><div class="ab-preview-dots"><span></span><span></span><span></span></div><span>AkiBusiness / Operations</span><span class="ab-preview-online">● <span data-i18n="workspaceReady">WORKSPACE</span></span></div>
+          <div class="ab-preview-body">
+            <aside class="ab-sidebar"><div class="ab-sidebar-brand">A<span>✳</span></div><span class="active" data-i18n="mockOverview">Overview</span><span data-i18n="mockSales">Sales</span><span data-i18n="mockInventory">Inventory</span><span data-i18n="mockTeam">Team</span><span data-i18n="mockReports">Reports</span></aside>
+            <div class="ab-preview-content">
+              <div class="ab-content-heading"><div><small data-i18n="liveWorkspace">YOUR WORKSPACE</small><h2 data-i18n="demoTitle">Everything in motion.</h2></div><span class="ab-chip" data-i18n="demoChip">OPERATIONS</span></div>
+              <div class="ab-demo-grid"><article><small data-i18n="demoPos">POINT OF SALE</small><strong data-i18n="posTitle">Orders</strong><div class="ab-order"><span>01</span><i></i><b>✓</b></div><div class="ab-order"><span>02</span><i></i><b>✓</b></div><div class="ab-order"><span>03</span><i></i><b>·</b></div></article><article><small data-i18n="demoInventory">INVENTORY</small><strong data-i18n="inventoryTitle">Stock health</strong><div class="ab-bar"><span style="width:79%"></span></div><div class="ab-bar"><span style="width:53%"></span></div><div class="ab-bar"><span style="width:92%"></span></div></article></div>
+              <div class="ab-demo-report"><div><small data-i18n="demoReports">REPORTING</small><strong data-i18n="reportTitle">Trends at a glance</strong></div><div class="ab-chart" aria-hidden="true"><span style="height:31%"></span><span style="height:53%"></span><span style="height:46%"></span><span style="height:69%"></span><span style="height:64%"></span><span style="height:84%"></span><span style="height:100%"></span></div></div>
+            </div>
+          </div>
+        </div>
+        <div class="ab-preview-floating"><span>✳</span> <span data-i18n="allConnected">ALL CONNECTED</span></div>
+      </div>
+    </section>
+    <section class="ab-connect"><span data-i18n="twoProducts">TWO PRODUCTS. ONE CONNECTED SUITE.</span><div><strong>AkiHQ <small data-i18n="managementHub">Free management hub</small></strong><span>→</span><strong>AkiBusiness <small data-i18n="operationsSuite">Professional operating tools</small></strong></div></section>
+    <section class="ab-section ab-tools" id="tools"><div class="ab-section-heading"><span class="ab-eyebrow" data-i18n="toolKicker">EVERY TOOL IN ITS PLACE</span><h2 data-i18n="toolHeading">One workspace. Your entire operation.</h2><p data-i18n="toolIntro">Start with the tools your location needs. Keep your team moving without switching between disconnected systems.</p></div>
+      <div class="ab-tools-grid">
+        <article><span class="ab-tool-icon">▦</span><span class="ab-tool-number">01</span><h3 data-i18n="toolPos">Point of sale</h3><p data-i18n="toolPosDesc">Tables, orders, bills, kitchen and bar workflows in one service view.</p></article>
+        <article><span class="ab-tool-icon">▤</span><span class="ab-tool-number">02</span><h3 data-i18n="toolInventory">Inventory</h3><p data-i18n="toolInventoryDesc">Keep stock, products and daily operations under control.</p></article>
+        <article><span class="ab-tool-icon">♧</span><span class="ab-tool-number">03</span><h3 data-i18n="toolTeam">Staff & permissions</h3><p data-i18n="toolTeamDesc">Give people access to the tools and locations they actually need.</p></article>
+        <article><span class="ab-tool-icon">◇</span><span class="ab-tool-number">04</span><h3 data-i18n="toolCrm">CRM & customers</h3><p data-i18n="toolCrmDesc">Build better customer relationships with an organised workspace.</p></article>
+        <article><span class="ab-tool-icon">▥</span><span class="ab-tool-number">05</span><h3 data-i18n="toolReports">Reports & insights</h3><p data-i18n="toolReportsDesc">Get a clear picture of performance and operational activity.</p></article>
+        <article><span class="ab-tool-icon">✳</span><span class="ab-tool-number">06</span><h3 data-i18n="toolTogether">Connected toolbox</h3><p data-i18n="toolTogetherDesc">Choose the right combination of operating tools for every location.</p></article>
+      </div>
+    </section>
+    <section class="ab-section ab-pricing" id="pricing"><div class="ab-section-heading"><span class="ab-eyebrow" data-i18n="pricingKicker">SIMPLE, SCALABLE PRICING</span><h2 data-i18n="pricingTitle">Your tools. Your pace.</h2><p data-i18n="pricingIntro">Monthly prices per operating location. Tool selections and billing are subject to your account's confirmed entitlements.</p></div>
+      <div class="ab-plan-grid">
+        <article class="ab-plan"><span class="ab-plan-label" data-i18n="starting">STARTING OUT</span><h3>Standard</h3><div class="ab-price">€24.99 <span data-i18n="month">/ month</span></div><p data-i18n="standardIntro">Your essential operating toolkit.</p><div class="ab-tools-total"><b>4</b><span data-i18n="ofTwelve">of 12 tools</span></div><ul><li data-i18n="standard1">Choose four active tools</li><li data-i18n="standard2">Save next month's selection</li><li data-i18n="all1">Location-scoped staff access</li></ul><a href="/membership.html" class="ab-plan-cta" data-i18n="comparePlans">View plan details ↗</a></article>
+        <article class="ab-plan ab-plan-featured"><span class="ab-plan-label" data-i18n="flexible">MORE FLEXIBILITY</span><h3>Plus</h3><div class="ab-price">€44.99 <span data-i18n="month">/ month</span></div><p data-i18n="plusIntro">A larger toolbox for growing teams.</p><div class="ab-tools-total"><b>8</b><span data-i18n="ofTwelve">of 12 tools</span></div><ul><li data-i18n="plus1">Choose eight active tools</li><li data-i18n="plus2">Two replacements each monthly rotation</li><li data-i18n="all1">Location-scoped staff access</li></ul><a href="/membership.html" class="ab-plan-cta" data-i18n="comparePlans">View plan details ↗</a></article>
+        <article class="ab-plan"><span class="ab-plan-label" data-i18n="everything">COMPLETE TOOLBOX</span><h3>Pro</h3><div class="ab-price">€64.99 <span data-i18n="month">/ month</span></div><p data-i18n="proIntro">The complete operating setup.</p><div class="ab-tools-total"><b>12</b><span data-i18n="ofTwelve">of 12 tools</span></div><ul><li data-i18n="pro1">All twelve operating tools</li><li data-i18n="pro2">No monthly selection required</li><li data-i18n="all1">Location-scoped staff access</li></ul><a href="/membership.html" class="ab-plan-cta" data-i18n="comparePlans">View plan details ↗</a></article>
+      </div><p class="ab-pricing-note" data-i18n="billingDisclaimer">Plan information only. See your account for availability, taxes, billing options and confirmed checkout.</p>
+    </section>
+    <section class="ab-cta"><div><span class="ab-eyebrow" data-i18n="ctaKicker">MANAGEMENT IS ON US</span><h2 data-i18n="ctaTitle">Need a free starting point?</h2><p data-i18n="ctaBody">AkiHQ is your free company and listing management hub. Add AkiBusiness operating tools when your team is ready.</p></div><a href="https://akihq.app" class="ab-btn ab-btn-secondary" data-i18n="openHq">Explore AkiHQ ↗</a></section>
+  </main>
+  <footer class="ab-footer"><span data-i18n="footerCopy">AkiBusiness · Part of AkiSuite by AkiPasa Marketing S.L.</span><div><a href="https://akihq.app">AkiHQ</a><a href="https://akipasa.com">AkiPasa</a><a href="https://akiduermo.com">AkiDuermo</a><a href="https://akicoches.com">AkiCoches</a><a data-login-link href="/login" data-i18n="signIn">Sign in ↗</a></div></footer>
+</div>
 </body>
 </html>
