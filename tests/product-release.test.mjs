@@ -50,7 +50,7 @@ for (const enabled of [false, true]) {
         const login = source.slice(source.indexOf('  function renderLoginScreen('), source.indexOf('  function renderAccessDenied('));
         vm.runInNewContext(`${login}\nrenderLoginScreen();`, context);
         assert.match(context.appRoot.innerHTML, new RegExp(`Sign in to ${product}`));
-        assert.match(context.appRoot.innerHTML, /suite-product-card active" href="\/"/);
+        assert.match(context.appRoot.innerHTML, /suite-product-card active" href="\/login"/);
         if (enabled) assert.match(context.appRoot.innerHTML, /href="https:\/\/akihq.app\/en\/business"/);
         await handlers['google-login-btn:click']();
         assert.equal(oauth.options.redirectTo, origin + '/login');
