@@ -63,7 +63,7 @@ test('elapsed label explicitly means first send and never shows a negative age',
  assert(api.cardHTML(card({created_at:new Date(now+60000).toISOString()}),{now}).includes('0 min since first send'));
 });
 test('new assets are included in both source and offline shell manifests, not offline writes',()=>{
- const html=readFileSync(new URL('../index.html',import.meta.url),'utf8'),sw=readFileSync(new URL('../sw.js',import.meta.url),'utf8');
+ const html=readFileSync(new URL('../login.html',import.meta.url),'utf8'),sw=readFileSync(new URL('../sw.js',import.meta.url),'utf8');
  for(const file of ['pos-kds.js?v=2','pos-kds.css?v=1']){assert(html.includes(file));assert(sw.includes(file));}
  assert(html.indexOf('pos-kds.js?v=2')<html.indexOf('hospitality-pos.js?v=19'));
 });
