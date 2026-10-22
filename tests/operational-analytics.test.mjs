@@ -319,7 +319,7 @@ test("app analytics entry loads owner/staff operational RPC while preserving pla
 });
 test("production source includes both report assets without changing release transform sentinels", async () => {
   const html = await readFile(
-      new URL("../index.html", import.meta.url),
+      new URL("../login.html", import.meta.url),
       "utf8",
     ),
     sw = await readFile(new URL("../sw.js", import.meta.url), "utf8");
