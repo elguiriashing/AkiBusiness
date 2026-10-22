@@ -105,24 +105,6 @@
       "to": "          <p><a class=\"action-btn\" href=\"${window.AkiSuiteNavigation.href(\"hq\", state.settings.locale)}\">Manage your company and locations in AkiHQ</a></p>\n          <button class=\"action-btn primary\" style=\"width:100%;justify-content:center\" id=\"deny-signout\">Sign out & Back to Login</button>\n"
     }
   ],
-  "index.html": [
-    {
-      "from": "  <meta name=\"description\" content=\"AkiHQ — AkiPasa's secure workspace for business operations.\" />\n  <title>AkiHQ</title>\n",
-      "to": "  <meta name=\"description\" content=\"AkiBusiness — secure operations for your company and locations.\" />\n  <title>AkiBusiness</title>\n"
-    },
-    {
-      "from": "  <noscript>AkiHQ needs JavaScript enabled.</noscript>\n",
-      "to": "  <noscript>AkiBusiness needs JavaScript enabled.</noscript>\n"
-    },
-    {
-      "from": "  <script src=\"config.js?v=44\"></script>\n",
-      "to": "  <script src=\"config.js?v=45\"></script>\n"
-    },
-    {
-      "from": "  <script src=\"assets/app-v32.js?v=43\"></script>\n",
-      "to": "  <script src=\"assets/app-v32.js?v=47\"></script>\n"
-    }
-  ],
   "manifest.webmanifest": [
     {
       "from": "  \"name\": \"AkiHQ\",\n  \"short_name\": \"AkiHQ\",\n  \"description\": \"Open-source business operating system for CRM, projects, operations and collaboration.\",\n",
@@ -131,8 +113,8 @@
   ],
   "sw.js": [
     {
-      "from": "const CACHE = \"akihq-v140\";\n",
-      "to": "const CACHE = \"akihq-v141\";\n"
+      "from": "const CACHE = \"akihq-v142\";\n",
+      "to": "const CACHE = \"akihq-v143\";\n"
     },
     {
       "from": "  \"./assets/app-v32.js?v=43\",\n",
@@ -151,6 +133,24 @@
     {
       "from": "  CRM_URL:           \"https://akihq.app\",\n",
       "to": "  CRM_URL:           \"https://akibusiness.com\",\n"
+    }
+  ],
+  "login.html": [
+    {
+      "from": "  <meta name=\"description\" content=\"AkiHQ — AkiPasa's secure workspace for business operations.\" />\n  <title>AkiHQ</title>\n",
+      "to": "  <meta name=\"description\" content=\"AkiBusiness — secure operations for your company and locations.\" />\n  <title>AkiBusiness</title>\n"
+    },
+    {
+      "from": "  <noscript>AkiHQ needs JavaScript enabled.</noscript>\n",
+      "to": "  <noscript>AkiBusiness needs JavaScript enabled.</noscript>\n"
+    },
+    {
+      "from": "  <script src=\"config.js?v=44\"></script>\n",
+      "to": "  <script src=\"config.js?v=45\"></script>\n"
+    },
+    {
+      "from": "  <script src=\"assets/app-v32.js?v=43\"></script>\n",
+      "to": "  <script src=\"assets/app-v32.js?v=47\"></script>\n"
     }
   ]
 }
