@@ -7699,7 +7699,7 @@
                 <i class="suite-product-dot suite-product-dot-business"></i>
                 <span><strong>AkiBusiness</strong></span>
               </a>
-              <a class="suite-product-card active" href="/">
+              <a class="suite-product-card active" href="/login">
                 <i class="suite-product-dot suite-product-dot-hq"></i>
                 <span><strong>AkiHQ</strong></span>
               </a>
