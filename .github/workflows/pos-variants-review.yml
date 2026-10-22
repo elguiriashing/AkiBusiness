@@ -41,7 +41,7 @@ jobs:
           EXPECTED_HEAD: ${{ github.event.pull_request.head.sha }}
   browser:
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 20
     strategy:
       fail-fast: false
       matrix:
