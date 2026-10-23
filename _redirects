@@ -1,4 +1,5 @@
-/login /login.html 200
-/login/ /login.html 200
-/app /login.html 200
-/app/ /login.html 200
+# Cloudflare Pages serves login.html automatically at /login (clean HTML URL).
+# Never rewrite /login to /login.html: Pages redirects .html back to /login.
+# Authenticated workspace deep links enter the existing login/session router.
+/app /login 302
+/app/ /login 302
