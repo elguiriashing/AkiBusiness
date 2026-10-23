@@ -18,8 +18,8 @@ test("the public homepage and operations shell stay separate", () => {
   assert.doesNotMatch(publicPage, /src="assets\/supabase\.js/);
   assert.match(authPage, /src="assets\/app-v32\.js\?v=43"/);
   assert.match(authPage, /<div id="app"/);
-  assert.match(rewrites, /^\/login \/login\.html 200$/m);
-  assert.match(rewrites, /^\/app \/login\.html 200$/m);
+  assert.doesNotMatch(rewrites, /^\/login\/?\s/m);
+  assert.match(rewrites, /^\/app \/login 302$/m);
   assert.doesNotMatch(rewrites, /\/\* \/index\.html/);
 });
 
