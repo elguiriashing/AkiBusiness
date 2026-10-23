@@ -30,7 +30,8 @@ for (const enabled of [false, true]) {
       else assert.match(source, /void client\.rpc\("queue_suite_portal_welcome"/);
       // Explicit /login and /app rewrites preserve authentication without an SPA wildcard.
       const rewrites = await read('_redirects');
-      assert.match(rewrites, new RegExp('^/login /login\\.html 200$', 'm'));
+  assert.doesNotMatch(rewrites, /^\/login\/?\s/m);
+  assert.match(rewrites, /^\/app \/login 302$/m);
       assert.doesNotMatch(rewrites, /\/\* \/index\.html/);
       assert.match(await read('config.js'), new RegExp(`CRM_URL: +"https://${enabled ? 'akibusiness.com' : 'akihq.app'}"`));
       // Permissions, workspace selection and operational implementations are byte-identical.
