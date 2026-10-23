@@ -49,8 +49,10 @@ jobs:
           assert.equal(stamp.canonicalOrigin, "https://akibusiness.com");
           assert.match(read("index.html"), /AkiBusiness \| Run the day/);
           assert.match(read("login.html"), /<title>AkiBusiness<\/title>/);
-          assert.match(read("_redirects"), /^\/login \/login\.html 200/m);
-          assert.match(read("_redirects"), /^\/app \/login\.html 200/m);
+          assert.doesNotMatch(read("_redirects"), /^\/login\/?\s/m);
+          assert.match(read("_redirects"), /^\/app \/login 302/m);
+          assert.doesNotMatch(read("_redirects"), /^\/login\/?\s/m);
+          assert.match(read("_redirects"), /^\/app \/login 302/m);
           assert.match(read("sw.js"), /akihq-v143/);
           NODE
       - uses: actions/upload-artifact@v4
