@@ -7585,6 +7585,12 @@
   document.addEventListener("dragend", handleDragEnd);
 
   document.addEventListener("keydown", event => {
+    const rotaDialog=document.querySelector('.rp-drawer[open]');
+    if(event.key==='Tab'&&rotaDialog){
+      const controls=[...rotaDialog.querySelectorAll('button,input,select,textarea,summary,a[href],[tabindex]')].filter(el=>!el.disabled&&el.type!=='hidden'&&el.tabIndex!==-1&&el.getClientRects().length);
+      const active=document.activeElement,first=controls[0],last=controls.at(-1);
+      if(!rotaDialog.contains(active)||(event.shiftKey?active===first:active===last)){event.preventDefault();(event.shiftKey?last:first)?.focus();return;}
+    }
     // Cards and rows with button semantics must also work without a pointer.
     const actionable=event.target.closest?.('[data-action][role="button"]');
     if ((event.key === "Enter" || event.key === " ") && actionable === event.target && !event.target.matches("button,a,input,select,textarea")) {

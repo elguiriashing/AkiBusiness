@@ -598,7 +598,7 @@
     function shiftCard(s, mobile = false) {
       const p = data.staff.find((p) => p.id === s.staffId),
         t = uiText();
-      return `<${manage ? "button" : "div"} ${manage ? 'type="button"' : ""} class="rp-shift rp-tint-${tint(s.staffId)}" ${manage ? `data-rota-action="edit" data-id="${E(s.id)}" draggable="true" data-rota-drag="${E(s.id)}"` : ""}><span class="rp-shift-time">${E(shiftText(s))}</span><span class="rp-shift-role">${E(mobile ? p?.name : s.role || t.addShift)}</span><span class="rp-shift-bottom">${E(mobile ? s.role || "" : s.location || "")}<b>${C.duration(s).toFixed(1)}h</b></span></${manage ? "button" : "div"}>`;
+      return `<${manage ? "button" : "div"} ${manage ? 'type="button"' : ""} class="rp-shift rp-tint-${tint(s.staffId)}" ${manage ? `data-rota-action="edit" data-id="${E(s.id)}" draggable="true" data-rota-drag="${E(s.id)}"` : ""}><span class="rp-shift-time">${E(shiftText(s))}</span><span class="rp-shift-role">${E(mobile ? p?.name : s.role || (lang() === "es" ? "Turno" : "Shift"))}</span><span class="rp-shift-bottom">${E(mobile ? s.role || "" : s.location || "")}<b>${C.duration(s).toFixed(1)}h</b></span></${manage ? "button" : "div"}>`;
     }
     function render() {
       if (scope !== current()) {
