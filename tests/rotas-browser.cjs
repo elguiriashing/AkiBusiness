@@ -132,7 +132,7 @@ const close = async (page) => {
           await datePicker.locator("summary").click();
         // Click an actual empty cell; mobile uses a day header, desktop uses staff/date cells.
         const newShift =
-          viewport.width <= 650
+          viewport.width <= 850
             ? page.locator(
                 '.rp-mobile [data-rota-action="new-shift"][data-date="2026-10-24"]',
               )
@@ -170,7 +170,7 @@ const close = async (page) => {
         );
         const firstShift = page
           .locator(
-            viewport.width <= 650
+            viewport.width <= 850
               ? ".rp-mobile .rp-shift"
               : ".rp-table .rp-shift",
           )
@@ -200,7 +200,7 @@ const close = async (page) => {
           await page.evaluate(() => fixture.published.shifts[0].notes),
           "",
         );
-        if (viewport.width > 650) {
+        if (viewport.width > 850) {
           const card = page.locator(".rp-table .rp-shift").first(),
             target = page
               .locator('.rp-table td[data-date="2026-10-23"]')
@@ -227,7 +227,7 @@ const close = async (page) => {
           ),
           false,
         );
-        if (viewport.width <= 650) {
+        if (viewport.width <= 850) {
           await page.locator(".rp-menu summary").click();
           await page.locator(".rp-mobile-export").click();
         } else
