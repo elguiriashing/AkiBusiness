@@ -27,6 +27,8 @@ async function fixture(
     ],
     failedBilling = false,
     failedCreate = false,
+    canOperate = true,
+    failedAccess = false,
   } = {},
 ) {
   const dom = new JSDOM(html, {
@@ -105,7 +107,13 @@ async function fixture(
       if (name === "list_managed_operating_locations")
         return { data: locations, error: null };
       if (name === "crm_workspace_access")
-        return { data: { can_operate: true, tool_keys: ["pos"] }, error: null };
+        return {
+          data: {
+            can_operate: canOperate,
+            tool_keys: canOperate ? ["pos"] : [],
+          },
+          error: failedAccess ? { code: "fixture-denial" } : null,
+        };
       if (name === "create_private_operating_location")
         return {
           data: failedCreate ? null : "private-created",
@@ -260,3 +268,29 @@ test("guest signup and Google entry stay native using the established callback",
   assert.equal(intent.tier, "standard");
   assert.equal(Object.hasOwn(intent, "access_token"), false);
 });
+
+for (const [canOperate, failedAccess, path] of [
+  [true, false, "/login"],
+  [false, false, "/account"],
+  [true, true, null],
+])
+  test(`location picker checks access and opens ${path || "no destination"}`, async (t) => {
+    const f = await fixture(t, { canOperate, failedAccess });
+    f.w.document
+      .getElementById("location-picker")
+      .dispatchEvent(new f.w.Event("submit", { cancelable: true }));
+    await tick();
+    assert.equal(
+      f.calls.filter((c) => c[0] === "crm_workspace_access").length,
+      2,
+    );
+    if (!path) {
+      assert.equal(f.destinations.length, 0);
+      return;
+    }
+    const destination = new URL(f.destinations[0], "https://akibusiness.com");
+    assert.equal(destination.origin, "https://akibusiness.com");
+    assert.equal(destination.pathname, path);
+    assert.equal(destination.searchParams.get("workspace"), "private-fixture");
+    assert.equal(destination.searchParams.get("tier"), "standard");
+  });

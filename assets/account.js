@@ -333,12 +333,27 @@
       .join(
         "",
       )}</div><label>Bio<textarea name="bio" maxlength="2000" rows="4">${esc(profile.bio)}</textarea></label><button type="submit">${t("Save shared profile", "Guardar perfil compartido")}</button></form></section><section class="panel"><h2>${t("Profile photos", "Fotos del perfil")}</h2><form id="photos"><label>${t("Photo type", "Tipo de foto")}<select name="kind"><option value="avatar">${t("Profile photo", "Foto de perfil")}</option><option value="banner">${t("Cover photo", "Foto de portada")}</option></select></label><label>${t("JPG, PNG or WebP, up to 10 MB", "JPG, PNG o WebP, hasta 10 MB")}<input name="file" type="file" accept="image/jpeg,image/png,image/webp" required></label><button type="submit">${t("Save shared photo", "Guardar foto compartida")}</button></form></section><section class="panel"><h2>${t("Sign-in and security", "Acceso y seguridad")}</h2><p>${esc(user.email)}</p><form id="email"><label>${t("New sign-in email", "Nuevo correo de acceso")}<input name="email" type="email" required maxlength="254" autocomplete="email"></label><button type="submit">${t("Request email change", "Solicitar cambio de correo")}</button></form><div class="actions"><button id="reset" type="button">${t("Send password reset link", "Enviar recuperación")}</button><button id="signout" type="button">${t("Sign out here", "Cerrar sesión aquí")}</button></div></section>`;
-    document.getElementById("location-picker").onsubmit = (event) => {
-      event.preventDefault();
-      const value = new FormData(event.currentTarget).get("workspace");
-      if (validWorkspace(value) && workspaces.some((w) => w.id === value))
-        location.assign(local("/account", { workspace: value }));
-    };
+    document.getElementById("location-picker").onsubmit = (event) =>
+      run(event, async (form) => {
+        const value = form.get("workspace");
+        if (!validWorkspace(value) || !workspaces.some((w) => w.id === value))
+          return;
+        const result = await client.rpc("crm_workspace_access", {
+          p_workspace: value,
+        });
+        if (result.error)
+          throw new Error(
+            t(
+              "Could not check this location's access. Please retry.",
+              "No se pudo comprobar el acceso a esta ubicación. Reintenta.",
+            ),
+          );
+        location.assign(
+          local(result.data?.can_operate === true ? "/login" : "/account", {
+            workspace: value,
+          }),
+        );
+      });
     const createId = crypto.randomUUID();
     document.getElementById("create-location").onsubmit = (event) =>
       run(event, async (form) => {

@@ -13,3 +13,7 @@ Bilingual new tests cover native profile forms, role/ID stripping, billing ident
 isolation, fixed destinations, partial failures, location idempotency and local
 logout. See `CUSTOMER_JOURNEYS_20261024.md` for all eight journeys, dependency/release
 order and explicit remaining shared safety/onboarding and provider acceptance.
+
+### 2026-10-24 — Native journey acceptance follow-up
+
+Workspace picker now rechecks crm_workspace_access and opens the native dashboard directly for authorized operating locations. Unentitled locations remain on native setup; access lookup failures do not navigate. Three focused positive/denial/error cases pass.
