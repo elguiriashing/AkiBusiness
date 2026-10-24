@@ -70,19 +70,20 @@ test('access-denied exit cannot revoke sessions in other products', async () => 
   assert.deepEqual(f.calls, ['local']); assert.equal(f.sessions.akipasa, true); assert.equal(f.sessions.business, true);
 });
 
-test('failed workspace authorization closes only the current HQ session', async () => {
+test('an account without a workspace retains its session and starts native setup', async () => {
   const f = fixture();
   const client = { auth: f.auth, from: () => ({ select: () => ({ eq: () => ({ maybeSingle: async () => ({ data: { app_role: 'user' } }) }) }) }) };
   Object.assign(f.context, {
-    window: { AKIHQ_CONFIG: { ONBOARDING_SCHEMA_READY: false } },
+    window: { AKIHQ_CONFIG: { ONBOARDING_SCHEMA_READY: false }, location:{origin:"https://akibusiness.com",assign:url=>{f.context.destination=url;}} },
     getSupabaseClient: () => client, availableWorkspaces: [], loadAccessibleWorkspaces: async () => [],
-    initialSearchParams: new URLSearchParams(), localStorage: { getItem: () => null },
+    initialSearchParams: new URLSearchParams(), localStorage: { getItem: () => null }, URL, state:{settings:{locale:"en"}},
     renderAccessDenied: () => { f.context.denied = true; },
   });
   const start = source.indexOf('  function selectInitialWorkspace(');
   const end = source.indexOf('\n  async function finishBoot(', start);
   vm.runInContext(source.slice(start, end), f.context);
   await f.context.bootWithSession({ user: { id: 'fixture-owner', email: 'fixture@example.invalid' } });
-  assert.deepEqual(f.calls, ['local']); assert.equal(f.context.denied, true);
-  assert.deepEqual(f.sessions, { hq: false, akipasa: true, business: true });
+  assert.deepEqual(f.calls, []); assert.equal(new URL(f.context.destination).origin, "https://akibusiness.com");
+  assert.equal(new URL(f.context.destination).pathname,"/account");
+  assert.deepEqual(f.sessions, { hq: true, akipasa: true, business: true });
 });

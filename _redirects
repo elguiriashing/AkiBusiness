@@ -3,3 +3,8 @@
 # Authenticated workspace deep links enter the existing login/session router.
 /app /login 302
 /app/ /login 302
+/account/settings /account 302
+/account/profile /account 302
+/account/membership /membership 302
+/account/subscription /account 302
+/settings /account 302

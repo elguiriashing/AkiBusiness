@@ -58,7 +58,9 @@
       link.href = "/login?locale=" + locale;
     });
     document.querySelectorAll(".ab-plan-cta").forEach(link => {
-      link.href = "/membership.html?locale=" + locale;
+      link.href = "/account?locale=" + locale + "&tier=" + link.dataset.tier;
+      const name = {basico:"Basic",standard:"Standard",pro:"Pro"}[link.dataset.tier];
+      link.textContent = (locale === "es" ? "Elegir " : "Choose ") + name + " →";
     });
     document.querySelectorAll('a[href^="https://akihq.app"]').forEach(link => {
       link.href = "https://akihq.app/?lang=" + locale;

@@ -29,7 +29,7 @@ test("public language switch preserves canonical local login destinations", () =
   assert.match(page, /id="ab-language"/);
   assert.match(script, /\[data-login-link\]/);
   assert.match(script, /"\/login\?locale="/);
-  assert.match(script, /"\/membership\.html\?locale="/);
+  assert.match(script, /"\/account\?locale="/);
   assert.match(page, /location\.replace\("\/login" \+ location\.search \+ location\.hash\)/);
   assert.match(page, /location\.replace\("\/app" \+ location\.search \+ location\.hash\)/);
 });
