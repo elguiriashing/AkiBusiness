@@ -1,4 +1,4 @@
-/* Native AkiBusiness account v1. Shared identity/RLS; no browser billing authority. */
+/* Native AkiBusiness account v2. Shared identity/RLS; no browser billing authority. */
 (() => {
   "use strict";
   const params = new URLSearchParams(location.search),
@@ -21,6 +21,7 @@
     selected = null,
     access = null,
     busy = false;
+  let activeSection = "workspace";
   const root = document.getElementById("account"),
     t = (en, es) => (locale === "es" ? es : en);
   const esc = (value) =>
@@ -44,6 +45,83 @@
       url.searchParams.set(key, value);
     return url.pathname + url.search;
   };
+  const icons = {
+    workspace:
+      '<rect x="3" y="5" width="18" height="16" rx="3"/><path d="M8 5V3h8v2M3 11h18M10 11v3h4v-3"/>',
+    membership:
+      '<rect x="3" y="5" width="18" height="14" rx="3"/><path d="M3 10h18M7 15h3"/>',
+    profile:
+      '<circle cx="12" cy="8" r="4"/><path d="M4 21v-2a8 8 0 0 1 16 0v2"/>',
+    security:
+      '<path d="m12 3 8 4v5c0 5-8 9-8 9s-8-4-8-9V7l8-4Z"/><path d="m8 12 3 3 5-6"/>',
+    arrow: '<path d="M5 12h14m-6-6 6 6-6 6"/>',
+    plus: '<path d="M12 5v14M5 12h14"/>',
+    check: '<path d="m5 12 4 4L19 6"/>',
+    photo:
+      '<rect x="3" y="3" width="18" height="18" rx="4"/><circle cx="8" cy="8" r="1"/><path d="m3 16 5-5 4 4 3-3 6 6"/>',
+  };
+  const icon = (name) =>
+    `<svg class="ui-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${icons[name] || icons.workspace}</svg>`;
+  let theme = "dark";
+  try {
+    theme =
+      localStorage.getItem("akipasa.theme") ||
+      (window.matchMedia?.("(prefers-color-scheme: light)").matches
+        ? "light"
+        : "dark");
+  } catch {}
+  if (theme !== "light") theme = "dark";
+  function applyTheme() {
+    document.documentElement.dataset.theme = theme;
+    const button = document.getElementById("theme");
+    button.textContent =
+      theme === "dark" ? t("Light", "Claro") : t("Dark", "Oscuro");
+    button.setAttribute(
+      "aria-label",
+      theme === "dark"
+        ? t("Use light theme", "Usar tema claro")
+        : t("Use dark theme", "Usar tema oscuro"),
+    );
+    document.querySelector('meta[name="theme-color"]').content =
+      theme === "dark" ? "#071124" : "#faf7f2";
+  }
+  function showSection(key, focus = false) {
+    if (!["workspace", "membership", "profile", "security"].includes(key))
+      return;
+    activeSection = key;
+    root.querySelectorAll("[data-section]").forEach((panel) => {
+      panel.hidden = panel.dataset.section !== key;
+    });
+    root.querySelectorAll("[data-account-nav]").forEach((button) => {
+      const current = button.dataset.accountNav === key;
+      button.setAttribute("aria-selected", String(current));
+      button.tabIndex = current ? 0 : -1;
+    });
+    if (focus) root.querySelector(`[data-account-nav="${key}"]`)?.focus();
+  }
+  function wireSections() {
+    const buttons = [...root.querySelectorAll("[data-account-nav]")];
+    buttons.forEach((button, index) => {
+      button.onclick = () => showSection(button.dataset.accountNav);
+      button.onkeydown = (event) => {
+        const delta = ["ArrowRight", "ArrowDown"].includes(event.key)
+          ? 1
+          : ["ArrowLeft", "ArrowUp"].includes(event.key)
+            ? -1
+            : 0;
+        if (!delta && !["Home", "End"].includes(event.key)) return;
+        event.preventDefault();
+        const target =
+          event.key === "Home"
+            ? 0
+            : event.key === "End"
+              ? buttons.length - 1
+              : (index + delta + buttons.length) % buttons.length;
+        showSection(buttons[target].dataset.accountNav, true);
+      };
+    });
+    showSection(activeSection);
+  }
   const client =
     config.SUPABASE_URL && config.SUPABASE_ANON_KEY
       ? window.supabase?.createClient(
@@ -61,8 +139,22 @@
     node.className = error ? "notice error" : "notice";
     node.setAttribute("role", error ? "alert" : "status");
     node.textContent = value;
+    node.scrollIntoView?.({ block: "nearest", behavior: "smooth" });
   };
   function controls() {
+    applyTheme();
+    root.removeAttribute("aria-busy");
+    document.querySelector(".skip-link").textContent = t(
+      "Skip to account",
+      "Ir a la cuenta",
+    );
+    document.getElementById("footer-copy").textContent = t(
+      "Your business. Your toolbox.",
+      "Tu negocio. Tus herramientas.",
+    );
+    document
+      .querySelector(".header-actions")
+      .setAttribute("aria-label", t("Page controls", "Controles de página"));
     window.AkiSuiteNavigation.remember(locale);
     document.documentElement.lang = locale;
     document.getElementById("language").textContent =
@@ -75,6 +167,20 @@
   function authScreen() {
     controls();
     root.innerHTML = `<h1>${t("Your business starts here", "Tu negocio empieza aquí")}</h1><p>${t("Use your existing AkiSuite account, or create one here. No public venue or listing is required.", "Usa tu cuenta AkiSuite o crea una aquí. No necesitas un local ni una ficha pública.")}</p><p id="message" role="status"></p><section class="panel"><h2>${t("Sign in", "Iniciar sesión")}</h2><form id="signin"><label>Email<input name="email" type="email" required maxlength="254" autocomplete="email"></label><label>${t("Password", "Contraseña")}<input name="password" type="password" required autocomplete="current-password"></label><button type="submit">${t("Continue in AkiBusiness", "Continuar en AkiBusiness")}</button></form><button id="google" type="button">${t("Continue with Google", "Continuar con Google")}</button><button id="forgot" type="button">${t("Forgot password?", "¿Olvidaste tu contraseña?")}</button><form id="recover" hidden><label>Email<input name="email" type="email" required maxlength="254" autocomplete="email"></label><button type="submit">${t("Send recovery link", "Enviar enlace de recuperación")}</button></form></section><details class="panel"><summary>${t("New here? Create your AkiSuite account", "¿Primera vez? Crea tu cuenta AkiSuite")}</summary><form id="signup"><label>${t("Your name", "Tu nombre")}<input name="name" required minlength="2" maxlength="100" autocomplete="name"></label><label>Email<input name="email" type="email" required maxlength="254" autocomplete="email"></label><label>${t("Password: 12+ characters, upper/lowercase and number", "Contraseña: 12+ caracteres, mayúscula, minúscula y número")}<input name="password" type="password" required minlength="12" maxlength="128" pattern="(?=.*[a-z])(?=.*[A-Z])(?=.*[0-9]).{12,128}" autocomplete="new-password"></label><label class="check"><input type="checkbox" name="terms" required><span>${t("I accept the shared AkiSuite terms and have read the privacy notice.", "Acepto las condiciones compartidas de AkiSuite y he leído la política de privacidad.")} <a href="https://akipasa.com/${locale}/terms" target="_blank" rel="noopener">${t("Terms", "Condiciones")}</a> · <a href="https://akipasa.com/${locale}/privacy" target="_blank" rel="noopener">${t("Privacy", "Privacidad")}</a></span></label><button type="submit">${t("Create account here", "Crear cuenta aquí")}</button></form></details>`;
+    root.className = "auth-layout";
+    const authIntro = document.createElement("div");
+    authIntro.className = "auth-intro";
+    authIntro.append(root.querySelector("h1"), root.querySelector("p"));
+    authIntro.insertAdjacentHTML(
+      "afterbegin",
+      `<p class="eyebrow">${t("YOUR BUSINESS. YOUR TOOLBOX.", "TU NEGOCIO. TUS HERRAMIENTAS.")}</p>`,
+    );
+    const authForms = document.createElement("div");
+    authForms.className = "auth-forms";
+    [...root.querySelectorAll(".panel")].forEach((panel) =>
+      authForms.append(panel),
+    );
+    root.append(authIntro, authForms);
     document.getElementById("signin").onsubmit = (event) =>
       run(event, async (form) => {
         const { error } = await client.auth.signInWithPassword({
@@ -305,34 +411,84 @@
     const plan = tier ? tiers[tier] : null;
     const input = (name, label, key, max) =>
       `<label>${label}<input name="${name}" value="${esc(profile[key])}" maxlength="${max}" ${name === "displayName" ? 'required minlength="2"' : name === "username" ? 'pattern="[a-zA-Z0-9_]{3,30}"' : ""}></label>`;
-    root.innerHTML = `<h1>${t("Your AkiBusiness account", "Tu cuenta AkiBusiness")}</h1><p>${t("One shared AkiSuite profile. Your operations stay here.", "Un perfil compartido AkiSuite. Tus operaciones se quedan aquí.")}</p><p id="message" role="status"></p><section class="panel"><h2>${t("Your operating location", "Tu ubicación operativa")}</h2><p>${t("Use AkiBusiness with a private workplace, even without a public AkiPasa venue, property or rental listing.", "Usa AkiBusiness con una ubicación privada, sin necesitar un local, alojamiento o sucursal pública.")}</p>${plan ? `<p class="notice">${t("Selected package", "Paquete elegido")}: AkiBusiness ${plan.name} · ${new Intl.NumberFormat(locale, { style: "currency", currency: "EUR" }).format(plan.cents / 100)} / ${t("month per location", "mes por ubicación")}</p>` : ""}<form id="location-picker"><label>${t("Choose location", "Elige ubicación")}<select name="workspace"><option value="">${t("Choose…", "Elige…")}</option>${workspaces.map((w) => `<option value="${esc(w.id)}" ${w.id === selected ? "selected" : ""}>${esc(w.name)}</option>`).join("")}</select></label><button type="submit">${t("Open this location", "Abrir esta ubicación")}</button></form>${selected ? `<div class="actions">${access?.can_operate === true ? `<a class="button primary" href="${esc(local("/login"))}">${t("Open my dashboard", "Abrir mi panel")}</a>` : `<p>${t("This location is set up. Operating tools need their applicable plan and permissions; choosing a package does not activate or charge it.", "La ubicación está creada. Las herramientas requieren su plan y permisos; elegir un paquete no lo activa ni genera cargos.")}</p>`}<a href="${esc(local("/toolbox"))}">${t("My toolbox and team permissions", "Mis herramientas y permisos")}</a></div>` : ""}<details><summary>${t("Create a private operating location", "Crear ubicación operativa privada")}</summary><form id="create-location"><label>${t("Location name", "Nombre de la ubicación")}<input name="name" required minlength="2" maxlength="120" autocomplete="organization"></label><button type="submit">${t("Create my location", "Crear mi ubicación")}</button></form></details><p>${t("New checkout is not available yet. Existing subscriptions and access remain unchanged. No payment is taken here.", "Las nuevas compras aún no están disponibles. Se mantienen las suscripciones y accesos existentes. Aquí no se cobra ningún pago.")}</p></section><section id="billing" class="panel"><h2>${t("My memberships", "Mis membresías")}</h2><p role="status">${t("Loading membership details…", "Cargando las membresías…")}</p></section><section class="panel"><h2>${t("Shared profile", "Perfil compartido")}</h2><p>${t("Saved directly to the same account used by AkiPasa, AkiDuermo, AkiCoches and AkiHQ.", "Guardado en la misma cuenta de AkiPasa, AkiDuermo, AkiCoches y AkiHQ.")}</p><form id="profile"><div class="grid">${input("displayName", t("Display name", "Nombre"), "display_name", 100)}${input("username", t("Username", "Nombre de usuario"), "username", 30)}${input("phone", t("Phone", "Teléfono"), "phone", 40)}${input("locality", t("Town / city", "Localidad"), "locality", 120)}${input("province", t("Province", "Provincia"), "province", 120)}<label>${t("Preferred language", "Idioma preferido")}<select name="preferredLocale"><option value="en" ${profile.preferred_locale === "en" ? "selected" : ""}>English</option><option value="es" ${profile.preferred_locale === "es" ? "selected" : ""}>Español</option></select></label>${[
-      [
-        "profileVisibility",
-        "profile_visibility",
-        t("Profile visibility", "Visibilidad del perfil"),
-      ],
-      [
-        "contactVisibility",
-        "contact_visibility",
-        t("Contact visibility", "Visibilidad del contacto"),
-      ],
-    ]
-      .map(
-        ([name, key, label]) =>
-          `<label>${label}<select name="${name}">${[
-            ["private", t("Private", "Privado")],
-            ["members", t("Members", "Miembros")],
-            ["public", t("Public", "Público")],
+    const sections = [
+      ["workspace", t("Workspace", "Espacio")],
+      ["membership", t("Membership", "Membresía")],
+      ["profile", t("Profile", "Perfil")],
+      ["security", t("Security", "Seguridad")],
+    ];
+    const initials = (profile.display_name || user.email || "AB")
+      .trim()
+      .split(/\s+/)
+      .slice(0, 2)
+      .map((part) => part[0])
+      .join("")
+      .toUpperCase();
+    root.className = "";
+    root.innerHTML = `
+      <div class="account-heading"><div><p class="eyebrow">${t("MADE FOR YOUR WORKING DAY", "PARA TU DÍA A DÍA")}</p><h1>${t("Your AkiBusiness account", "Tu cuenta AkiBusiness")}</h1><p>${t("Your workspace, your details. All in one place.", "Tu espacio, tus datos. Todo en un lugar.")}</p></div><span class="suite-badge">${icon("check")} ${t("One AkiSuite account", "Una cuenta AkiSuite")}</span></div>
+      <p id="message" role="status"></p>
+      <div class="account-layout">
+        <aside class="account-sidebar">
+          <div class="member-summary"><span class="member-avatar" aria-hidden="true">${esc(initials)}</span><div><strong>${esc(profile.display_name || t("Your account", "Tu cuenta"))}</strong><span>${esc(user.email)}</span></div></div>
+          <nav class="account-nav" role="tablist" aria-label="${t("Account sections", "Secciones de la cuenta")}">${sections.map(([key, label]) => `<button type="button" role="tab" id="tab-${key}" aria-controls="view-${key}" aria-selected="false" data-account-nav="${key}">${icon(key)}<span>${label}</span><span class="nav-arrow" aria-hidden="true">›</span></button>`).join("")}</nav>
+          <div class="shared-note">${icon("security")}<p>${t("One profile, across AkiSuite.", "Un perfil para AkiSuite.")}<span>${t("Updates follow you across all five products.", "Tus cambios se comparten en los cinco productos.")}</span></p></div>
+        </aside>
+        <div class="account-content">
+          <section id="view-workspace" role="tabpanel" aria-labelledby="tab-workspace" data-section="workspace">
+            <div class="section-heading"><div><p class="eyebrow">${t("LET’S GET TO WORK", "MANOS A LA OBRA")}</p><h2>${t("Your workspace", "Tu espacio de trabajo")}</h2><p>${t("Choose a location and pick up where you left off.", "Elige una ubicación y sigue donde lo dejaste.")}</p></div></div>
+            <div class="workspace-grid"><section class="panel locations-panel"><div class="panel-heading"><span class="icon-tile">${icon("workspace")}</span><div><h3>${t("Your locations", "Tus ubicaciones")}</h3><p>${t("A space for each place you run.", "Un espacio para cada negocio.")}</p></div><span class="count-badge">${workspaces.length}</span></div>
+              <form id="location-picker"><fieldset class="location-options"><legend class="sr-only">${t("Choose location", "Elige ubicación")}</legend>${workspaces.length ? workspaces.map((w) => `<label class="location-card"><input type="radio" name="workspace" value="${esc(w.id)}" ${w.id === selected ? "checked" : ""} required><span class="location-symbol">${icon("workspace")}</span><span class="location-copy"><strong>${esc(w.name)}</strong><span>${t("Operating location", "Ubicación operativa")}</span></span><span class="radio-mark" aria-hidden="true"></span></label>`).join("") : `<div class="empty-state">${icon("workspace")}<h3>${t("Make room for your business", "Dale espacio a tu negocio")}</h3><p>${t("Create your first location below to get started.", "Crea tu primera ubicación para empezar.")}</p></div>`}</fieldset>
+              ${selected && access?.can_operate === true ? `<a id="open-dashboard" class="button primary" href="${esc(local("/login"))}">${t("Open my dashboard", "Abrir mi panel")}${icon("arrow")}</a>` : ""}
+              <button id="open-location" class="primary" type="submit" ${!workspaces.length ? "disabled" : ""} ${selected && access?.can_operate === true ? "hidden" : ""}>${t("Open this location", "Abrir esta ubicación")}${icon("arrow")}</button>
+              </form>
+              ${selected && access?.can_operate !== true ? `<p class="fine-print">${t("Tools require an active plan and permission for this location.", "Las herramientas necesitan un plan activo y permisos para esta ubicación.")}</p>` : ""}
+              ${selected ? `<a class="text-link" href="${esc(local("/toolbox"))}">${t("My toolbox and team permissions", "Mis herramientas y permisos")}${icon("arrow")}</a>` : ""}
+            </section>
+            <aside class="plan-preview panel"><span class="plan-orbit" aria-hidden="true">✦</span><p class="eyebrow">${plan ? t("YOUR SELECTED PLAN", "TU PLAN ELEGIDO") : t("YOUR NEXT CHAPTER", "TU SIGUIENTE PASO")}</p><h3>${plan ? `AkiBusiness ${plan.name}` : t("Build your toolbox", "Crea tu caja de herramientas")}</h3>${plan ? `<p class="plan-preview-price"><strong>${new Intl.NumberFormat(locale, { style: "currency", currency: "EUR" }).format(plan.cents / 100)}</strong><span>/${t("month", "mes")}</span></p><p class="fine-print">${t("Per operating location", "Por ubicación operativa")}</p><span class="plan-capacity">${icon("check")} ${tier === "basico" ? "4" : tier === "standard" ? "8" : "12"}/12 ${t("tools", "herramientas")}</span>` : `<p>${t("Choose the tools that fit the way you work.", "Elige las herramientas que encajan con tu negocio.")}</p>`}<a class="button secondary" href="${esc(local("/membership"))}">${plan ? t("Compare plans", "Comparar planes") : t("Explore plans", "Explorar planes")}${icon("arrow")}</a><p class="fine-print">${t("New purchases are not available yet. Selecting a plan does not charge you or change your access.", "Las nuevas compras aún no están disponibles. Elegir un plan no genera cargos ni cambia tu acceso.")}</p></aside></div>
+            <details class="panel create-panel" ${!workspaces.length ? "open" : ""}><summary><span class="icon-tile">${icon("plus")}</span><span><strong>${t("Create a private operating location", "Crear ubicación operativa privada")}</strong><small>${t("An office, a shop, a studio. No public listing needed.", "Oficina, tienda o estudio. Sin necesitar una ficha pública.")}</small></span><span class="expand-mark" aria-hidden="true">+</span></summary><form id="create-location"><label>${t("Location name", "Nombre de la ubicación")}<input name="name" required minlength="2" maxlength="120" autocomplete="organization" placeholder="${t("e.g. Fuengirola studio", "Ej. Estudio Fuengirola")}"></label><button type="submit">${t("Create my location", "Crear mi ubicación")}${icon("arrow")}</button></form></details>
+          </section>
+          <section id="view-membership" role="tabpanel" aria-labelledby="tab-membership" data-section="membership" hidden><div class="section-heading"><h2>${t("Your membership", "Tu membresía")}</h2><p>${t("Plans and billing, together in one place.", "Planes y pagos, en un solo lugar.")}</p></div><section id="billing" class="panel"><h3>${t("My memberships", "Mis membresías")}</h3><p role="status">${t("Loading membership details…", "Cargando las membresías…")}</p></section><a class="button secondary" href="${esc(local("/membership"))}">${t("Explore AkiBusiness plans", "Explorar planes AkiBusiness")}${icon("arrow")}</a></section>
+          <section id="view-profile" role="tabpanel" aria-labelledby="tab-profile" data-section="profile" hidden><div class="section-heading"><h2>${t("Make it yours", "A tu manera")}</h2><p>${t("One profile. Updated across AkiSuite.", "Un perfil. Actualizado en AkiSuite.")}</p></div><section class="panel"><div class="panel-heading"><span class="icon-tile">${icon("profile")}</span><h3>${t("Personal details", "Datos personales")}</h3></div><form id="profile"><div class="grid">${input("displayName", t("Display name", "Nombre"), "display_name", 100)}${input("username", t("Username", "Nombre de usuario"), "username", 30)}${input("phone", t("Phone", "Teléfono"), "phone", 40)}${input("locality", t("Town / city", "Localidad"), "locality", 120)}${input("province", t("Province", "Provincia"), "province", 120)}<label>${t("Preferred language", "Idioma preferido")}<select name="preferredLocale"><option value="en" ${profile.preferred_locale === "en" ? "selected" : ""}>English</option><option value="es" ${profile.preferred_locale === "es" ? "selected" : ""}>Español</option></select></label>${[
+            [
+              "profileVisibility",
+              "profile_visibility",
+              t("Profile visibility", "Visibilidad del perfil"),
+            ],
+            [
+              "contactVisibility",
+              "contact_visibility",
+              t("Contact visibility", "Visibilidad del contacto"),
+            ],
           ]
             .map(
-              ([v, l]) =>
-                `<option value="${v}" ${profile[key] === v ? "selected" : ""}>${l}</option>`,
+              ([name, key, label]) =>
+                `<label>${label}<select name="${name}">${[
+                  ["private", t("Private", "Privado")],
+                  ["members", t("Members", "Miembros")],
+                  ["public", t("Public", "Público")],
+                ]
+                  .map(
+                    ([v, l]) =>
+                      `<option value="${v}" ${profile[key] === v ? "selected" : ""}>${l}</option>`,
+                  )
+                  .join("")}</select></label>`,
             )
-            .join("")}</select></label>`,
-      )
-      .join(
-        "",
-      )}</div><label>Bio<textarea name="bio" maxlength="2000" rows="4">${esc(profile.bio)}</textarea></label><button type="submit">${t("Save shared profile", "Guardar perfil compartido")}</button></form></section><section class="panel"><h2>${t("Profile photos", "Fotos del perfil")}</h2><form id="photos"><label>${t("Photo type", "Tipo de foto")}<select name="kind"><option value="avatar">${t("Profile photo", "Foto de perfil")}</option><option value="banner">${t("Cover photo", "Foto de portada")}</option></select></label><label>${t("JPG, PNG or WebP, up to 10 MB", "JPG, PNG o WebP, hasta 10 MB")}<input name="file" type="file" accept="image/jpeg,image/png,image/webp" required></label><button type="submit">${t("Save shared photo", "Guardar foto compartida")}</button></form></section><section class="panel"><h2>${t("Sign-in and security", "Acceso y seguridad")}</h2><p>${esc(user.email)}</p><form id="email"><label>${t("New sign-in email", "Nuevo correo de acceso")}<input name="email" type="email" required maxlength="254" autocomplete="email"></label><button type="submit">${t("Request email change", "Solicitar cambio de correo")}</button></form><div class="actions"><button id="reset" type="button">${t("Send password reset link", "Enviar recuperación")}</button><button id="signout" type="button">${t("Sign out here", "Cerrar sesión aquí")}</button></div></section>`;
+            .join(
+              "",
+            )}</div><label>Bio<textarea name="bio" maxlength="2000" rows="3">${esc(profile.bio)}</textarea></label><div class="form-footer"><span>${icon("check")}${t("Shared across all five products", "Compartido en los cinco productos")}</span><button type="submit">${t("Save shared profile", "Guardar perfil compartido")}</button></div></form></section><section class="panel"><div class="panel-heading"><span class="icon-tile">${icon("photo")}</span><h3>${t("Profile photos", "Fotos del perfil")}</h3></div><form id="photos"><div class="grid"><label>${t("Photo type", "Tipo de foto")}<select name="kind"><option value="avatar">${t("Profile photo", "Foto de perfil")}</option><option value="banner">${t("Cover photo", "Foto de portada")}</option></select></label><label class="upload-field">${t("JPG, PNG or WebP, up to 10 MB", "JPG, PNG o WebP, hasta 10 MB")}<input name="file" type="file" accept="image/jpeg,image/png,image/webp" required></label></div><button type="submit">${t("Save shared photo", "Guardar foto compartida")}</button></form></section></section>
+          <section id="view-security" role="tabpanel" aria-labelledby="tab-security" data-section="security" hidden><div class="section-heading"><h2>${t("Sign-in and security", "Acceso y seguridad")}</h2><p>${t("Keep your account in safe hands. Yours.", "Tu cuenta en buenas manos. Las tuyas.")}</p></div><section class="panel"><div class="panel-heading"><span class="icon-tile">${icon("security")}</span><div><h3>${t("Email address", "Correo electrónico")}</h3><p>${esc(user.email)}</p></div></div><form id="email"><label>${t("New sign-in email", "Nuevo correo de acceso")}<input name="email" type="email" required maxlength="254" autocomplete="email"></label><button type="submit">${t("Request email change", "Solicitar cambio de correo")}</button></form></section><section class="panel security-row"><div><h3>${t("Password", "Contraseña")}</h3><p>${t("Receive a secure link to reset your password.", "Recibe un enlace seguro para cambiar tu contraseña.")}</p></div><button id="reset" type="button">${t("Send password reset link", "Enviar recuperación")}</button></section><section class="panel security-row"><div><h3>${t("This device", "Este dispositivo")}</h3><p>${t("Sign out of AkiBusiness on this browser.", "Cierra tu sesión de AkiBusiness en este navegador.")}</p></div><button id="signout" class="danger-button" type="button">${t("Sign out here", "Cerrar sesión aquí")}</button></section></section>
+        </div>
+      </div>`;
+    wireSections();
+    root.querySelectorAll('[name="workspace"]').forEach((radio) =>
+      radio.addEventListener("change", () => {
+        const direct = document.getElementById("open-dashboard");
+        if (direct) direct.hidden = radio.value !== selected;
+        document.getElementById("open-location").hidden =
+          !!direct && radio.value === selected;
+      }),
+    );
     document.getElementById("location-picker").onsubmit = (event) =>
       run(event, async (form) => {
         const value = form.get("workspace");
@@ -421,6 +577,7 @@
             ),
           );
         profile = { ...profile, ...update };
+        root.querySelector(".member-summary strong").textContent = name;
         message(
           t(
             "Profile saved across all five products.",
@@ -589,7 +746,7 @@
         akihq_standard: t("Legacy AkiHQ Standard", "AkiHQ Standard anterior"),
         akihq_pro: t("Legacy AkiHQ Pro", "AkiHQ Pro anterior"),
       };
-      node.innerHTML = `<h2>${t("My memberships", "Mis membresías")}</h2><p>${t("Existing subscriptions on your shared account.", "Suscripciones existentes en tu cuenta compartida.")}</p>${data.subscriptions?.length ? `<ul>${data.subscriptions.map((row) => `<li>${esc(planNames[row.plan_code] || t("Existing subscription", "Suscripción existente"))} · ${esc(row.status)}${row.current_period_end ? ` · ${esc(new Date(row.current_period_end).toLocaleDateString(locale))}` : ""}</li>`).join("")}</ul>` : `<p>${t("No paid subscriptions recorded.", "No hay suscripciones de pago registradas.")}</p>`}${data.hasCustomer ? `<button id="billing-portal" type="button">${t("Manage billing and subscriptions", "Gestionar pagos y suscripciones")}</button>` : ""}`;
+      node.innerHTML = `<div class="panel-heading"><span class="icon-tile">${icon("membership")}</span><h3>${t("My memberships", "Mis membresías")}</h3></div>${data.subscriptions?.length ? `<ul>${data.subscriptions.map((row) => `<li>${esc(planNames[row.plan_code] || t("Existing subscription", "Suscripción existente"))} · ${esc(row.status)}${row.current_period_end ? ` · ${esc(new Date(row.current_period_end).toLocaleDateString(locale))}` : ""}</li>`).join("")}</ul>` : `<div class="empty-state">${icon("membership")}<h3>${t("No paid subscriptions recorded.", "No hay suscripciones de pago registradas.")}</h3><p>${t("Your existing subscriptions will appear here.", "Tus suscripciones existentes aparecerán aquí.")}</p></div>`}${data.hasCustomer ? `<button id="billing-portal" type="button">${t("Manage billing and subscriptions", "Gestionar pagos y suscripciones")}</button>` : ""}`;
       document
         .getElementById("billing-portal")
         ?.addEventListener("click", async (event) => {
@@ -619,13 +776,54 @@
         node.innerHTML = `<h2>${t("My memberships", "Mis membresías")}</h2><p role="alert">${t("Membership details could not be loaded. Your profile remains available.", "No se pudieron cargar las membresías. Puedes seguir usando tu perfil.")}</p>`;
     }
   }
+  document.getElementById("theme").onclick = () => {
+    theme = theme === "dark" ? "light" : "dark";
+    try {
+      localStorage.setItem("akipasa.theme", theme);
+    } catch {}
+    applyTheme();
+  };
+  applyTheme();
   document.getElementById("language").onclick = () => {
     locale = locale === "es" ? "en" : "es";
     window.AkiSuiteNavigation.remember(locale);
+    const drafts = [...root.querySelectorAll("form")].map((form) => [
+      form.id,
+      [...form.elements]
+        .filter(
+          (field) => field.name && !["file", "password"].includes(field.type),
+        )
+        .map((field) => ({
+          name: field.name,
+          value: field.value,
+          checked: field.checked,
+        })),
+    ]);
+    const disclosures = [...root.querySelectorAll("details")].map(
+      (node) => node.open,
+    );
     if (user && profile) {
       render();
       void loadBilling();
     } else authScreen();
+    for (const [id, fields] of drafts)
+      for (const field of fields) {
+        const controls = document.getElementById(id)?.elements;
+        if (!controls) continue;
+        for (const control of controls)
+          if (control.name === field.name) {
+            if (["radio", "checkbox"].includes(control.type)) {
+              if (control.value === field.value)
+                control.checked = field.checked;
+            } else control.value = field.value;
+          }
+      }
+    root.querySelectorAll("details").forEach((node, i) => {
+      node.open = disclosures[i] ?? node.open;
+    });
+    root
+      .querySelector('[name="workspace"]:checked')
+      ?.dispatchEvent(new window.Event("change"));
   };
   load().catch(() => {
     root.innerHTML = `<h1>${t("Your account is temporarily unavailable", "Tu cuenta no está disponible ahora")}</h1><p>${t("Reload to retry. Your data and sign-in have not been changed.", "Recarga para reintentar. Tus datos y sesión no se han cambiado.")}</p><a href="${esc(local("/account"))}">${t("Retry", "Reintentar")}</a>`;

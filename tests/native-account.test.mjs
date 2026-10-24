@@ -140,6 +140,7 @@ async function fixture(
     URLSearchParams,
     Intl,
     FormData: w.FormData,
+    Event: w.Event,
     crypto: { randomUUID: () => "00000000-0000-4000-8000-000000000001" },
     AbortSignal,
     fetch: async (url, options) => {
@@ -294,3 +295,28 @@ for (const [canOperate, failedAccess, path] of [
     assert.equal(destination.searchParams.get("workspace"), "private-fixture");
     assert.equal(destination.searchParams.get("tier"), "standard");
   });
+
+test("section keyboard navigation and theme/language changes preserve profile drafts", async (t) => {
+ const f=await fixture(t),d=f.w.document;
+ const workspace=d.querySelector('[data-account-nav="workspace"]');
+ workspace.dispatchEvent(new f.w.KeyboardEvent("keydown",{key:"ArrowRight",bubbles:true}));
+ assert.equal(d.querySelector('[data-account-nav="membership"]').getAttribute("aria-selected"),"true");
+ d.querySelector('[data-account-nav="profile"]').click();
+ d.querySelector('[name="displayName"]').value="Unsaved profile";
+ d.getElementById("theme").click();
+ assert.equal(d.querySelector('[name="displayName"]').value,"Unsaved profile");
+ d.getElementById("language").click();
+ assert.equal(d.querySelector('[name="displayName"]').value,"Unsaved profile");
+ assert.equal(d.getElementById("view-profile").hidden,false);
+});
+test("location selection removes the previous direct dashboard shortcut",async(t)=>{
+ const f=await fixture(t,{query:"?workspace=private-fixture",locations:[{id:"private-fixture",name:"First"},{id:"second-fixture",name:"Second"}]}),d=f.w.document;
+ const radio=d.querySelector('[value="second-fixture"]');radio.checked=true;radio.dispatchEvent(new f.w.Event("change"));
+ assert.equal(d.getElementById("open-dashboard").hidden,true);
+ assert.equal(d.getElementById("open-location").hidden,false);
+});
+test("empty workspaces expose location setup and disable the empty picker",async(t)=>{
+ const f=await fixture(t,{locations:[]}),d=f.w.document;
+ assert.equal(d.querySelector(".create-panel").open,true);
+ assert.equal(d.getElementById("open-location").disabled,true);
+});

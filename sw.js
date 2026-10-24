@@ -1,4 +1,4 @@
-const CACHE = "akihq-v145";
+const CACHE = "akihq-v146";
 const ASSETS = [
   "./assets/rotas-core.js?v=1",
   "./assets/rotas.js?v=2",

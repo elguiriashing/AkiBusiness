@@ -3,30 +3,48 @@
   <head>
     <meta charset="utf-8" />
     <base href="/" />
-    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <meta
+      name="viewport"
+      content="width=device-width,initial-scale=1,viewport-fit=cover"
+    />
     <meta name="robots" content="noindex,nofollow" />
+    <meta name="theme-color" content="#071124" />
     <title>Your account · AkiBusiness</title>
-    <link rel="icon" href="assets/icons/icon.svg" />
-    <link rel="stylesheet" href="assets/account.css?v=1" />
+    <link rel="icon" href="assets/icons/icon.svg" type="image/svg+xml" />
+    <link rel="stylesheet" href="assets/membership.css?v=2" />
+    <link rel="stylesheet" href="assets/account.css?v=2" />
   </head>
-  <body>
-    <main>
-      <header>
-        <a id="brand" href="/">AkiBusiness</a>
-        <nav>
-          <a id="dashboard" href="/login">Dashboard</a
-          ><a id="plans" href="/membership">Plans</a
-          ><button id="language" type="button">ES</button>
+  <body class="account-page">
+    <a class="skip-link" href="#account">Skip to account</a>
+    <main class="account-shell">
+      <header class="plans-header">
+        <a class="brand" id="brand" href="/"
+          ><img src="assets/logo.svg" alt="" /><span
+            >AkiBusiness<small>by AkiPasa</small></span
+          ></a
+        >
+        <nav class="header-actions" aria-label="Page controls">
+          <a id="plans" href="/membership">Plans</a>
+          <button id="theme" type="button">Light</button>
+          <button id="language" type="button">ES</button>
+          <a id="dashboard" href="/login">Dashboard</a>
         </nav>
       </header>
-      <div id="account" aria-live="polite">
-        <p role="status">Loading your account…</p>
+      <div id="account" tabindex="-1" aria-busy="true">
+        <div class="loading-state" role="status">
+          <span class="loading-mark" aria-hidden="true"></span>
+          <p>Loading your account…</p>
+        </div>
       </div>
+      <footer class="account-footer">
+        <span>AkiBusiness <span aria-hidden="true">✦</span> AkiSuite</span
+        ><span id="footer-copy">Your business. Your toolbox.</span>
+      </footer>
     </main>
     <script src="config.js"></script>
     <script src="assets/supabase.js"></script>
     <script src="assets/suite-navigation.js?v=2"></script>
     <script src="assets/account-eligibility.js?v=3"></script>
-    <script src="assets/account.js?v=1"></script>
+    <script src="assets/account.js?v=2"></script>
   </body>
 </html>

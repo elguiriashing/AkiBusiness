@@ -142,5 +142,5 @@ test('cash reconciliation runtime assets have exact cache versions',()=>{
   assert.match(html,new RegExp(asset.replace(/[.?]/g,'\\$&')));
   assert.match(sw,new RegExp(asset.replace(/[.?]/g,'\\$&')));
  }
- assert.match(sw,/const CACHE = "akihq-v145"/);
+ assert.match(sw,/const CACHE = "akihq-v146"/);
 });
