@@ -227,7 +227,7 @@ const close = async (page) => {
           ),
           false,
         );
-        if (viewport.width <= 850) {
+        if (viewport.width <= 650) {
           await page.locator(".rp-menu summary").click();
           await page.locator(".rp-mobile-export").click();
         } else
