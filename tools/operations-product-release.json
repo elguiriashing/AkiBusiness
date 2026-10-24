@@ -113,12 +113,12 @@
   ],
   "sw.js": [
     {
-      "from": "const CACHE = \"akihq-v142\";\n",
-      "to": "const CACHE = \"akihq-v144\";\n"
+      "from": "const CACHE = \"akihq-v144\";\n",
+      "to": "const CACHE = \"akihq-v145\";\n"
     },
     {
-      "from": "  \"./assets/app-v32.js?v=43\",\n",
-      "to": "  \"./assets/app-v32.js?v=47\",\n"
+      "from": "  \"./assets/app-v32.js?v=44\",\n",
+      "to": "  \"./assets/app-v32.js?v=48\",\n"
     },
     {
       "from": "  \"./config.js?v=44\",\n",
@@ -149,8 +149,8 @@
       "to": "  <script src=\"config.js?v=45\"></script>\n"
     },
     {
-      "from": "  <script src=\"assets/app-v32.js?v=43\"></script>\n",
-      "to": "  <script src=\"assets/app-v32.js?v=47\"></script>\n"
+      "from": "  <script src=\"assets/app-v32.js?v=44\"></script>\n",
+      "to": "  <script src=\"assets/app-v32.js?v=48\"></script>\n"
     }
   ]
 }

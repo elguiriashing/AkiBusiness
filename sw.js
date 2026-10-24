@@ -1,4 +1,4 @@
-const CACHE = "akihq-v142";
+const CACHE = "akihq-v144";
 const ASSETS = [
   "./assets/suite-navigation.js?v=2",
   "./assets/operational-analytics.js?v=1",
@@ -26,14 +26,17 @@ const ASSETS = [
   "./index.html",
   "./login.html",
   "./assets/landing.css?v=1",
-  "./assets/landing.js?v=2",
+  "./assets/landing.js?v=3",
   "./membership.html",
+  "./account.html",
+  "./assets/account.js?v=1",
+  "./assets/account.css?v=1",
   "./assets/membership.css?v=2",
-  "./assets/membership.js?v=6",
+  "./assets/membership.js?v=7",
   "./assets/styles.css?v=60",
   "./assets/account-eligibility.js?v=3",
   "./assets/toolbox-notifications.js?v=1",
-  "./assets/app-v32.js?v=43",
+  "./assets/app-v32.js?v=44",
   "./assets/commerce-export.js?v=3",
   "./assets/checkout-session.js?v=2",
   "./assets/fiscal-core.js?v=2",

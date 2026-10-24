@@ -16,7 +16,7 @@ test("the public homepage and operations shell stay separate", () => {
   assert.match(publicPage, /href="\/login"/);
   assert.doesNotMatch(publicPage, /src="assets\/app-v32\.js/);
   assert.doesNotMatch(publicPage, /src="assets\/supabase\.js/);
-  assert.match(authPage, /src="assets\/app-v32\.js\?v=43"/);
+  assert.match(authPage, /src="assets\/app-v32\.js\?v=44"/);
   assert.match(authPage, /<div id="app"/);
   assert.doesNotMatch(rewrites, /^\/login\/?\s/m);
   assert.match(rewrites, /^\/app \/login 302$/m);
@@ -29,7 +29,7 @@ test("public language switch preserves canonical local login destinations", () =
   assert.match(page, /id="ab-language"/);
   assert.match(script, /\[data-login-link\]/);
   assert.match(script, /"\/login\?locale="/);
-  assert.match(script, /"\/membership\.html\?locale="/);
+  assert.match(script, /"\/account\?locale="/);
   assert.match(page, /location\.replace\("\/login" \+ location\.search \+ location\.hash\)/);
   assert.match(page, /location\.replace\("\/app" \+ location\.search \+ location\.hash\)/);
 });

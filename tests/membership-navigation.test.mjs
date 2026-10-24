@@ -18,7 +18,7 @@ test("plans use the authoritative account handoff and never collect payment loca
   assert.doesNotMatch(page, /data-plan="plus"/);
   assert.match(page, /data-plan="pro"/);
   assert.match(page, /id="operations-subscription-link"/);
-  assert.match(script, /account\/subscription\/operations/);
+  assert.match(script, /new URL\("\/account", location.origin\)/);
   assert.match(page, /id="listing-plans-link"/);
   assert.match(script, /listing-plans-link/);
   assert.doesNotMatch(page + script, /checkout\.sessions|payment_intent|stripe\.com|<form|fetch\(/i);
@@ -28,10 +28,10 @@ test("the membership navigation bundle has a fresh and consistent offline cache 
   const html = readFileSync(new URL("../login.html", import.meta.url), "utf8");
   const sw = readFileSync(new URL("../sw.js", import.meta.url), "utf8");
   assert.match(sw, /\.\/membership\.html/);
-  assert.match(sw, /\.\/assets\/membership\.js\?v=6/);
+  assert.match(sw, /\.\/assets\/membership\.js\?v=7/);
   assert.match(sw, /\.\/assets\/membership\.css\?v=2/);
-  assert.match(html, /app-v32\.js\?v=43/);
-  assert.match(sw, /app-v32\.js\?v=43/);
+  assert.match(html, /app-v32\.js\?v=44/);
+  assert.match(sw, /app-v32\.js\?v=44/);
   const cache = sw.match(/^const CACHE = "akihq-v(\d+)";/m);
   assert.ok(cache, "Service-worker cache must carry an explicit release version");
   assert.ok(Number(cache[1]) >= 120, "Membership navigation must not reuse a pre-navigation cache");

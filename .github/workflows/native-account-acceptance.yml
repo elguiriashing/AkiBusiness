@@ -1,0 +1,39 @@
+name: Native customer journey acceptance
+on:
+  pull_request:
+    paths:
+      [
+        "account.html",
+        "membership.html",
+        "assets/**",
+        "tests/native-account*",
+        ".github/workflows/native-account-acceptance.yml",
+      ]
+permissions:
+  contents: read
+concurrency:
+  group: native-account-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  native-account:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Install isolated browser tooling
+        run: |
+          npm install --prefix "$RUNNER_TEMP/native-account-browser" @playwright/test@1.61.1
+          "$RUNNER_TEMP/native-account-browser/node_modules/.bin/playwright" install --with-deps chromium
+      - name: Bilingual phone, tablet and desktop journey
+        env:
+          AKIBUSINESS_PLAYWRIGHT_PATH: ${{ runner.temp }}/native-account-browser/node_modules/@playwright/test
+        run: node tests/native-account-browser.cjs
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: native-account-${{ github.event.pull_request.head.sha }}
+          path: test-results/native-account
+          retention-days: 7
