@@ -33,6 +33,14 @@ Verified on 24 October 2026: Cloudflare Pages project **akibusiness-selfowned-st
 
 The connected build runs `NEXT_PUBLIC_AKISUITE_ROLE_SWAP=true node tools/build-product-release.mjs dist-product`, verifies the clean source stamp against `CF_PAGES_COMMIT_SHA`, and publishes `dist-product`. The manual verified production workflow uses the same existing project and refuses mismatched domain, owner, repository, branch, product or source metadata. Verify `/release-source.json` after every release.
 
+Normal releases use the connected Cloudflare Git deployment. The optional GitHub
+fallback runs only through `workflow_dispatch` on `main` and requires an existing
+scoped `CLOUDFLARE_API_TOKEN` GitHub Actions secret. The 24 October fallback attempt
+stopped before publishing because that optional secret was absent; the connected
+production release succeeded independently. Do not trigger a duplicate publisher
+on workflow-file pushes or weaken its target/token preflight to conceal missing
+configuration. Configure the fallback credential separately only when needed.
+
 Release gates: static asset/deep-link checks; sign-in, Google OAuth and redirects; PoS checkout, table transfer, printer handling, offline/retry, tenant isolation, inventory and staff permissions, EN/ES, mobile/tablet layout, and rollback. Spanish invoicing/tax features are **not** represented as certified until independent compliance approval. Preserve all existing production data and settings.
 
 ## Historical staging (19 October 2026)
