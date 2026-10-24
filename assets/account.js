@@ -63,6 +63,7 @@
     node.textContent = value;
   };
   function controls() {
+    window.AkiSuiteNavigation.remember(locale);
     document.documentElement.lang = locale;
     document.getElementById("language").textContent =
       locale === "es" ? "EN" : "ES";
