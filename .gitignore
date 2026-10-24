@@ -18,3 +18,8 @@ dist-product/
 # Generated local and CI browser evidence.
 artifacts/
 __pycache__/
+Android/.gradle/
+Android/**/build/
+Android/local.properties
+*.jks
+*.keystore
