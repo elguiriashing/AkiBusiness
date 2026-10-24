@@ -320,3 +320,10 @@ test("empty workspaces expose location setup and disable the empty picker",async
  assert.equal(d.querySelector(".create-panel").open,true);
  assert.equal(d.getElementById("open-location").disabled,true);
 });
+
+test("installed account cache includes the exact script and stylesheet versions requested by the document", () => {
+  const sw = readFileSync(new URL("../sw.js", import.meta.url), "utf8");
+  for (const match of html.matchAll(/(?:src|href)="(assets\/account\.(?:js|css)\?v=[^"]+)"/g)) {
+    assert.ok(sw.includes('"./' + match[1] + '"'), "Missing account precache entry: " + match[1]);
+  }
+});
