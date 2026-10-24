@@ -232,7 +232,7 @@ const close = async (page) => {
           await page.locator(".rp-mobile-export").click();
         } else
           await page
-            .locator('.rp-header [data-rota-action="open-export"]')
+            .locator('.rp-secondary-action[data-rota-action="open-export"]')
             .click();
         await page.locator('[data-rota-action="csv"]').click();
         await page.locator('[data-rota-action="ics"]').click();

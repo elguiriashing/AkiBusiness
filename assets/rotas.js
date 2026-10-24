@@ -329,6 +329,7 @@
         manage = value.manage === true;
         exportMode = manage ? "draft" : "published";
         note = "";
+        undoMove = null;
         dirty = false;
       } catch (e) {
         if (active(key) && id === requestId) {
