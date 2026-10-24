@@ -1,0 +1,42 @@
+name: Rotas workflow acceptance
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - "assets/rotas*"
+      - "assets/tool-guides.js"
+      - "assets/app-v32.js"
+      - "login.html"
+      - "supabase/migrations/*staff_rotas.sql"
+      - "tests/rotas*"
+      - ".github/workflows/rotas-review.yml"
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: cloudflare/package-lock.json
+      - run: npm ci --prefix cloudflare
+      - run: node --test tests/rotas.test.mjs tests/rotas-db.test.mjs
+      - name: Install browser acceptance runtime
+        run: |
+          npm install --prefix "$RUNNER_TEMP/rotas-browser" --no-package-lock --ignore-scripts playwright@1.61.1
+          node "$RUNNER_TEMP/rotas-browser/node_modules/playwright/cli.js" install --with-deps chromium
+      - name: Check EN/ES on phone, tablet and desktop
+        env:
+          AKIBUSINESS_BROWSER_ARTIFACTS: artifacts/rotas
+        run: AKIBUSINESS_PLAYWRIGHT_PATH="$RUNNER_TEMP/rotas-browser/node_modules/playwright" node tests/rotas-browser.cjs
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: rotas-browser-evidence
+          path: artifacts/rotas/
+          if-no-files-found: ignore

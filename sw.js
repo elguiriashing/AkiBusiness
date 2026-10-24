@@ -1,5 +1,9 @@
 const CACHE = "akihq-v144";
 const ASSETS = [
+  "./assets/rotas-core.js?v=1",
+  "./assets/rotas.js?v=1",
+  "./assets/rotas.css?v=1",
+  "./assets/tool-guides.js?v=1",
   "./assets/suite-navigation.js?v=2",
   "./assets/operational-analytics.js?v=1",
   "./assets/operational-analytics.css?v=1",

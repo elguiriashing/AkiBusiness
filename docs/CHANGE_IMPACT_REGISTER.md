@@ -17,3 +17,8 @@ order and explicit remaining shared safety/onboarding and provider acceptance.
 ### 2026-10-24 — Native journey acceptance follow-up
 
 Workspace picker now rechecks crm_workspace_access and opens the native dashboard directly for authorized operating locations. Unentitled locations remain on native setup; access lookup failures do not navigate. Three focused positive/denial/error cases pass.
+
+
+### 2026-10-24 — Preserve concurrent staff rotas release
+
+Merged reviewed main 8fa3e279, retaining staff rotas, tool guides and existing operation gates. Resolved version-only overlaps by keeping source cache 144 and advancing paid cache to 146 and paid app asset to 49, beyond the separately released cache 145. Native account/pricing flows and the direct authorized workspace picker remain intact. Full combined operation/release and hosted journey checks are required.

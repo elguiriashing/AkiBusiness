@@ -144,7 +144,7 @@
       support: "Customer support",
       dashboard: "Dashboard", crm: "CRM", inbox: "Inbox", tasks: "Tasks & Projects", calendar: "Calendar", "business-workspaces": "Business CRM",
       inventory: "Inventory", pos: "Point of Sale", sales: "Sales & Billing", marketing: "Marketing", sites: "Sites & Forms",
-      automation: "Automation", collaboration: "Team Chat", employees: "People", knowledge: "Knowledge",
+      automation: "Automation", collaboration: "Team Chat", employees: "People", rotas: "Schedules & rotas", knowledge: "Knowledge",
       analytics: "Analytics", integrations: "Integrations", settings: "Settings", create: "Create", search: "Search everything…",
       collapse: "Collapse", allSystems: "Business operating system", newRecord: "New record", board: "Board", list: "List",
       deals: "Deals", leads: "Leads", contacts: "Contacts", companies: "Companies", social: "Social", aiTeam: "AI Team", save: "Save", cancel: "Cancel",
@@ -154,7 +154,7 @@
       support: "Atención al cliente",
       dashboard: "Resumen", crm: "CRM", inbox: "Bandeja", tasks: "Tareas y proyectos", calendar: "Calendario", "business-workspaces": "CRM de negocios",
       inventory: "Inventario", pos: "Punto de venta", sales: "Ventas y facturación", marketing: "Marketing", sites: "Webs y formularios",
-      automation: "Automatización", collaboration: "Chat de Equipo", employees: "Equipo", knowledge: "Conocimiento",
+      automation: "Automatización", collaboration: "Chat de Equipo", employees: "Equipo", rotas: "Horarios y turnos", knowledge: "Conocimiento",
       analytics: "Analítica", integrations: "Integraciones", settings: "Ajustes", create: "Crear", search: "Buscar en todo…",
       collapse: "Contraer", allSystems: "Sistema operativo empresarial", newRecord: "Nuevo registro", board: "Tablero", list: "Lista",
       deals: "Negocios", leads: "Prospectos", contacts: "Contactos", companies: "Empresas", social: "Social", aiTeam: "Equipo IA", save: "Guardar", cancel: "Cancelar",
@@ -178,7 +178,7 @@
     {
       label: "Team & insight",
       items: [
-        ["collaboration", "collaboration"], ["telegram", "telegram"], ["employees", "employees"], ["knowledge", "knowledge"], ["analytics", "analytics"], ["integrations", "integrations"]
+        ["collaboration", "collaboration"], ["telegram", "telegram"], ["employees", "employees"], ["rotas", "calendar"], ["knowledge", "knowledge"], ["analytics", "analytics"], ["integrations", "integrations"]
       ]
     }
   ];
@@ -188,7 +188,7 @@
     dashboard: "dashboard", crm: "crm", inbox: "inbox", tasks: "tasks", calendar: "calendar",
     inventory: "inventory", pos: "pos", sales: "sales", marketing: "marketing", sites: "sites",
     automation: "automation", collaboration: "collaboration", telegram: "telegram",
-    employees: "employees", knowledge: "knowledge", analytics: "analytics",
+    employees: "employees", rotas: "employees", knowledge: "knowledge", analytics: "analytics",
     integrations: "integrations", "business-workspaces": "business-admin", settings: "dashboard"
   };
 
@@ -1444,6 +1444,7 @@
   }
 
   function setRoute(route) {
+    if (ui.route === "rotas" && route !== "rotas" && rotaController?.isDirty() && !window.confirm(state.settings.locale === "es" ? "¿Salir sin guardar el formulario del horario?" : "Leave without saving the rota form?")) return;
     if (!canUseRoute(route)) {
       toast("Tool not enabled", "This tool is not included in the current workspace.", "info");
       return;
@@ -2034,7 +2035,8 @@
       sites: [t("sites"), "Landing pages and lead forms"],
       automation: [t("automation"), "Triggers, rules and actions"],
       collaboration: [t("collaboration"), "Team feed and channels"],
-      employees: [t("employees"), "Directory, status and leave"],
+      employees: [t("employees"), "Directory, status and assignments"],
+      rotas: [t("rotas"), state.settings.locale === "es" ? "Personal, turnos e impresión" : "Staff, shifts and printing"],
       knowledge: [t("knowledge"), "Document how the business works"],
       analytics: [t("analytics"), "Performance across every module"],
       integrations: [t("integrations"), "Connect the rest of your stack"],
@@ -2046,6 +2048,7 @@
 
   function render() {
     if (!authUser) return;
+    const rotaForms = ui.route === "rotas" ? rotaController?.capture() : null;
     captureDialogFocus();
     const pageFocus = describeFocus(document.activeElement);
     applySettings();
@@ -2094,6 +2097,7 @@
       }
     }
     attachAfterRender();
+    if(ui.route === "rotas")rotaController?.restore(rotaForms);
     requestAnimationFrame(() => {
       const nextPage = document.getElementById("page-content");
       if (nextPage) {
@@ -2398,6 +2402,20 @@
     }
   }
 
+  let rotaController = null, rotaControllerKey = "";
+  function getRotas() {
+    const key = `${authUser?.id}:${state.workspace.id}`;
+    if (!rotaController || rotaControllerKey !== key) {
+      rotaController?.dispose();
+      rotaControllerKey = key;
+      rotaController = window.AkiRotas.create({
+        scope: () => ({workspace:state.workspace.id,user:authUser?.id,locale:state.settings.locale}),
+        client: getSupabaseClient, refresh: render, download: downloadBlob
+      });
+    }
+    return rotaController;
+  }
+
   function renderView() {
     const views = {
       dashboard: renderDashboard,
@@ -2415,6 +2433,7 @@
       automation: renderAutomation,
       collaboration: renderCollaboration,
       employees: renderEmployees,
+      rotas: () => getRotas().render(),
       knowledge: renderKnowledge,
       analytics: renderAnalytics,
       telegram: renderTelegram,
@@ -2424,7 +2443,7 @@
     if (!canUseRoute(ui.route)) {
       return `<div class="view"><section class="panel"><div class="panel-empty"><div><strong>Tool not enabled</strong><span>This module is not included in the current workspace. Ask a workspace owner about Business Pro tools.</span></div></div></section></div>`;
     }
-    return `<div class="view">${(views[ui.route] || renderDashboard)()}</div>`;
+    return `<div class="view">${window.AkiToolGuides?.render(ui.route,state.settings.locale)||""}${(views[ui.route] || renderDashboard)()}</div>`;
   }
 
   function renderMetric(label, value, foot, iconName, color, change = "") {
@@ -3036,7 +3055,7 @@
 
   function renderTaskCard(task) {
     const dueClass = task.status !== "done" && isOverdue(task.dueDate) ? "overdue" : "";
-    return `<article class="task-card" draggable="true" data-drag-entity="task" data-id="${task.id}" data-action="view-entity" data-entity="task">
+    return `<article class="task-card" role="button" tabindex="0" draggable="true" data-drag-entity="task" data-id="${task.id}" data-action="view-entity" data-entity="task">
       <div class="task-top"><span class="priority-dot ${task.priority}"></span><div><div class="task-title">${escapeHtml(task.title)}</div><div class="task-project">${escapeHtml(projectName(task.projectId))}</div></div></div>
       <div class="task-foot"><span class="${dueClass}">${escapeHtml(formatDate(task.dueDate, { year: false }))}</span><div class="card-avatar" title="${escapeHtml(employeeName(task.assigneeId))}">${initials(employeeName(task.assigneeId))}</div></div>
     </article>`;
@@ -3249,7 +3268,7 @@
     return `<div class="page-grid">
       <div class="page-grid grid-4">
         ${renderMetric("Messages sent", totals.sent.toLocaleString(), "across all campaigns", "send", "#7c8cff")}
-        ${renderMetric("Open rate", `${openRate}%`, "of delivered messages", "mail", "#52d9e9")}
+        ${renderMetric("Open rate", `${openRate}%`, "of recorded messages sent", "mail", "#52d9e9")}
         ${renderMetric("Click rate", `${clickRate}%`, "of opened messages", "link", "#ffbd55")}
         ${renderMetric("Conversions", totals.conversions.toLocaleString(), "tracked actions", "check", "#49d7a0")}
       </div>
@@ -3263,13 +3282,13 @@
           </article>`;
         }).join("")}
       </div>
-      <section class="panel"><div class="panel-header"><div><h2>Audience segments</h2><p>Dynamic groups sourced from the AkiPasa database</p></div></div><div class="panel-body cards-grid">
-        ${[
+      <section class="panel"><div class="panel-header"><div><h2>Audience segments</h2><p>${isPlatformWorkspace() ? "Dynamic groups sourced from the AkiPasa database" : "Workspace records; verify consent before any outreach"}</p></div></div><div class="panel-body cards-grid">
+        ${(isPlatformWorkspace() ? [
           ["All registered users", liveStats ? liveStats.total_users : state.contacts.length, "All profiles in the AkiPasa database"],
           ["New this month", liveStats ? liveStats.new_users_30d : 0, "Signed up in the last 30 days"],
           ["Unverified venues", liveStats ? (liveStats.total_venues - liveStats.verified_venues) : 0, "Venue is registered but not yet verified"],
           ["Pending claim reviews", liveStats ? liveStats.pending_claims : 0, "Venue claim submitted and awaiting decision"]
-        ].map(([name, count, rule]) => `<div class="entity-card"><div class="entity-card-top"><div class="entity-logo">${icon("filter")}</div><div class="entity-card-copy"><h3>${escapeHtml(name)}</h3><p>${escapeHtml(rule)}</p></div></div><div class="entity-card-stats"><div class="entity-stat"><span>Members</span><strong>${Number(count||0).toLocaleString()}</strong></div><div class="entity-stat"><span>Refresh</span><strong>Live</strong></div></div></div>`).join("")}
+        ] : [["Workspace contacts",state.contacts.length,"Contacts visible in this workspace; not a marketing-consent list"]]).map(([name, count, rule]) => `<div class="entity-card"><div class="entity-card-top"><div class="entity-logo">${icon("filter")}</div><div class="entity-card-copy"><h3>${escapeHtml(name)}</h3><p>${escapeHtml(rule)}</p></div></div><div class="entity-card-stats"><div class="entity-stat"><span>Members</span><strong>${Number(count||0).toLocaleString()}</strong></div><div class="entity-stat"><span>Refresh</span><strong>Live</strong></div></div></div>`).join("")}
       </div></section>
     </div>`;
   }
@@ -3636,7 +3655,7 @@
       <div class="page-grid grid-4">
         ${renderMetric("Team members", String(staffCount), `${departments.length} departments · staff & admins`, "employees", "#7c8cff")}
         ${renderMetric("Online now", String(onlineCount), "active CRM sessions", "activity", "#49d7a0")}
-        ${renderMetric("AkiPasa Users", String(totalUsers), "registered database profiles", "user", "#52d9e9")}
+        ${isPlatformWorkspace() ? renderMetric("AkiPasa Users", String(totalUsers), "registered database profiles", "user", "#52d9e9") : renderMetric("Workspace contacts", String(state.contacts.length), "visible in this location", "user", "#52d9e9")}
         ${renderMetric("Open assignments", String(state.tasks.filter(task => task.status !== "done").length), "tasks assigned", "tasks", "#ffbd55")}
       </div>
       <div class="cards-grid">
@@ -3669,7 +3688,7 @@
       </aside>
       <article class="knowledge-article">
         <div class="article-wrap">
-          <div class="flex items-center"><span class="status-pill info">${escapeHtml(article.category)}</span><div class="ml-auto flex gap-8"><button class="action-btn" data-action="edit-entity" data-entity="article" data-id="${article.id}">${icon("edit")} Edit</button><button class="action-btn ghost" data-action="delete-entity" data-entity="article" data-id="${article.id}">${icon("trash")}</button></div></div>
+          <div class="flex items-center"><span class="status-pill info">${escapeHtml(article.category)}</span><div class="ml-auto flex gap-8"><button class="action-btn" data-action="edit-entity" data-entity="article" data-id="${article.id}">${icon("edit")} Edit</button><button class="action-btn ghost" aria-label="${state.settings.locale === 'es' ? 'Eliminar artículo' : 'Delete article'}" data-action="delete-entity" data-entity="article" data-id="${article.id}">${icon("trash")}</button></div></div>
           <h1>${escapeHtml(article.title)}</h1>
           <div class="article-meta">Written by ${escapeHtml(employeeName(article.authorId))} · updated ${escapeHtml(relativeTime(article.updatedAt))}</div>
           <div class="article-content">${markdown(article.content)}</div>
@@ -7499,6 +7518,12 @@
   }
 
   document.addEventListener("click", event => {
+    const rotaAction = event.target.closest("[data-rota-action]");
+    if (rotaAction) {
+      if (ui.route !== "rotas" || !canUseRoute("rotas")) return;
+      getRotas().action(rotaAction.dataset.rotaAction,rotaAction.dataset.id).catch(error => toast("Rotas",error.message,"danger"));
+      return;
+    }
     const target = event.target.closest("[data-action]");
     if (target) {
       handleAction(target, event).catch(error => toast("Action could not be completed", error.message || "Please retry.", "danger"));
@@ -7511,17 +7536,24 @@
   });
 
   document.addEventListener("change", event => {
+    if (event.target.closest(".rota-shell")) {
+      try { getRotas().change(event.target); } catch(error) { toast("Rotas",error.message,"danger"); }
+      return;
+    }
     const form = event.target.closest?.("form[data-form]");
     if (form) saveFormDraft(form);
     handleChange(event.target);
   });
   document.addEventListener("input", event => {
+    if(event.target.closest("[data-rota-form]")){getRotas().markDirty();return;}
     const form = event.target.closest?.("form[data-form]");
     if (form) saveFormDraft(form);
     handleInput(event.target);
   });
   document.addEventListener("focusout", () => setTimeout(flushBackgroundRender, 0));
   document.addEventListener("submit", event => {
+    const rotaForm = event.target.closest("form[data-rota-form]");
+    if(rotaForm){event.preventDefault();if(ui.route === "rotas" && canUseRoute("rotas"))getRotas().submit(rotaForm).catch(error=>toast("Rotas",error.message,"danger"));return;}
     const form = event.target.closest("form[data-form]");
     if (!form) return;
     event.preventDefault();
@@ -7536,6 +7568,11 @@
   document.addEventListener("dragend", handleDragEnd);
 
   document.addEventListener("keydown", event => {
+    // Cards and rows with button semantics must also work without a pointer.
+    const actionable=event.target.closest?.('[data-action][role="button"]');
+    if ((event.key === "Enter" || event.key === " ") && actionable === event.target && !event.target.matches("button,a,input,select,textarea")) {
+      event.preventDefault();actionable.click();return;
+    }
     const dialog = dialogFocus.current?.element;
     if (event.key === "Tab" && dialog?.isConnected && !document.querySelector("dialog[open]")) {
       const controls = dialogControls(dialog);
@@ -7573,9 +7610,12 @@
     else dialogFocus.frames.get(current.key).focused = describeFocus(event.target);
   });
 
+  window.addEventListener("beforeunload",event=>{if(rotaController?.isDirty()){event.preventDefault();event.returnValue="";}});
+
   window.addEventListener("hashchange", () => {
     const parts = location.hash.replace(/^#\/?/, "").split("/").filter(Boolean);
     const route = parts[0] || "dashboard";
+    if(ui.route === "rotas" && route !== "rotas" && rotaController?.isDirty() && !window.confirm(state.settings.locale === "es" ? "¿Salir sin guardar el formulario?" : "Leave without saving the rota form?")){history.replaceState(null,"","#/rotas");return;}
     const previousRoute = ui.route;
     const previousCrmTab = ui.crmTab;
     if (route === "crm" && ["social", "ai-team"].includes(parts[1])) ui.crmTab = parts[1];
