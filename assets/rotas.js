@@ -322,7 +322,16 @@
         note = "";
         dirty = false;
       } catch (e) {
-        if (active(key) && id === requestId) error = e.message;
+        if (active(key) && id === requestId) {
+          error = e.message;
+          if (e.code === "42501") {
+            data = null;
+            published = null;
+            members = [];
+            manage = false;
+            dirty = false;
+          }
+        }
       } finally {
         if (active(key) && id === requestId) {
           loading = false;
@@ -354,6 +363,13 @@
       } catch (e) {
         if (active(key)) {
           error = e.code === "40001" ? w().conflict : e.message;
+          if (e.code === "42501") {
+            data = null;
+            published = null;
+            members = [];
+            manage = false;
+            dirty = false;
+          }
           throw e;
         }
       } finally {

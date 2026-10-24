@@ -71,6 +71,7 @@ begin
  or exists(select 1 from jsonb_array_elements(d->'staff') x where nullif(x->>'profileId','') is not null group by x->>'profileId' having count(*)>1)
  or exists(select 1 from jsonb_array_elements(d->'shifts') x group by x->>'id' having count(*)>1)
  or exists(select 1 from jsonb_array_elements(d->'absences') x group by x->>'id' having count(*)>1)
+ or exists(select 1 from jsonb_array_elements(d->'templates') x group by x->>'id' having count(*)>1)
  then raise exception 'Duplicate rota identifiers';end if;
  for p in select value from jsonb_array_elements(d->'staff') loop
   if coalesce(length(p->>'id'),0) not between 1 and 100 or coalesce(length(btrim(p->>'name')),0) not between 1 and 120
@@ -99,6 +100,9 @@ begin
    or coalesce(s->>'start','') !~ '^([01]\d|2[0-3]):[0-5]\d$' or coalesce(s->>'end','') !~ '^([01]\d|2[0-3]):[0-5]\d$'
    or coalesce(s->>'breakMinutes','') !~ '^\d{1,4}$' or (s->>'breakMinutes')::int>=1440
    or jsonb_typeof(s->'overnight') is distinct from 'boolean' or coalesce(length(s->>'role'),0)>120 or coalesce(length(s->>'location'),0)>120 then raise exception 'Invalid shift template';end if;
+  start_at:=date '2026-01-01'+(s->>'start')::time;
+  end_at:=date '2026-01-01'+(s->>'end')::time+case when (s->>'overnight')::boolean then interval '1 day' else interval '0 days' end;
+  if end_at<=start_at or end_at-start_at>interval '24 hours' or (s->>'breakMinutes')::int>=extract(epoch from(end_at-start_at))/60 then raise exception 'Invalid template duration or break';end if;
  end loop;
 end $$;
 

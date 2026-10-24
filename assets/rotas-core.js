@@ -108,6 +108,30 @@
         throw Error("Check absence dates and staff.");
       absenceIds.add(a.id);
     }
+    const templateIds = new Set();
+    for (const t of data.templates) {
+      const length =
+        time(t.start) && time(t.end)
+          ? minute("2026-01-01", t.end) -
+            minute("2026-01-01", t.start) +
+            (t.overnight ? 1440 : 0)
+          : NaN;
+      if (
+        !t.id ||
+        templateIds.has(t.id) ||
+        !t.name?.trim() ||
+        t.name.length > 120 ||
+        typeof t.overnight !== "boolean" ||
+        !Number.isFinite(length) ||
+        length <= 0 ||
+        length > 1440 ||
+        !Number.isInteger(t.breakMinutes) ||
+        t.breakMinutes < 0 ||
+        t.breakMinutes >= length
+      )
+        throw Error("Check template name, times and break.");
+      templateIds.add(t.id);
+    }
     return data;
   }
   function conflicts(data) {

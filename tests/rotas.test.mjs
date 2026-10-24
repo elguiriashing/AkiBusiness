@@ -139,7 +139,8 @@ async function controller() {
       members: [],
     };
   const pending = deferred();
-  let wait = false;
+  let wait = false,
+    denied = false;
   const context = {
     AkiRotasCore: C,
     Intl,
@@ -163,6 +164,10 @@ async function controller() {
     client: () => ({
       rpc: async (name, args) => {
         calls.push({ name, args });
+        if (denied)
+          return {
+            error: { code: "42501", message: "People access required" },
+          };
         if (wait) return pending.promise;
         return { data: state };
       },
@@ -170,7 +175,15 @@ async function controller() {
     refresh() {},
     download() {},
   });
-  return { c, calls, scope, state, pending, wait: () => (wait = true) };
+  return {
+    c,
+    calls,
+    scope,
+    state,
+    pending,
+    wait: () => (wait = true),
+    deny: () => (denied = true),
+  };
 }
 test("controller rejects late responses after switching workspace and resets private data", async () => {
   const t = await controller();
@@ -190,5 +203,33 @@ test("publish is explicit, checks dirty forms and conflicts before the server ca
   t.c.markDirty();
   await assert.rejects(t.c.action("publish"), /Save the current form/);
   assert.equal(t.calls.length, 1);
+  t.c.dispose();
+});
+
+test("templates reject breaks longer than the shift", () => {
+  const d = doc();
+  d.templates.push({
+    id: "template",
+    name: "Morning",
+    start: "09:00",
+    end: "17:00",
+    overnight: false,
+    breakMinutes: 30,
+  });
+  C.validate(d);
+  d.templates[0].breakMinutes = 480;
+  assert.throws(() => C.validate(d), /template/);
+});
+
+test("a permission denial clears previously loaded staff, drafts and export access", async () => {
+  const t = await controller();
+  await t.c.load();
+  assert(t.c.render().includes("Alex"));
+  t.deny();
+  await t.c.load();
+  const html = t.c.render();
+  assert(!html.includes("Alex"));
+  assert(!html.includes('data-rota-action="csv"'));
+  assert(html.includes("People access required"));
   t.c.dispose();
 });

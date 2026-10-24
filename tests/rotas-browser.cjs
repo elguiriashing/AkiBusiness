@@ -6,8 +6,8 @@ const http = require("node:http"),
   path = require("node:path"),
   assert = require("node:assert/strict");
 const root = path.resolve(__dirname, "..");
-let server, browser;
-const html = `<!doctype html><html data-theme="dark"><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><link rel="stylesheet" href="/assets/styles.css"><link rel="stylesheet" href="/assets/rotas.css"><style>body{margin:0;padding:12px}.panel{width:100%;box-sizing:border-box}#app{width:100%}</style><div id="app"></div><script src="/assets/rotas-core.js"></script><script src="/assets/rotas.js"></script><script>
+let server, browser, currentPage;
+const html = `<!doctype html><html data-theme="dark"><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><link rel="stylesheet" href="/assets/styles.css"><link rel="stylesheet" href="/assets/rotas.css"><style>body{margin:0;padding:0}.panel{width:100%;box-sizing:border-box}#app{width:100%;height:100dvh;overflow:auto;padding:12px;box-sizing:border-box}</style><div id="app"></div><script src="/assets/rotas-core.js"></script><script src="/assets/rotas.js"></script><script>
 window.scope={workspace:'one',user:'owner',locale:new URLSearchParams(location.search).get('locale')||'en'};
 window.state={manage:true,data:{settings:{title:'Bar rota',timezone:'Europe/Madrid',timeFormat:'24'},staff:[],shifts:[],absences:[],templates:[]},published:null,revision:0,members:[{profileId:'staff-user',name:'Gmail staff'}]};window.calls=[];window.downloads=[];window.errors=[];
 window.rpc=async(name,args)=>{calls.push({name,args});if(name==='crm_rota_save'){if(args.p_revision!==state.revision)return{error:{message:'Rota changed',code:'40001'}};AkiRotasCore.validate(args.p_data);if(args.p_publish&&AkiRotasCore.conflicts(args.p_data).length)return{error:{message:'Resolve conflicts'}};state.data=structuredClone(args.p_data);state.revision++;if(args.p_publish){state.published=structuredClone(state.data);state.publishedAt='2026-10-24T12:00Z';}}return{data:structuredClone(state)}};
@@ -59,7 +59,7 @@ document.addEventListener('click',e=>{const b=e.target.closest('[data-rota-actio
       { width: 1440, height: 900 },
     ])
       for (const theme of ["dark", "light"]) {
-        const page = await browser.newPage({ viewport });
+        const page = (currentPage = await browser.newPage({ viewport }));
         const errors = [];
         page.on("pageerror", (e) => errors.push(e.message));
         page.on("dialog", (d) => d.accept());
@@ -151,6 +151,24 @@ document.addEventListener('click',e=>{const b=e.target.closest('[data-rota-actio
   server.close();
 })().catch(async (e) => {
   console.error(e);
+  if (currentPage) {
+    const dir = process.env.AKIBUSINESS_BROWSER_ARTIFACTS || "/tmp";
+    fs.mkdirSync(dir, { recursive: true });
+    await currentPage
+      .screenshot({ path: path.join(dir, "rotas-failure.png"), fullPage: true })
+      .catch(() => {});
+    console.error(
+      await currentPage
+        .evaluate(() => ({
+          errors,
+          details: [...document.querySelectorAll("details")].map((d) => ({
+            open: d.open,
+            text: d.querySelector("summary")?.textContent,
+          })),
+        }))
+        .catch(() => null),
+    );
+  }
   await browser?.close();
   server?.close();
   process.exit(1);
