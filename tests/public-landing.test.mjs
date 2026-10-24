@@ -10,9 +10,9 @@ test("the public homepage and operations shell stay separate", () => {
   assert.match(publicPage, /<title>AkiBusiness \|/);
   assert.match(publicPage, /id="tools"/);
   assert.match(publicPage, /id="pricing"/);
-  assert.match(publicPage, /€24\.99/);
-  assert.match(publicPage, /€44\.99/);
-  assert.match(publicPage, /€64\.99/);
+  assert.match(publicPage, /€19\.99/);
+  assert.match(publicPage, /€48\.99/);
+  assert.match(publicPage, /€97\.99/);
   assert.match(publicPage, /href="\/login"/);
   assert.doesNotMatch(publicPage, /src="assets\/app-v32\.js/);
   assert.doesNotMatch(publicPage, /src="assets\/supabase\.js/);
@@ -61,8 +61,8 @@ test("public operating tools are exactly the twelve authoritative membership cat
     assert.ok(en.length > 0 && es.length > 0);
   }
   assert.match(page, /next eligible monthly rotation/);
-  assert.match(page, /€24\.99/);
-  assert.match(page, /€44\.99/);
-  assert.match(page, /€64\.99/);
+  assert.match(page, /€19\.99/);
+  assert.match(page, /€48\.99/);
+  assert.match(page, /€97\.99/);
   assert.doesNotMatch(page, /data-i18n="toolTogether"|data-i18n="toolReports"/);
 });
