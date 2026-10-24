@@ -2222,10 +2222,10 @@
             </summary>
             <nav class="suite-app-panel" aria-label="AkiSuite applications">
               <strong class="suite-app-heading">AkiSuite apps</strong>
-              <a href="${window.AkiSuiteNavigation.href("pasa", state.settings.locale)}"><img src="https://akipasa.com/pwa/akipasa-512.png" alt="" width="34" height="34"><span>AkiPasa</span></a>
-              <a href="${window.AkiSuiteNavigation.href("duermo", state.settings.locale)}"><img src="https://akipasa.com/brand/duermo-icon.png" alt="" width="34" height="34"><span>AkiDuermo</span></a>
-              <a href="${window.AkiSuiteNavigation.href("coches", state.settings.locale)}"><img src="https://akipasa.com/brand/conduzco-icon.svg" alt="" width="34" height="34"><span>AkiCoches</span></a>
-              <a href="${window.AkiSuiteNavigation.href("hq", state.settings.locale)}"><img src="https://akipasa.com/brand/hq-mark.svg" alt="" width="34" height="34"><span>AkiHQ</span></a>
+              <a href="${window.AkiSuiteNavigation.href("pasa", state.settings.locale)}"><img src="/assets/brand/v3/pasa.svg" alt="" width="34" height="34"><span>AkiPasa</span></a>
+              <a href="${window.AkiSuiteNavigation.href("duermo", state.settings.locale)}"><img src="/assets/brand/v3/duermo.svg" alt="" width="34" height="34"><span>AkiDuermo</span></a>
+              <a href="${window.AkiSuiteNavigation.href("coches", state.settings.locale)}"><img src="/assets/brand/v3/coches.svg" alt="" width="34" height="34"><span>AkiCoches</span></a>
+              <a href="${window.AkiSuiteNavigation.href("hq", state.settings.locale)}"><img src="/assets/brand/v3/hq.svg" alt="" width="34" height="34"><span>AkiHQ</span></a>
               <a href="${window.AkiSuiteNavigation.href("business", state.settings.locale)}" aria-current="page"><img src="assets/icons/icon.svg" alt="" width="34" height="34"><span>AkiBusiness</span><small>Current</small></a>
               ${window.AkiSuiteNavigation.referralCode() ? `<a href="${window.AkiSuiteNavigation.href("pasa", state.settings.locale, { path: "/referrals" })}">${state.settings.locale === "es" ? "Aplicar invitación de referido" : "Apply referral invitation"}</a>` : ""}
               <div class="suite-app-actions">

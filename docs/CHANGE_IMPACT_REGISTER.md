@@ -22,3 +22,18 @@ Workspace picker now rechecks crm_workspace_access and opens the native dashboar
 ### 2026-10-24 — Preserve concurrent staff rotas release
 
 Merged reviewed main 8fa3e279, retaining staff rotas, tool guides and existing operation gates. Resolved version-only overlaps by keeping source cache 144 and advancing paid cache to 146 and paid app asset to 49, beyond the separately released cache 145. Native account/pricing flows and the direct authorized workspace picker remain intact. Full combined operation/release and hosted journey checks are required.
+
+
+## 2026-10-25 | Shared icon family v3
+
+Owner-requested burgundy Coches (#3B101B) and space-grey HQ (#252830) tiles
+are synchronized across all five product selectors, favicons, Apple/PWA and
+mobile icon sources. Coches uses the current car-free mark; black artwork has
+a fine brand-colour edge for legibility. Pasa, Duermo and the purple AB geometry
+are preserved. Default dark canvases match the tiles; light and selected owner
+themes remain available. Versioned URLs and the static operating suite cache
+refresh remove stale selector artwork. Stable PWA IDs and app identifiers remain.
+No roles, links, data, billing, analytics, storage or provider configuration change.
+See AKISUITE_ICON_FAMILY.md for dependencies, checks, native rebuild limitations
+and source-only rollback. Local visual/asset validation and required CI are
+separate from exact-source production and signed native-device acceptance.
