@@ -1,0 +1,183 @@
+.rota-shell {
+  padding: clamp(12px, 2vw, 24px);
+  min-width: 0;
+  overflow: hidden;
+}
+.rota-shell p {
+  color: var(--text-muted);
+  line-height: 1.6;
+}
+.rota-heading,
+.rota-actions,
+.rota-filters,
+.rota-fields {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  align-items: end;
+}
+.rota-heading {
+  justify-content: space-between;
+  align-items: start;
+}
+.rota-heading > div:first-child {
+  flex: 1 1 280px;
+}
+.rota-actions {
+  margin: 14px 0;
+  align-items: center;
+}
+.rota-shell label {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+  font-size: 13px;
+}
+.rota-shell input,
+.rota-shell select,
+.rota-shell textarea {
+  font: inherit;
+  color: var(--text-primary, #e5e7eb);
+  background: var(--bg-input, #1b1b27);
+  border: 1px solid var(--border, #666);
+  border-radius: 8px;
+  min-height: 44px;
+  max-width: 100%;
+  padding: 9px;
+  box-sizing: border-box;
+}
+.rota-shell button {
+  min-height: 44px;
+}
+.rota-shell :focus-visible,
+.tool-guide :focus-visible {
+  outline: 3px solid #b299ff;
+  outline-offset: 3px;
+}
+.rota-shell input[type="checkbox"] {
+  min-height: 24px;
+  width: 24px;
+}
+.rota-shell .rota-check {
+  flex-direction: row;
+  align-items: center;
+}
+.rota-fields {
+  padding: 16px 0;
+  border-bottom: 1px solid var(--border, #666);
+}
+.rota-fields > label {
+  flex: 1 1 155px;
+}
+.rota-fields fieldset {
+  flex: 1 1 100%;
+  display: flex;
+  gap: 14px;
+  flex-wrap: wrap;
+  border: 1px solid var(--border, #666);
+}
+.rota-block {
+  padding: 16px 0;
+  border-top: 1px solid var(--border, #666);
+}
+.rota-block summary,
+.tool-guide summary {
+  cursor: pointer;
+  font-weight: 650;
+  min-height: 44px;
+  align-content: center;
+}
+.rota-scroll {
+  overflow: auto;
+  max-width: 100%;
+  margin: 18px 0;
+}
+.rota-scroll caption {
+  text-align: left;
+  padding: 12px;
+}
+.rota-grid {
+  min-width: 800px;
+}
+.rota-grid td {
+  min-width: 135px;
+  vertical-align: top;
+}
+.rota-shift {
+  display: block;
+  white-space: normal;
+  width: 100%;
+  text-align: left;
+  background: var(--bg-input, #222);
+  color: var(--text-primary, #eee);
+  border: 1px solid var(--border, #888);
+  border-left: 4px solid #b299ff;
+  border-radius: 5px;
+  margin-bottom: 5px;
+  padding: 8px;
+}
+.rota-shift small {
+  display: block;
+}
+.rota-error {
+  color: var(--danger, #ff9cac) !important;
+}
+.rota-empty {
+  padding: 30px 0;
+}
+.tool-guide {
+  margin-bottom: 14px;
+  padding: 10px 16px;
+}
+.tool-guide p {
+  line-height: 1.6;
+  color: var(--text-muted);
+}
+.tool-guide ol {
+  line-height: 1.9;
+  padding-left: 24px;
+}
+.tool-guide .action-btn {
+  min-height: 44px;
+}
+.tool-guide summary {
+  font-size: 14px;
+}
+.tool-guide label {
+  display: block;
+}
+.rota-shell {
+  --bg-input: var(--surface-2, #20202d);
+}
+html[data-theme="light"] .rota-shell {
+  --bg-input: #fff;
+  --text-primary: #1f2535;
+  --text-muted: #4a5266;
+  --border: #858b9a;
+  --danger: #a91f35;
+}
+html[data-theme="light"] .rota-shift {
+  background: #f5f3ff;
+  color: #20202d;
+}
+@media (max-width: 600px) {
+  .rota-filters > label,
+  .rota-fields > label {
+    flex: 1 1 45%;
+    width: 45%;
+  }
+  .rota-actions button {
+    flex: 1 1 140px;
+  }
+  .rota-heading .rota-actions {
+    width: 100%;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .rota-shell *,
+  .tool-guide * {
+    animation: none !important;
+    transition: none !important;
+  }
+}
