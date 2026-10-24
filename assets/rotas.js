@@ -594,7 +594,7 @@
           )
           .join("")}</div>`;
       }
-      return `<dialog class="rp-drawer" aria-labelledby="rp-drawer-title" data-rota-panel="${panel}"><header><div><span class="rp-eyebrow">${E(data.settings.title)}</span><h2 id="rp-drawer-title">${E(title)}</h2></div>${ctl(t.close, "close-panel", "close", "", "rp-icon-only")}</header>${body}</dialog>`;
+      return `<dialog class="rp-drawer" aria-labelledby="rp-drawer-title" data-rota-panel="${panel}"><header><div><span class="rp-eyebrow">${E(data.settings.title)}</span><h2 id="rp-drawer-title">${E(title)}</h2></div>${ctl(t.close, "close-panel", "close", "", "rp-icon-only")}</header>${error ? `<div class="rp-alert" role="alert">${ico("alert")}${E(error)}</div>` : ""}${body}</dialog>`;
     }
     function shiftCard(s, mobile = false) {
       const p = data.staff.find((p) => p.id === s.staffId),
@@ -672,99 +672,105 @@
       return structuredClone(data);
     }
     async function submit(form) {
-      const kind = form.dataset.rotaForm,
-        values = Object.fromEntries(new FormData(form)),
-        next = editData();
-      if (kind === "linked") {
-        const m = members.find((m) => m.profileId === values.profileId);
-        if (!m) throw Error(w().noTeam);
-        next.staff.push({
-          id: root.crypto.randomUUID(),
-          profileId: m.profileId,
-          name: m.name,
-          department: "",
-          weeklyHours: 40,
-        });
-      }
-      if (kind === "staff")
-        next.staff.push({
-          id: root.crypto.randomUUID(),
-          profileId: null,
-          name: values.name.trim(),
-          department: values.department,
-          weeklyHours: Number(values.weeklyHours),
-        });
-      if (kind === "staff-edit") {
-        const p = next.staff.find((p) => p.id === values.id);
-        if (!p) throw Error("Staff no longer exists.");
-        Object.assign(p, {
-          name: values.name.trim(),
-          department: values.department,
-          weeklyHours: Number(values.weeklyHours),
-        });
-      }
-      if (kind === "shift") {
-        const s = {
-          id: values.id || root.crypto.randomUUID(),
-          staffId: values.staffId,
-          date: values.date,
-          endDate: values.endDate,
-          start: values.start,
-          end: values.end,
-          breakMinutes: Number(values.breakMinutes),
-          role: values.role,
-          location: values.location,
-          notes: values.notes,
-        };
-        if (values.id) {
-          const index = next.shifts.findIndex((s) => s.id === values.id);
-          if (index < 0) throw Error("Shift no longer exists.");
-          next.shifts[index] = s;
-        } else {
-          const weekdays = new FormData(form).getAll("weekday").map(Number);
-          if (!weekdays.length) throw Error(w().weekdays);
-          next.shifts.push(
-            ...C.repeat(s, {
-              through: values.through,
-              work: Number(values.work),
-              rest: Number(values.rest),
-              weekdays,
-            }),
-          );
-        }
-        if (values.saveTemplate) {
-          if (!values.templateName.trim()) throw Error(w().templateName);
-          next.templates.push({
+      try {
+        const kind = form.dataset.rotaForm,
+          values = Object.fromEntries(new FormData(form)),
+          next = editData();
+        if (kind === "linked") {
+          const m = members.find((m) => m.profileId === values.profileId);
+          if (!m) throw Error(w().noTeam);
+          next.staff.push({
             id: root.crypto.randomUUID(),
-            name: values.templateName.trim(),
-            start: s.start,
-            end: s.end,
-            overnight: s.endDate !== s.date,
-            breakMinutes: s.breakMinutes,
-            role: s.role,
-            location: s.location,
+            profileId: m.profileId,
+            name: m.name,
+            department: "",
+            weeklyHours: 40,
           });
         }
+        if (kind === "staff")
+          next.staff.push({
+            id: root.crypto.randomUUID(),
+            profileId: null,
+            name: values.name.trim(),
+            department: values.department,
+            weeklyHours: Number(values.weeklyHours),
+          });
+        if (kind === "staff-edit") {
+          const p = next.staff.find((p) => p.id === values.id);
+          if (!p) throw Error("Staff no longer exists.");
+          Object.assign(p, {
+            name: values.name.trim(),
+            department: values.department,
+            weeklyHours: Number(values.weeklyHours),
+          });
+        }
+        if (kind === "shift") {
+          const s = {
+            id: values.id || root.crypto.randomUUID(),
+            staffId: values.staffId,
+            date: values.date,
+            endDate: values.endDate,
+            start: values.start,
+            end: values.end,
+            breakMinutes: Number(values.breakMinutes),
+            role: values.role,
+            location: values.location,
+            notes: values.notes,
+          };
+          if (values.id) {
+            const index = next.shifts.findIndex((s) => s.id === values.id);
+            if (index < 0) throw Error("Shift no longer exists.");
+            next.shifts[index] = s;
+          } else {
+            const weekdays = new FormData(form).getAll("weekday").map(Number);
+            if (!weekdays.length) throw Error(w().weekdays);
+            next.shifts.push(
+              ...C.repeat(s, {
+                through: values.through,
+                work: Number(values.work),
+                rest: Number(values.rest),
+                weekdays,
+              }),
+            );
+          }
+          if (values.saveTemplate) {
+            if (!values.templateName.trim()) throw Error(w().templateName);
+            next.templates.push({
+              id: root.crypto.randomUUID(),
+              name: values.templateName.trim(),
+              start: s.start,
+              end: s.end,
+              overnight: s.endDate !== s.date,
+              breakMinutes: s.breakMinutes,
+              role: s.role,
+              location: s.location,
+            });
+          }
+        }
+        if (kind === "absence")
+          next.absences.push({
+            id: root.crypto.randomUUID(),
+            staffId: values.staffId,
+            from: values.from,
+            through: values.through,
+            reason: values.reason,
+          });
+        if (kind === "settings")
+          next.settings = {
+            title: values.title.trim(),
+            timezone: values.timezone.trim(),
+            timeFormat: values.timeFormat,
+          };
+        await save(next);
+        editing = "";
+        if (kind !== "linked" && kind !== "staff" && kind !== "staff-edit")
+          panel = "";
+        repaint();
+      } catch (e) {
+        error = e.message;
+        repaint();
+        throw e;
       }
-      if (kind === "absence")
-        next.absences.push({
-          id: root.crypto.randomUUID(),
-          staffId: values.staffId,
-          from: values.from,
-          through: values.through,
-          reason: values.reason,
-        });
-      if (kind === "settings")
-        next.settings = {
-          title: values.title.trim(),
-          timezone: values.timezone.trim(),
-          timeFormat: values.timeFormat,
-        };
-      await save(next);
-      editing = "";
-      if (kind !== "linked" && kind !== "staff" && kind !== "staff-edit")
-        panel = "";
-      repaint();
     }
     function source() {
       const value = exportMode === "published" ? published : data;
@@ -781,7 +787,15 @@
       ) {
         if (dirty && action !== "close-panel") throw Error(w().unsaved);
         if (action === "close-panel") {
-          if (dirty && !root.confirm(w().refreshWarning)) return;
+          if (
+            dirty &&
+            !root.confirm(
+              lang() === "es"
+                ? "¿Descartar los cambios sin guardar?"
+                : "Discard unsaved changes?",
+            )
+          )
+            return;
           dirty = false;
           panel = "";
           editing = "";

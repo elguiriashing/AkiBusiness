@@ -157,6 +157,13 @@ const close = async (page) => {
           await shift.locator('[name="endDate"]').inputValue(),
           "2026-10-25",
         );
+        await shift.locator('[name="breakMinutes"]').fill("600");
+        await shift.locator('[type="submit"]').click();
+        await page.locator('.rp-drawer [role="alert"]').waitFor();
+        assert.equal(
+          await shift.locator('[name="breakMinutes"]').inputValue(),
+          "600",
+        );
         await shift.locator('[name="breakMinutes"]').fill("30");
         await shift.locator('[name="role"]').fill("Bar service");
         await shift.locator(".rp-advanced").last().locator("summary").click();
