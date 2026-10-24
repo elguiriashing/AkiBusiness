@@ -27,7 +27,11 @@ jobs:
       - uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: "9.5.0"
-      - run: gradle --no-daemon test lint bundleRelease assembleDebug assembleRelease
+      - name: Generate pinned Gradle wrapper
+        run: |
+          gradle --no-daemon wrapper --gradle-version 9.5.0 --distribution-type bin
+          printf 'Repository: %s\nCI source commit: %s\nCI run: %s/%s/actions/runs/%s\n' "$GITHUB_REPOSITORY" "$(git rev-parse HEAD)" "$GITHUB_SERVER_URL" "$GITHUB_REPOSITORY" "$GITHUB_RUN_ID" > BUILD-SOURCE.txt
+      - run: ./gradlew --no-daemon test lint bundleRelease assembleDebug assembleRelease
       - uses: actions/upload-artifact@v4
         with:
           name: akibusiness-unsigned-aab
@@ -37,5 +41,18 @@ jobs:
             Android/app/build/outputs/apk/release/*.apk
             Android/app/build/reports/lint-results*.html
             Android/app/build/test-results/testDebugUnitTest/*.xml
+          if-no-files-found: error
+      - name: Upload Android Studio source project
+        uses: actions/upload-artifact@v4
+        with:
+          name: akibusiness-android-studio-project
+          path: |
+            Android/**
+            !Android/**/build/**
+            !Android/.gradle/**
+            !Android/.gitignore
+            !Android/local.properties
+            !Android/**/*.jks
+            !Android/**/*.keystore
           if-no-files-found: error
 
