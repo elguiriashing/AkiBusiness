@@ -16,7 +16,7 @@ test("the public homepage and operations shell stay separate", () => {
   assert.match(publicPage, /href="\/login"/);
   assert.doesNotMatch(publicPage, /src="assets\/app-v32\.js/);
   assert.doesNotMatch(publicPage, /src="assets\/supabase\.js/);
-  assert.match(authPage, /src="assets\/app-v32\.js\?v=44"/);
+  assert.match(authPage, /src="assets\/app-v32\.js\?v=45"/);
   assert.match(authPage, /<div id="app"/);
   assert.doesNotMatch(rewrites, /^\/login\/?\s/m);
   assert.match(rewrites, /^\/app \/login 302$/m);

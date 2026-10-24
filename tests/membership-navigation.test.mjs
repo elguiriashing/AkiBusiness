@@ -30,8 +30,8 @@ test("the membership navigation bundle has a fresh and consistent offline cache 
   assert.match(sw, /\.\/membership\.html/);
   assert.match(sw, /\.\/assets\/membership\.js\?v=6/);
   assert.match(sw, /\.\/assets\/membership\.css\?v=2/);
-  assert.match(html, /app-v32\.js\?v=44/);
-  assert.match(sw, /app-v32\.js\?v=44/);
+  assert.match(html, /app-v32\.js\?v=45/);
+  assert.match(sw, /app-v32\.js\?v=45/);
   const cache = sw.match(/^const CACHE = "akihq-v(\d+)";/m);
   assert.ok(cache, "Service-worker cache must carry an explicit release version");
   assert.ok(Number(cache[1]) >= 120, "Membership navigation must not reuse a pre-navigation cache");

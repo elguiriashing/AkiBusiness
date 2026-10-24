@@ -7520,7 +7520,7 @@
     const rotaAction = event.target.closest("[data-rota-action]");
     if (rotaAction) {
       if (ui.route !== "rotas" || !canUseRoute("rotas")) return;
-      getRotas().action(rotaAction.dataset.rotaAction,rotaAction.dataset.id).catch(error => toast("Rotas",error.message,"danger"));
+      getRotas().action(rotaAction.dataset.rotaAction,rotaAction.dataset.id,rotaAction.dataset).catch(error => toast("Rotas",error.message,"danger"));
       return;
     }
     const target = event.target.closest("[data-action]");
@@ -7560,6 +7560,23 @@
       console.error("Form submission failed:", error);
       toast("Change not saved", error?.message || "The database rejected the change.", "danger");
     });
+  });
+  document.addEventListener("cancel", event => {
+    if(event.target.matches?.('.rp-drawer')){event.preventDefault();getRotas().action('close-panel').catch(error=>toast("Rotas",error.message,"danger"));}
+  },true);
+  document.addEventListener("dragstart",event=>{
+    const shift=event.target.closest?.('[data-rota-drag]');if(!shift)return;
+    event.stopImmediatePropagation();event.dataTransfer.setData('application/x-aki-rota',shift.dataset.rotaDrag);event.dataTransfer.effectAllowed='move';
+  });
+  document.addEventListener("dragover",event=>{
+    const cell=event.target.closest?.('[data-rota-drop]');if(!cell||!event.dataTransfer.types.includes('application/x-aki-rota'))return;
+    event.preventDefault();event.stopImmediatePropagation();cell.classList.add('rp-drop-active');event.dataTransfer.dropEffect='move';
+  });
+  document.addEventListener("dragleave",event=>event.target.closest?.('[data-rota-drop]')?.classList.remove('rp-drop-active'));
+  document.addEventListener("drop",event=>{
+    const cell=event.target.closest?.('[data-rota-drop]'),id=event.dataTransfer.getData('application/x-aki-rota');if(!cell||!id)return;
+    event.preventDefault();event.stopImmediatePropagation();cell.classList.remove('rp-drop-active');
+    if(ui.route==='rotas'&&canUseRoute('rotas'))getRotas().moveShift(id,cell.dataset.rotaDrop,cell.dataset.date).catch(error=>toast('Rotas',error.message,'danger'));
   });
   document.addEventListener("dragstart", handleDragStart);
   document.addEventListener("dragover", handleDragOver);
