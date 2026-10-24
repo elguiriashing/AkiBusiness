@@ -5,6 +5,33 @@ import { tmpdir } from 'node:os';
 import path from 'node:path';
 import vm from 'node:vm';
 import { buildProductRelease } from '../tools/build-product-release.mjs';
+import { productionProject, verifyProductionTarget } from '../tools/verify-production-target.mjs';
+
+test('production preflight accepts the canonical self-owned project and rejects retired or drifted targets', () => {
+  const project = {
+    name: productionProject, domains: ['akibusiness.com', 'operations.akipasa.com'], production_branch: 'main',
+    source: { type: 'github', config: { owner: 'elguiriashing', repo_name: 'AkiBusiness', production_branch: 'main' } },
+  };
+  const stamp = { sourceCommit: 'verified-commit', sourceTreeDirty: false, product: 'AkiBusiness', roleSwap: true, canonicalOrigin: 'https://akibusiness.com' };
+  assert.doesNotThrow(() => verifyProductionTarget(project, stamp, 'verified-commit'));
+  for (const change of [
+    value => { value.name = 'akibusiness-operations-preview'; },
+    value => { value.domains = ['preview.pages.dev']; },
+    value => { value.production_branch = 'migration/old'; },
+    value => { value.source.config.owner = 'another-owner'; },
+    value => { value.source.config.repo_name = 'akihq'; },
+    value => { value.source.config.production_branch = 'migration/old'; },
+    value => { delete value.source; },
+  ]) {
+    const drifted = structuredClone(project);
+    change(drifted);
+    assert.throws(() => verifyProductionTarget(drifted, stamp, 'verified-commit'));
+  }
+  for (const change of [{ sourceCommit: 'older-commit' }, { sourceTreeDirty: true }, { product: 'AkiHQ' }, { roleSwap: false }, { canonicalOrigin: 'https://crm.akipasa.com' }]) {
+    assert.throws(() => verifyProductionTarget(project, { ...stamp, ...change }, 'verified-commit'));
+  }
+  assert.throws(() => verifyProductionTarget(project, stamp, ''));
+});
 
 for (const enabled of [false, true]) {
   test(`isolated ${enabled ? 'AkiBusiness' : 'legacy AkiHQ'} release preserves operations and initiating-origin authentication`, async () => {

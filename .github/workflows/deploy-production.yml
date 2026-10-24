@@ -13,6 +13,7 @@ concurrency:
 
 jobs:
   package:
+    if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     timeout-minutes: 25
     steps:
@@ -51,7 +52,7 @@ jobs:
           assert.match(read("login.html"), /<title>AkiBusiness<\/title>/);
           assert.doesNotMatch(read("_redirects"), /^\/login\/?\s/m);
           assert.match(read("_redirects"), /^\/app \/login 302/m);
-          assert.match(read("sw.js"), /akihq-v143/);
+          assert.match(read("sw.js"), /akihq-v144/);
           NODE
       - uses: actions/upload-artifact@v4
         with:
@@ -85,31 +86,25 @@ jobs:
           node --input-type=module <<'NODE'
           import assert from "node:assert/strict";
           import { readFileSync } from "node:fs";
+          import { productionProject, verifyProductionTarget } from "./tools/verify-production-target.mjs";
           const token = process.env.CLOUDFLARE_API_TOKEN;
           assert.ok(token, "Missing CLOUDFLARE_API_TOKEN GitHub Actions secret; production not changed");
           const account = process.env.CLOUDFLARE_ACCOUNT_ID;
-          const res = await fetch("https://api.cloudflare.com/client/v4/accounts/" + account + "/pages/projects/akibusiness-operations-preview", {
+          const res = await fetch("https://api.cloudflare.com/client/v4/accounts/" + account + "/pages/projects/" + productionProject, {
             headers: { Authorization: "Bearer " + token }, signal: AbortSignal.timeout(20000)
           });
           const payload = await res.json();
           assert.ok(res.ok && payload.success, "Unable to verify the existing AkiBusiness Pages project");
           const project = payload.result;
-          assert.equal(project.name, "akibusiness-operations-preview");
-          assert.ok(project.domains?.includes("akibusiness.com"), "Refusing to deploy: akibusiness.com not attached to project");
-          assert.equal(project.production_branch, "main", "Refusing deployment to non-main production branch");
           const stamp = JSON.parse(readFileSync("dist-product/release-source.json", "utf8"));
-          assert.equal(stamp.sourceCommit, process.env.GITHUB_SHA);
-          assert.equal(stamp.product, "AkiBusiness");
+          verifyProductionTarget(project, stamp, process.env.GITHUB_SHA);
           console.log("Verified akibusiness.com Pages target and source " + stamp.sourceCommit);
-          if (project.source?.config?.repo_name !== "AkiBusiness") {
-            console.warn("Pages Git source differs from AkiBusiness; direct upload will not reconfigure automatic Git deployments.");
-          }
           NODE
       - name: Install pinned Wrangler
         run: npm ci --prefix cloudflare
       - name: Publish exact main build to existing AkiBusiness Pages
         run: |
-          ./cloudflare/node_modules/.bin/wrangler pages deploy dist-product --project-name akibusiness-operations-preview --branch main --commit-hash "$GITHUB_SHA" --commit-message "AkiBusiness landing and login release"
+          ./cloudflare/node_modules/.bin/wrangler pages deploy dist-product --project-name akibusiness-selfowned-staging --branch main --commit-hash "$GITHUB_SHA" --commit-message "AkiBusiness verified production release"
       - name: Verify production home, login and stamped source
         run: |
           node --input-type=module <<'NODE'
