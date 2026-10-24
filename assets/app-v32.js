@@ -2157,6 +2157,7 @@
               <span class="nav-icon">${icon("settings")}</span>
               <span class="nav-text">${escapeHtml(t("settings"))}</span>
             </button>
+            <a class="nav-item" href="/account?locale=${state.settings?.locale === "es" ? "es" : "en"}" title="${state.settings?.locale === "es" ? "Mi cuenta AkiSuite" : "My AkiSuite account"}">Account</a>
             <a class="nav-item" href="/membership.html?locale=${state.settings?.locale === "es" ? "es" : "en"}" title="${state.settings?.locale === "es" ? "Ver planes de AkiBusiness" : "View AkiBusiness plans"}" style="text-decoration:none;">
               <span class="nav-icon">${icon("settings")}</span>
               <span class="nav-text">${state.settings?.locale === "es" ? "Planes AkiBusiness" : "AkiBusiness plans"}</span>
@@ -8089,6 +8090,19 @@
   async function bootWithSession(session) {
     const client = getSupabaseClient();
     if (!session?.user || !client) { renderLoginScreen(); return; }
+    // Explicit native account intent survives the existing approved /login OAuth callback.
+    try {
+      const raw = sessionStorage.getItem("akibusiness:account-return");
+      sessionStorage.removeItem("akibusiness:account-return");
+      if (raw) {
+        const intent = JSON.parse(raw), account = new URL("/account", window.location.origin);
+        account.searchParams.set("locale", intent.locale === "es" ? "es" : "en");
+        if (["basico", "standard", "pro"].includes(intent.tier)) account.searchParams.set("tier", intent.tier);
+        if (typeof intent.workspace === "string" && /^[a-z0-9][a-z0-9_-]{2,79}$/.test(intent.workspace)) account.searchParams.set("workspace", intent.workspace);
+        window.location.assign(account.toString());
+        return;
+      }
+    } catch { /* Invalid local navigation context grants no access. */ }
 
     if (window.AKIHQ_CONFIG?.ONBOARDING_SCHEMA_READY === true) {
       try {
@@ -8140,9 +8154,12 @@
     }
     // The database workspace membership and tool permissions remain authoritative.
     if (!selectedWorkspace) {
-      try { await client.auth.signOut({ scope: "local" }); } catch {}
-      authUser = null; authRole = null;
-      renderAccessDenied(session.user?.email);
+      // A shared account without a workspace starts native onboarding, retaining its session.
+      const account = new URL("/account", window.location.origin);
+      account.searchParams.set("locale", state.settings.locale === "es" ? "es" : "en");
+      const tier = initialSearchParams.getAll("tier");
+      if (tier.length === 1 && ["basico", "standard", "pro"].includes(tier[0])) account.searchParams.set("tier", tier[0]);
+      window.location.assign(account.toString());
       return;
     }
     authUser = session.user;

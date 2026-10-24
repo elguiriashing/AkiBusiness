@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="en" data-theme="dark">
+  <head>
+    <meta charset="utf-8" />
+    <base href="/" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <meta name="robots" content="noindex,nofollow" />
+    <title>Your account · AkiBusiness</title>
+    <link rel="icon" href="assets/icons/icon.svg" />
+    <link rel="stylesheet" href="assets/account.css?v=1" />
+  </head>
+  <body>
+    <main>
+      <header>
+        <a id="brand" href="/">AkiBusiness</a>
+        <nav>
+          <a id="dashboard" href="/login">Dashboard</a
+          ><a id="plans" href="/membership">Plans</a
+          ><button id="language" type="button">ES</button>
+        </nav>
+      </header>
+      <div id="account" aria-live="polite">
+        <p role="status">Loading your account…</p>
+      </div>
+    </main>
+    <script src="config.js"></script>
+    <script src="assets/supabase.js"></script>
+    <script src="assets/suite-navigation.js?v=2"></script>
+    <script src="assets/account-eligibility.js?v=3"></script>
+    <script src="assets/account.js?v=1"></script>
+  </body>
+</html>

@@ -4,7 +4,7 @@ import { fileURLToPath } from 'node:url';
 import { execFileSync } from 'node:child_process';
 
 const root = fileURLToPath(new URL('../', import.meta.url));
-const files = ['assets', 'index.html', 'login.html', '_redirects', 'membership.html', 'toolbox.html', 'manifest.webmanifest', 'sw.js', 'config.js', '_headers', 'LICENSE', 'NOTICE', 'VERSION'];
+const files = ['assets', 'index.html', 'login.html', '_redirects', 'membership.html', 'account.html', 'toolbox.html', 'manifest.webmanifest', 'sw.js', 'config.js', '_headers', 'LICENSE', 'NOTICE', 'VERSION'];
 
 // Produce an isolated static Pages artifact. Source files, auth contracts, RPCs,
 // storage keys and provider resource names stay stable across the role swap.

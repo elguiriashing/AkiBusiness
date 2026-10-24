@@ -74,7 +74,10 @@
     document.getElementById("billing-note").textContent = text.monthlyNote;
     const catalogue = document.getElementById("tool-catalogue");
     catalogue.replaceChildren(...tools.map(([key, en, es]) => { const node = document.createElement("li"); node.dataset.tool = key; node.textContent = language === "es" ? es : en; return node; }));
-    const review = new URL(window.AkiSuiteNavigation.href("pasa", language, { path: "/account/subscription/operations" }));
+    const review = new URL("/account", location.origin);
+    review.searchParams.set("locale", language);
+    const ref = window.AkiSuiteNavigation.referralCode();
+    if (ref) review.searchParams.set("ref", ref);
     if (workspace) review.searchParams.set("workspace", workspace);
     document.getElementById("operations-subscription-link").href = review.toString();
     document.querySelectorAll("[data-tier-cta]").forEach(link => { const target = new URL(review); target.searchParams.set("tier", link.dataset.tierCta); link.href = target.toString(); });
