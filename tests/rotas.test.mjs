@@ -233,3 +233,18 @@ test("a permission denial clears previously loaded staff, drafts and export acce
   assert(html.includes("People access required"));
   t.c.dispose();
 });
+
+test("dragging preserves overnight duration and reload clears stale undo history", async () => {
+  const t = await controller();
+  await t.c.load();
+  await t.c.moveShift("s1", "p", "2026-10-23");
+  const sent = t.calls.find((c) => c.name === "crm_rota_save").args.p_data
+    .shifts[0];
+  assert.equal(sent.date, "2026-10-23");
+  assert.equal(sent.endDate, "2026-10-24");
+  assert.equal(C.duration(sent), 7.5);
+  assert(t.c.render().includes('data-rota-action="undo-move"'));
+  await t.c.load();
+  assert(!t.c.render().includes('data-rota-action="undo-move"'));
+  t.c.dispose();
+});
