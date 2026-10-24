@@ -28,7 +28,7 @@ const server = http.createServer((req, res) => {
         ? "text/javascript"
         : file.endsWith(".css")
           ? "text/css"
-          : "text/html",
+          : file.endsWith(".svg") ? "image/svg+xml" : "text/html",
     );
     res.end(fs.readFileSync(target));
   } catch {
@@ -43,6 +43,7 @@ const server = http.createServer((req, res) => {
   try {
     browser = await chromium.launch({
       headless: true,
+      executablePath: process.env.AKIBUSINESS_CHROMIUM_PATH || undefined,
       args: ["--no-sandbox", "--disable-dev-shm-usage"],
     });
     for (const locale of ["en", "es"])
@@ -198,6 +199,7 @@ const server = http.createServer((req, res) => {
             ).searchParams.get("workspace"),
             "private-fixture",
           );
+          await page.locator('[data-account-nav="profile"]').click();
           await page
             .getByLabel(locale === "es" ? "Nombre" : "Display name", {
               exact: true,
@@ -217,6 +219,7 @@ const server = http.createServer((req, res) => {
             await page.evaluate(() => window.__mutations[0].display_name),
             "Updated fixture",
           );
+          await page.locator('[data-account-nav="workspace"]').click();
           assert.ok(
             await page
               .getByText(
@@ -227,6 +230,24 @@ const server = http.createServer((req, res) => {
               )
               .isVisible(),
           );
+          await page.locator('[data-account-nav="workspace"]').focus();
+          await page.keyboard.press("ArrowRight");
+          assert.equal(await page.locator('[data-account-nav="membership"]').getAttribute("aria-selected"), "true");
+          await page.locator('[data-account-nav="profile"]').click();
+          const draft = page.getByLabel(locale === "es" ? "Nombre" : "Display name", {exact: true});
+          await draft.fill("Unsaved draft");
+          await page.locator("#theme").click();
+          assert.equal(await draft.inputValue(), "Unsaved draft");
+          await page.locator("#language").click();
+          assert.equal(await page.locator('[name="displayName"]').inputValue(), "Unsaved draft");
+          await page.locator("#language").click();
+          await page.locator("#theme").click();
+          for (const section of ["workspace", "membership", "profile", "security"]) {
+            await page.locator(`[data-account-nav="${section}"]`).click();
+            assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1));
+          }
+          await page.locator('[data-account-nav="workspace"]').click();
+          assert.equal(await page.locator("#brand img").evaluate(img => img.complete && img.naturalWidth > 0), true);
           await page.screenshot({
             path: path.join(output, `${locale}-${theme}-${viewport.width}.png`),
             fullPage: true,
