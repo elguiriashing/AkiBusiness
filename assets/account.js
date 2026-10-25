@@ -127,6 +127,7 @@
       ? window.supabase?.createClient(
           config.SUPABASE_URL,
           config.SUPABASE_ANON_KEY,
+          { auth: { flowType: "pkce" } },
         )
       : null;
   const message = (value, error = false) => {
@@ -277,7 +278,7 @@
         );
         const { error } = await client.auth.signInWithOAuth({
           provider: "google",
-          options: { redirectTo: location.origin + "/login" },
+          options: { redirectTo: window.AkiBusinessNativeAuth?.callbackUrl() || location.origin + "/login" },
         });
         if (error) throw error;
       } catch {

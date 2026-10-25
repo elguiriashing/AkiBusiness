@@ -9,6 +9,10 @@
 /sw.js
   Cache-Control: no-cache
 
+/login
+  Cache-Control: no-store
+  Referrer-Policy: no-referrer
+
 /config.js
   Cache-Control: no-cache
 

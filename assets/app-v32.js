@@ -1,5 +1,6 @@
 (() => {
   "use strict";
+  if (window.AkiBusinessNativeAuth?.handoff) return;
 
   const APP_VERSION = "0.1.0";
   const initialRouteParts = location.hash.replace(/^#\/?/, "").split("/").filter(Boolean);
@@ -403,7 +404,7 @@
       const createFn = typeof sbObj.createClient === "function" ? sbObj.createClient : (typeof sbObj === "function" ? sbObj : null);
       if (createFn) {
         try {
-          window._sbClientInstance = createFn(url, key);
+          window._sbClientInstance = createFn(url, key, { auth: { flowType: "pkce" } });
           return window._sbClientInstance;
         } catch (e) {
           console.error("Supabase initialization error:", e);
@@ -7823,7 +7824,7 @@
         const span = btn.querySelector("span");
         if (span) span.textContent = "Redirecting to Google…";
       }
-      const redirectTarget = window.location.origin + "/login";
+      const redirectTarget = window.AkiBusinessNativeAuth?.callbackUrl() || window.location.origin + "/login";
       const { error } = await client.auth.signInWithOAuth({
         provider: "google",
         options: {
