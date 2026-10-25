@@ -56,7 +56,7 @@
     footer: "Regresando de forma segura a tu aplicación AkiSuite"
   } : {
     title: "Secure sign-in",
-    description: "You’re signed in with your provider. Let’s finish opening your app.",
+    description: "You’ve finished with your provider. Let’s return to the app to complete sign-in.",
     count: "Returning in", unit: "seconds", button: "Open AkiBusiness now",
     help: "App not opening? Tap the button above. Make sure the app is installed on this device.",
     footer: "Securely returning to your AkiSuite app"
