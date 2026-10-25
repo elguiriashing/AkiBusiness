@@ -52,3 +52,13 @@ Each repository carries only its affected subset. No schema, feature activation,
 provider setting, customer record or native signing change. Source revert is the
 rollback. Full source, browser/CI and exact production checks remain required;
 device/authenticated acceptance must not be inferred from fixtures.
+
+
+## 2026-10-25 | Login stylesheet cache continuity
+
+Live release verification found returning browsers could reuse the previous
+version of the brand stylesheet under its unchanged asset URL. Advance the
+login stylesheet revision to v2 so the existing home/language/theme controls
+receive their 44px target and surface styling. Applies to EN/ES guest login,
+light/dark, desktop/mobile. No auth, billing, tenant or data changes. Rollback
+is a source revert; exact-source production visual verification follows CI.
