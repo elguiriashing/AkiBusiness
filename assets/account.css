@@ -339,7 +339,7 @@
 .account-page textarea:hover {
   border-color: var(--accent);
 }
-.account-page button,
+.account-page button:not(.aks-selector__card):not(.aks-selector__nav),
 .account-page .button {
   font: inherit;
   font-size: 12px;
@@ -362,21 +362,21 @@
     border-color 0.15s,
     transform 0.15s;
 }
-.account-page button:hover,
+.account-page button:not(.aks-selector__card):not(.aks-selector__nav):hover,
 .account-page .button:hover {
   border-color: var(--accent);
 }
-.account-page button:active,
+.account-page button:not(.aks-selector__card):not(.aks-selector__nav):active,
 .account-page .button:active {
   transform: translateY(1px);
 }
-.account-page button[type="submit"],
+.account-page button:not(.aks-selector__card):not(.aks-selector__nav)[type="submit"],
 .account-page .primary {
   background: var(--button);
   border-color: var(--button);
   color: var(--button-ink);
 }
-.account-page button:disabled {
+.account-page button:not(.aks-selector__card):not(.aks-selector__nav):disabled {
   opacity: 0.5;
   cursor: default;
   transform: none;
@@ -1015,7 +1015,7 @@
     width: 36px;
     height: 36px;
   }
-  .account-page button,
+  .account-page button:not(.aks-selector__card):not(.aks-selector__nav),
   .account-page .button {
     font-size: 12px;
   }
@@ -1026,4 +1026,12 @@
     transition: none !important;
     scroll-behavior: auto !important;
   }
+}
+
+@media (max-width: 800px) {
+  .account-page .auth-layout { display: flex; flex-direction: column; }
+  .account-page .auth-intro { display: contents; }
+  .account-page .auth-intro > :not(.aki-workspace-picker) { order: 1; }
+  .account-page .auth-forms { order: 2; }
+  .account-page .auth-intro > .aki-workspace-picker { order: 3; }
 }

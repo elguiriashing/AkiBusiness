@@ -66,7 +66,7 @@
       name.textContent = item.label;subtitle.textContent = item.id === current ? (es ? "Espacio actual" : "Current workspace") : "";count.textContent = `${index + 1} / ${products.length}`;
       const target = element(item.id === current ? "span" : "a", item.id === current ? "aki-workspace-picker__current" : "", item.id === current ? `${es ? "Estás en" : "You’re in"} ${item.label}` : `${es ? "Abrir" : "Open"} ${item.label} ↗`);
       if (item.id !== current) target.href = root.AkiSuiteNavigation.href(item.id, locale, {path:item.path});action.replaceChildren(target);
-      if (focus) buttons[selected].focus();
+      if (focus) buttons[selected].focus({preventScroll:true});
     }
     choose(selected);
   }
