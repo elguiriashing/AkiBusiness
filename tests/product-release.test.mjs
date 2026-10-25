@@ -57,6 +57,13 @@ for (const enabled of [false, true]) {
       else assert.match(source, /void client\.rpc\("queue_suite_portal_welcome"/);
       // Native clean /login and one-hop /app redirect preserve auth without an SPA wildcard.
       const rewrites = await read('_redirects');
+      const privacy = await read('privacy.html');
+      assert.match(privacy, /id="en"/);
+      assert.match(privacy, /id="es"/);
+      assert.match(privacy, /https:\/\/akipasa.com\/en\/account-deletion/);
+      assert.match(privacy, /https:\/\/akipasa.com\/es\/account-deletion/);
+      assert.match(privacy, /not a confirmed maximum/);
+      assert.match(privacy, /no un máximo confirmado/);
       assert.doesNotMatch(rewrites, /^\/login\/?\s/m);
       assert.match(rewrites, /^\/app \/login 302$/m);
       assert.doesNotMatch(rewrites, /\/\* \/index\.html/);
