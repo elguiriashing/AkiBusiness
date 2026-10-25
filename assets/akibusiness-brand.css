@@ -46,3 +46,6 @@ html[data-theme="light"] {
 }
 :focus-visible {outline-color:var(--accent)}
 ::selection {background:#ac83ff;color:#11142e}
+
+.suite-login-utilities{display:flex;align-items:center;justify-content:flex-end;flex-wrap:wrap;gap:8px;margin-bottom:18px}
+.suite-login-utilities :is(a,button){display:inline-flex;align-items:center;justify-content:center;min-height:44px;min-width:44px;padding:8px 12px;border:1px solid var(--border);border-radius:12px;background:var(--surface);color:var(--text);font:inherit;text-decoration:none;cursor:pointer}

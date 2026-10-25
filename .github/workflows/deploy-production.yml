@@ -48,7 +48,7 @@ jobs:
           assert.match(read("login.html"), /<title>AkiBusiness<\/title>/);
           assert.doesNotMatch(read("_redirects"), /^\/login\/?\s/m);
           assert.match(read("_redirects"), /^\/app \/login 302/m);
-          assert.match(read("sw.js"), /akihq-v151/);
+          assert.match(read("sw.js"), /akihq-v153/);
           NODE
       - uses: actions/upload-artifact@v4
         with:
