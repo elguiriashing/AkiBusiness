@@ -1,0 +1,58 @@
+name: AkiBusiness Android bundle
+on:
+  pull_request:
+    paths: ["Android/**", ".github/workflows/android-play.yml"]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  android:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: Android
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: "17"
+      - name: Android SDK
+        run: |
+          SDK_ROOT="${ANDROID_HOME:-/usr/local/lib/android/sdk}"
+          SDKMANAGER="$(find "$SDK_ROOT/cmdline-tools" -type f -path "*/bin/sdkmanager" | sort -V | tail -n 1)"
+          test -x "$SDKMANAGER"
+          yes | "$SDKMANAGER" --licenses >/dev/null || true
+          "$SDKMANAGER" "platforms;android-36" "build-tools;36.0.0"
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: "9.5.0"
+      - name: Generate pinned Gradle wrapper
+        run: |
+          gradle --no-daemon wrapper --gradle-version 9.5.0 --distribution-type bin
+          printf 'Repository: %s\nCI source commit: %s\nCI run: %s/%s/actions/runs/%s\n' "$GITHUB_REPOSITORY" "$(git rev-parse HEAD)" "$GITHUB_SERVER_URL" "$GITHUB_REPOSITORY" "$GITHUB_RUN_ID" > BUILD-SOURCE.txt
+      - run: ./gradlew --no-daemon test lint bundleRelease assembleDebug assembleRelease
+      - uses: actions/upload-artifact@v4
+        with:
+          name: akibusiness-unsigned-aab
+          path: |
+            Android/app/build/outputs/bundle/release/*.aab
+            Android/app/build/outputs/apk/debug/*.apk
+            Android/app/build/outputs/apk/release/*.apk
+            Android/app/build/reports/lint-results*.html
+            Android/app/build/test-results/testDebugUnitTest/*.xml
+          if-no-files-found: error
+      - name: Upload Android Studio source project
+        uses: actions/upload-artifact@v4
+        with:
+          name: akibusiness-android-studio-project
+          path: |
+            Android/**
+            !Android/**/build/**
+            !Android/.gradle/**
+            !Android/.gitignore
+            !Android/local.properties
+            !Android/**/*.jks
+            !Android/**/*.keystore
+          if-no-files-found: error
+
