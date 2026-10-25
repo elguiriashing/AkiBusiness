@@ -46,7 +46,7 @@ test('Spanish Android callback and return preserve the selected language', () =>
   const start = page('/account?locale=es', 'AkiBusinessAndroid/1.0');
   assert.equal(new URL(start.window.AkiBusinessNativeAuth.callbackUrl()).searchParams.get('locale'), 'es');
   const returned = page('/login?android=1&code=one-time&locale=es');
-  assert.match(returned.window.document.querySelector('a').textContent, /Volver/);
+  assert.match(returned.window.document.querySelector('a').textContent, /Abrir/);
   assert.equal(new URL(returned.window.document.querySelector('a').href).searchParams.get('locale'), 'es');
   start.window.close(); returned.window.close();
 });
