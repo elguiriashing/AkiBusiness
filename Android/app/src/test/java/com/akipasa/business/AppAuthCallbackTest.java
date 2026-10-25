@@ -6,8 +6,8 @@ import static org.junit.Assert.*;
 public class AppAuthCallbackTest {
     @Test public void mapsOnlyToOwnFixedOriginWithNativeMarkers() {
         String result = AppAuthCallback.toWebUrl("akibusiness://auth/callback?locale=en&code=one%2Btwo&next=%2Fen%2Faccount");
-        assertEquals("https://akibusiness.com/login?android=1&native=1&code=one%2Btwo&next=%2Fen%2Faccount", result);
-        assertTrue(AppAuthCallback.toWebUrl("akibusiness://auth/callback?code=abc").startsWith("https://akibusiness.com/login?android=1&native=1"));
+        assertEquals("https://akibusiness.com/login?android=1&native=1&locale=en&code=one%2Btwo&next=%2Fen%2Faccount", result);
+        assertTrue(AppAuthCallback.toWebUrl("akibusiness://auth/callback?code=abc").startsWith("https://akibusiness.com/login?android=1&native=1&locale=es"));
     }
     @Test public void cancellationReturnsToOwnWebCallback() {
         assertTrue(AppAuthCallback.toWebUrl("akibusiness://auth/callback?locale=es&error=access_denied&error_description=Cancelled%20by%20user").contains("error=access_denied&error_description=Cancelled+by+user"));

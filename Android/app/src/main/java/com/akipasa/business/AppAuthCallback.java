@@ -61,7 +61,7 @@ final class AppAuthCallback {
             }
             if (params.getOrDefault("code", "").isBlank() && params.getOrDefault("error", "").isBlank()) return null;
             String locale = "en".equals(params.get("locale")) ? "en" : "es";
-            StringBuilder url = new StringBuilder("https://akibusiness.com" + "/login" + "?android=1&native=1");
+            StringBuilder url = new StringBuilder("https://akibusiness.com/login?android=1&native=1&locale=" + locale);
             for (String key : new String[]{"code", "next", "error", "error_code", "error_description"}) {
                 if (params.containsKey(key)) url.append('&').append(key).append('=')
                         .append(URLEncoder.encode(params.get(key), "UTF-8"));
