@@ -23,4 +23,19 @@ public class AppAuthCallbackTest {
         assertNull(AppAuthCallback.toWebUrl(null));
         assertNull(AppAuthCallback.toWebUrl("akibusiness://auth/callback?code=" + "x".repeat(9000)));
     }
+    @Test public void legacyHttpsReturnsAreNativeExactlyOnce() {
+        String url = "https://akibusiness.com/login?android=1&code=abc";
+        assertEquals(url + "&native=1", AppAuthCallback.nativeHttpsCallback(url));
+        assertEquals(url + "&native=1", AppAuthCallback.nativeHttpsCallback(url + "&native=1"));
+        for (String bad : new String[]{
+            "https://evil.example/login?android=1&code=abc",
+            "https://user@akibusiness.com/login?android=1&code=abc",
+            "https://akibusiness.com:443/login?android=1&code=abc",
+            "https://akibusiness.com/login?android=1&android=0&code=abc",
+            "https://akibusiness.com/login?android=1&code=abc#secret",
+            "https://akibusiness.com/login?code=abc",
+            "https://akibusiness.com/login?android=1&native=1&native=1&code=abc"}) assertNull(bad, AppAuthCallback.nativeHttpsCallback(bad));
+        assertNull(AppAuthCallback.toWebUrl("akibusiness://%61uth/callback?code=abc"));
+        assertNull(AppAuthCallback.toWebUrl("akibusiness://auth/callback?locale=en&locale=es&code=abc"));
+    }
 }
