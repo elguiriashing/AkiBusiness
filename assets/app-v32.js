@@ -404,7 +404,7 @@
       const createFn = typeof sbObj.createClient === "function" ? sbObj.createClient : (typeof sbObj === "function" ? sbObj : null);
       if (createFn) {
         try {
-          window._sbClientInstance = createFn(url, key, { auth: { flowType: "pkce" } });
+          window._sbClientInstance = createFn(url, key, window.AkiBusinessNativeAuth?.callbackOptions);
           return window._sbClientInstance;
         } catch (e) {
           console.error("Supabase initialization error:", e);
@@ -7825,7 +7825,8 @@
         if (span) span.textContent = "Redirecting to Google…";
       }
       const redirectTarget = window.AkiBusinessNativeAuth?.callbackUrl() || window.location.origin + "/login";
-      const { error } = await client.auth.signInWithOAuth({
+      const oauthClient = window.AkiBusinessNativeAuth?.oauthClient(client) || client;
+      const { error } = await oauthClient.auth.signInWithOAuth({
         provider: "google",
         options: {
           redirectTo: redirectTarget,
@@ -7900,7 +7901,8 @@
       try {
         if (!hasRecoverySession) {
           const email = document.getElementById("recovery-email").value.trim();
-          const { error } = await client.auth.resetPasswordForEmail(email, { redirectTo: window.location.origin + "/login" });
+          const recoveryClient = window.AkiBusinessNativeAuth?.emailClient(client) || client;
+          const { error } = await recoveryClient.auth.resetPasswordForEmail(email, { redirectTo: window.location.origin + "/login" });
           if (error) throw new Error(text("Could not send a recovery link. Please try again shortly.", "No se ha podido enviar el enlace. Inténtalo de nuevo en unos instantes."));
           status.textContent = text("If an account exists, a recovery link has been sent. Open it in this browser.", "Si existe una cuenta, hemos enviado un enlace. Ábrelo en este navegador.");
         } else {
