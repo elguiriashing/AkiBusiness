@@ -2467,8 +2467,13 @@
     const dueTasks = state.tasks.filter(task => task.status !== "done" && new Date(task.dueDate).getTime() <= Date.now() + 86400000 * 3).length;
     const completedTasks = state.tasks.filter(task => task.status === "done").length;
     const completion = state.tasks.length ? Math.round(completedTasks / state.tasks.length * 100) : 0;
-    const pipeline = state.pipelines.find(item => item.id === ui.pipelineId) || state.pipelines[0];
-    const stageStats = pipeline.stages.map(stage => ({
+    // CRM can be absent from an otherwise valid operations workspace. Its
+    // collections are deliberately cleared when access is denied; older caches
+    // can also contain an incomplete pipeline. Neither should block Dashboard.
+    const pipelines = Array.isArray(state.pipelines)
+      ? state.pipelines.filter(item => item && Array.isArray(item.stages)) : [];
+    const pipeline = pipelines.find(item => item.id === ui.pipelineId) || pipelines[0];
+    const stageStats = (pipeline?.stages || []).filter(stage => stage && typeof stage === "object").map(stage => ({
       label: stage.name,
       value: state.deals.filter(deal => deal.pipelineId === pipeline.id && deal.stageId === stage.id).reduce((sum, deal) => sum + Number(deal.value || 0), 0)
     }));
@@ -2484,7 +2489,7 @@
           ${!platform && canUseTool("pos") ? renderMetric("Your tips this month", formatMoney(tipBalance(authUser?.id, true) / 100), `${formatMoney(tipBalance(authUser?.id) / 100)} available balance`, "money", "#49d7a0") : ""}
         </div>
         <div class="page-grid grid-main">
-          ${canUseTool("crm") ? `<section class="panel">
+          ${canUseTool("crm") && pipeline ? `<section class="panel">
             <div class="panel-header">
               <div><h2>${escapeHtml(pipeline.name)} value</h2><p>Value currently sitting in each stage</p></div>
               <div class="panel-actions"><button class="mini-btn" data-action="navigate" data-route="crm" title="Open CRM">${icon("external")}</button></div>
