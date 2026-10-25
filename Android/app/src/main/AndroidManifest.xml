@@ -36,6 +36,12 @@
                 <data android:host="akibusiness.com" />
                 <data android:host="www.akibusiness.com" />
             </intent-filter>
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="akibusiness" android:host="auth" android:path="/callback" />
+            </intent-filter>
         </activity>
     </application>
 
