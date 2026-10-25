@@ -4,7 +4,10 @@
   const android = /\bAkiBusinessAndroid\//.test(navigator.userAgent);
   const callbackUrl = () => {
     const callback = new URL("/login", location.origin);
-    if (android) callback.searchParams.set("android", "1");
+    if (android) {
+      callback.searchParams.set("android", "1");
+      callback.searchParams.set("locale", document.documentElement.lang === "es" || current.searchParams.get("locale") === "es" ? "es" : "en");
+    }
     return callback.toString();
   };
   const handoff = current.pathname === "/login" && current.searchParams.get("android") === "1"
@@ -14,6 +17,7 @@
   // The verifier remains in the initiating WebView. Chrome must not consume
   // this one-time PKCE code or initialize a second Supabase auth client.
   const target = new URL("akibusiness://auth/callback");
+  target.searchParams.set("locale", current.searchParams.get("locale") === "es" ? "es" : "en");
   for (const key of ["code", "error", "error_code", "error_description"]) {
     const value = current.searchParams.get(key);
     if (value) target.searchParams.set(key, value);

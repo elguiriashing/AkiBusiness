@@ -12,11 +12,14 @@ const account = readFileSync(new URL('../assets/account.js', import.meta.url), '
 function page(path, agent = 'Chrome') {
   const dom = new JSDOM('<div id="app"></div>', { url: `https://akibusiness.com${path}`, runScripts: 'outside-only' });
   Object.defineProperty(dom.window.navigator, 'userAgent', { value: agent });
+  const timer = dom.window.setTimeout;
+  dom.window.setTimeout = (_callback, delay) => { dom.handoffDelay = delay; return 0; };
   dom.window.eval(native);
+  dom.window.setTimeout = timer;
   return dom;
 }
 test('Android initiation marks fixed HTTPS callback; ordinary browser stays unchanged', () => {
-  for (const [agent, expected] of [['AkiBusinessAndroid/1.0', 'https://akibusiness.com/login?android=1'], ['Chrome', 'https://akibusiness.com/login']]) {
+  for (const [agent, expected] of [['AkiBusinessAndroid/1.0', 'https://akibusiness.com/login?android=1&locale=en'], ['Chrome', 'https://akibusiness.com/login']]) {
     const dom = page('/account?next=https://evil.test', agent);
     assert.equal(dom.window.AkiBusinessNativeAuth.callbackUrl(), expected);
     dom.window.close();
@@ -25,16 +28,25 @@ test('Android initiation marks fixed HTTPS callback; ordinary browser stays unch
 test('browser handoff copies code and provider errors only and never starts WebView auth boot', () => {
   const dom = page('/login?android=1&code=one-time&access_token=secret&refresh_token=secret&next=https://evil.test&error_description=%22%3Cscript%3E');
   assert.equal(dom.window.AkiBusinessNativeAuth.handoff, true);
+  assert.equal(dom.handoffDelay, 2000);
   const target = new URL(dom.window.document.querySelector('a').href);
   assert.equal(target.protocol, 'akibusiness:');
   assert.equal(target.searchParams.get('code'), 'one-time');
-  assert.deepEqual([...target.searchParams.keys()], ['code', 'error_description']);
+  assert.deepEqual([...target.searchParams.keys()], ['locale', 'code', 'error_description']);
   assert.equal(dom.window.document.querySelectorAll('script').length, 0);
   // Execute the actual full application: the early return must precede SDK init,
   // cache restoration and any code exchange in this external browser.
   dom.window.eval(app);
   assert.equal(dom.window._sbClientInstance, undefined);
   dom.window.close();
+});
+test('Spanish Android callback and return preserve the selected language', () => {
+  const start = page('/account?locale=es', 'AkiBusinessAndroid/1.0');
+  assert.equal(new URL(start.window.AkiBusinessNativeAuth.callbackUrl()).searchParams.get('locale'), 'es');
+  const returned = page('/login?android=1&code=one-time&locale=es');
+  assert.match(returned.window.document.querySelector('a').textContent, /Volver/);
+  assert.equal(new URL(returned.window.document.querySelector('a').href).searchParams.get('locale'), 'es');
+  start.window.close(); returned.window.close();
 });
 test('native return and ordinary callbacks proceed in the original WebView', () => {
   for (const path of ['/login?android=1&native=1&code=one-time', '/login?code=ordinary', '/account?android=1']) {
@@ -78,7 +90,7 @@ test('actual SDK creates S256 challenge with verifier retained only in the initi
   assert.equal(typeof verifier, 'string');
   assert.equal(authUrl.searchParams.get('code_challenge_method'), 's256');
   assert.equal(authUrl.searchParams.get('code_challenge'), createHash('sha256').update(verifier).digest('base64url'));
-  assert.equal(authUrl.searchParams.get('redirect_to'), 'https://akibusiness.com/login?android=1');
+  assert.equal(authUrl.searchParams.get('redirect_to'), 'https://akibusiness.com/login?android=1&locale=en');
   const external = page('/login?android=1&code=one-time');
   assert.equal(external.window.localStorage.getItem('sb-reviewfixture-auth-token-code-verifier'), null);
   assert.equal(external.window.AkiBusinessNativeAuth.handoff, true);
