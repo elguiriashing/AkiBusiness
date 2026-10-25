@@ -36,7 +36,7 @@ test("public language switch preserves canonical local login destinations", () =
 
 test("login uses same-origin OAuth and recovery; dashboard URL requires an authorised session", () => {
   const source = read("assets/app-v32.js");
-  assert.match(source, /const redirectTarget = window\.location\.origin \+ "\/login"/);
+  assert.match(source, /const redirectTarget = window\.AkiBusinessNativeAuth\?\.callbackUrl\(\) \|\| window\.location\.origin \+ "\/login"/);
   assert.match(source, /redirectTo: window\.location\.origin \+ "\/login"/);
   assert.match(source, /history\.replaceState\(null, "", "\/app#\/" \+ \(ui\.route \|\| "dashboard"\)\)/);
   assert.ok(source.indexOf("const selectedWorkspace = selectInitialWorkspace(") < source.indexOf('history.replaceState(null, "", "/app#/"'));

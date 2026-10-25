@@ -56,18 +56,16 @@ test('native return and ordinary callbacks proceed in the original WebView', () 
     dom.window.close();
   }
 });
-test('runtime and account clients use PKCE with the same default origin storage', () => {
+test('runtime and account clients retain their existing default email/password flow', () => {
   let options;
   const context = vm.createContext({window:{AKIHQ_CONFIG:{SUPABASE_URL:'https://project.supabase.co',SUPABASE_ANON_KEY:'public'},supabase:{createClient:(url,key,config)=>{options=config;return {};}}}});
   vm.runInContext(app.slice(app.indexOf('  function getSupabaseClient()'), app.indexOf('  // Auth state')), context);
   vm.runInContext('getSupabaseClient()', context);
-  assert.equal(options.auth.flowType, 'pkce');
-  assert.equal(options.auth.storage, undefined);
+  assert.equal(options, undefined);
   const snippet = account.slice(account.indexOf('  const client ='), account.indexOf('  const message ='));
   const accountContext = vm.createContext({config:context.window.AKIHQ_CONFIG,window:context.window});
   vm.runInContext(snippet, accountContext);
-  assert.equal(options.auth.flowType, 'pkce');
-  assert.equal(options.auth.storage, undefined);
+  assert.equal(options, undefined);
 });
 test('handoff script loads before SDK and auth clients in both entry pages', () => {
   for (const file of ['login.html','account.html']) {
@@ -82,7 +80,8 @@ test('actual SDK creates S256 challenge with verifier retained only in the initi
   dom.window.TextEncoder = TextEncoder;
   dom.window.TextDecoder = TextDecoder;
   dom.window.eval(readFileSync(new URL('../assets/supabase.js', import.meta.url), 'utf8'));
-  const client = dom.window.supabase.createClient('https://reviewfixture.supabase.co', 'public-fixture-key', {auth:{flowType:'pkce',autoRefreshToken:false,detectSessionInUrl:false}});
+  dom.window.AKIHQ_CONFIG = {SUPABASE_URL:'https://reviewfixture.supabase.co',SUPABASE_ANON_KEY:'public-fixture-key'};
+  const client = dom.window.AkiBusinessNativeAuth.oauthClient(null);
   const result = await client.auth.signInWithOAuth({provider:'google',options:{redirectTo:dom.window.AkiBusinessNativeAuth.callbackUrl(),skipBrowserRedirect:true}});
   assert.equal(result.error, null);
   const authUrl = new URL(result.data.url);
@@ -95,4 +94,43 @@ test('actual SDK creates S256 challenge with verifier retained only in the initi
   assert.equal(external.window.localStorage.getItem('sb-reviewfixture-auth-token-code-verifier'), null);
   assert.equal(external.window.AkiBusinessNativeAuth.handoff, true);
   dom.window.close(); external.window.close();
+});
+
+test('default SDK still accepts existing implicit password-recovery email callbacks', async () => {
+  const token = `${Buffer.from(JSON.stringify({alg:'HS256',typ:'JWT'})).toString('base64url')}.${Buffer.from(JSON.stringify({sub:'00000000-0000-4000-8000-000000000001',exp:Math.floor(Date.now()/1000)+3600,aud:'authenticated',role:'authenticated'})).toString('base64url')}.fixture-signature`;
+  const dom = page(`/login#access_token=${token}&refresh_token=fixture-refresh&expires_in=3600&token_type=bearer&type=recovery`);
+  dom.window.fetch = async () => new Response(JSON.stringify({id:'00000000-0000-4000-8000-000000000001',aud:'authenticated',role:'authenticated',email:'fixture@example.invalid'}), {status:200,headers:{'Content-Type':'application/json'}});
+  dom.window.Response = Response; dom.window.Headers = Headers; dom.window.Request = Request;
+  dom.window.eval(readFileSync(new URL('../assets/supabase.js', import.meta.url), 'utf8'));
+  const client = dom.window.supabase.createClient('https://reviewfixture.supabase.co', 'public-fixture-key', {auth:{autoRefreshToken:false}});
+  const {data,error} = await client.auth.getSession();
+  assert.equal(error, null);
+  assert.equal(data.session.access_token, token);
+  assert.equal(data.session.user.email, 'fixture@example.invalid');
+  assert.equal(dom.window.AkiBusinessNativeAuth.handoff, false);
+  dom.window.close();
+});
+
+test('default callback SDK exchanges the Android code exactly once with the original stored verifier', async () => {
+  const dom = page('/login?android=1&native=1&code=fixture-code');
+  const user = {id:'00000000-0000-4000-8000-000000000001',aud:'authenticated',role:'authenticated',email:'fixture@example.invalid'};
+  const token = `${Buffer.from(JSON.stringify({alg:'HS256',typ:'JWT'})).toString('base64url')}.${Buffer.from(JSON.stringify({sub:user.id,exp:Math.floor(Date.now()/1000)+3600,aud:'authenticated',role:'authenticated'})).toString('base64url')}.fixture-signature`;
+  const calls = [];
+  dom.window.fetch = async (url, options) => {
+    calls.push({url:String(url), body:options?.body});
+    return new Response(JSON.stringify({access_token:token,refresh_token:'fixture-refresh',expires_in:3600,token_type:'bearer',user}), {status:200,headers:{'Content-Type':'application/json'}});
+  };
+  dom.window.Response = Response; dom.window.Headers = Headers; dom.window.Request = Request;
+  dom.window.localStorage.setItem('sb-reviewfixture-auth-token-code-verifier', JSON.stringify('original-webview-verifier'));
+  dom.window.eval(readFileSync(new URL('../assets/supabase.js', import.meta.url), 'utf8'));
+  const client = dom.window.supabase.createClient('https://reviewfixture.supabase.co', 'public-fixture-key', {auth:{autoRefreshToken:false}});
+  const {data,error} = await client.auth.getSession();
+  assert.equal(error, null);
+  assert.equal(data.session.access_token, token);
+  const exchanges = calls.filter(call => call.url.includes('grant_type=pkce'));
+  assert.equal(exchanges.length, 1);
+  assert.deepEqual(JSON.parse(exchanges[0].body), {auth_code:'fixture-code',code_verifier:'original-webview-verifier'});
+  assert.equal(dom.window.localStorage.getItem('sb-reviewfixture-auth-token-code-verifier'), null);
+  assert.equal(dom.window.AkiBusinessNativeAuth.handoff, false);
+  dom.window.close();
 });
