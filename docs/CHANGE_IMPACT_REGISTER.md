@@ -62,3 +62,20 @@ login stylesheet revision to v2 so the existing home/language/theme controls
 receive their 44px target and surface styling. Applies to EN/ES guest login,
 light/dark, desktop/mobile. No auth, billing, tenant or data changes. Rollback
 is a source revert; exact-source production visual verification follows CI.
+
+
+## 2026-10-25 | AkiSelector workspace login integration
+
+Alex explicitly selected the existing private lab's AkiSelector for the public
+login workspace chooser. All five apps appear: Pasa orange, Duermo teal,
+Coches red/burgundy, HQ yellow/space grey and Business purple. Reuse the
+engine's card scene, swipe, keyboard navigation and reduced-motion behavior
+in a compact sign-in adapter. Previewing an app never submits, navigates or
+replaces a login form; opening another app is an explicit localized action
+with only the bounded referral code passed across origins. Current product
+is selected initially. Mobile keeps the chooser after the sign-in fields.
+The static operating app uses a DOM adapter and the same scene styles, with
+no framework runtime or third-party dependency added. The private lab keeps
+its administrator-only route. No pricing, session, tenant, permissions or
+provider setting changes. Source revert is rollback. Source, responsive
+browser, exact live source and physical device acceptance remain distinct.

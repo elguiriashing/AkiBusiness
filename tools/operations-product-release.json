@@ -41,18 +41,6 @@
       "to": "            <div class=\"suite-login-kicker\">AKIBUSINESS</div>\n"
     },
     {
-      "from": "              <a class=\"suite-product-card\" href=\"https://business.akipasa.com/es/auth?next=/es/business\">\n",
-      "to": "              <a class=\"suite-product-card\" href=\"${window.AkiSuiteNavigation.href(\"hq\", state.settings.locale)}\">\n"
-    },
-    {
-      "from": "                <span><strong>AkiBusiness</strong></span>\n",
-      "to": "                <span><strong>AkiHQ</strong><small>Free business management</small></span>\n"
-    },
-    {
-      "from": "                <span><strong>AkiHQ</strong></span>\n",
-      "to": "                <span><strong>AkiBusiness</strong><small>Operations workspace</small></span>\n"
-    },
-    {
       "from": "              <div><strong>AkiHQ</strong><small>by AkiPasa</small></div>\n",
       "to": "              <div><strong>AkiBusiness</strong><small>by AkiPasa</small></div>\n"
     },
@@ -114,11 +102,11 @@
   "sw.js": [
     {
       "from": "const CACHE = \"akihq-v146\";\n",
-      "to": "const CACHE = \"akihq-v153\";\n"
+      "to": "const CACHE = \"akihq-v154\";\n"
     },
     {
       "from": "  \"./assets/app-v32.js?v=45\",\n",
-      "to": "  \"./assets/app-v32.js?v=54\",\n"
+      "to": "  \"./assets/app-v32.js?v=55\",\n"
     },
     {
       "from": "  \"./config.js?v=44\",\n",
@@ -150,7 +138,7 @@
     },
     {
       "from": "  <script src=\"assets/app-v32.js?v=45\"></script>\n",
-      "to": "  <script src=\"assets/app-v32.js?v=54\"></script>\n"
+      "to": "  <script src=\"assets/app-v32.js?v=55\"></script>\n"
     }
   ]
 }
