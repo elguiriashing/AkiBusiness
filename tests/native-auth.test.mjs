@@ -28,12 +28,14 @@ test('Android initiation marks fixed HTTPS callback; ordinary browser stays unch
 test('browser handoff copies code and provider errors only and never starts WebView auth boot', () => {
   const dom = page('/login?android=1&code=one-time&access_token=secret&refresh_token=secret&next=https://evil.test&error_description=%22%3Cscript%3E');
   assert.equal(dom.window.AkiBusinessNativeAuth.handoff, true);
-  assert.equal(dom.handoffDelay, 2000);
+  assert.equal(dom.handoffDelay, 5000);
   const target = new URL(dom.window.document.querySelector('a').href);
   assert.equal(target.protocol, 'akibusiness:');
   assert.equal(target.searchParams.get('code'), 'one-time');
   assert.deepEqual([...target.searchParams.keys()], ['locale', 'code', 'error_description']);
   assert.equal(dom.window.document.querySelectorAll('script').length, 0);
+  assert.equal(dom.window.document.querySelector('#return-seconds').textContent, '5');
+  assert.equal(dom.window.document.body.classList.contains('native-oauth-handoff'), true);
   // Execute the actual full application: the early return must precede SDK init,
   // cache restoration and any code exchange in this external browser.
   dom.window.eval(app);
