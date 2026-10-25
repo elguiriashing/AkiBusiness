@@ -127,6 +127,7 @@
       ? window.supabase?.createClient(
           config.SUPABASE_URL,
           config.SUPABASE_ANON_KEY,
+          window.AkiBusinessNativeAuth?.callbackOptions,
         )
       : null;
   const message = (value, error = false) => {
@@ -275,9 +276,10 @@
               : null,
           }),
         );
-        const { error } = await client.auth.signInWithOAuth({
+        const oauthClient = window.AkiBusinessNativeAuth?.oauthClient(client) || client;
+        const { error } = await oauthClient.auth.signInWithOAuth({
           provider: "google",
-          options: { redirectTo: location.origin + "/login" },
+          options: { redirectTo: window.AkiBusinessNativeAuth?.callbackUrl() || location.origin + "/login" },
         });
         if (error) throw error;
       } catch {
