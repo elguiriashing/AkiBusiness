@@ -46,14 +46,50 @@
     const value = current.searchParams.get(key);
     if (value) target.searchParams.set(key, value);
   }
+
   const es = current.searchParams.get("locale") === "es";
-  const title = document.createElement("h1");
-  title.textContent = "AkiBusiness";
-  const message = document.createElement("p");
-  message.textContent = es ? "Vuelve a AkiBusiness para terminar de iniciar sesión." : "Return to AkiBusiness to finish signing in.";
-  const link = document.createElement("a");
+  const copy = es ? {
+    title: "Inicio de sesión seguro",
+    description: "Has terminado con tu proveedor. Vamos a abrir la aplicación para completar el inicio de sesión.",
+    count: "Volviendo en", unit: "segundos", button: "Abrir AkiBusiness ahora",
+    help: "¿No se abre? Pulsa el botón de arriba y comprueba que tienes la aplicación instalada.",
+    footer: "Regresando de forma segura a tu aplicación AkiSuite"
+  } : {
+    title: "Secure sign-in",
+    description: "You’re signed in with your provider. Let’s finish opening your app.",
+    count: "Returning in", unit: "seconds", button: "Open AkiBusiness now",
+    help: "App not opening? Tap the button above. Make sure the app is installed on this device.",
+    footer: "Securely returning to your AkiSuite app"
+  };
+  document.body.classList.add("native-oauth-handoff");
+  document.title = "AkiBusiness · " + copy.title;
+  const shell = document.createElement("main");
+  shell.className = "native-return-shell";
+  shell.innerHTML = `<div class="native-return-label">AkiSuite · <span class="native-return-label-text"></span></div>
+    <section class="native-return-card" aria-labelledby="return-title">
+      <div class="native-return-icon"><img alt="" width="80" height="80" src="/assets/brand/v3/business.svg"></div>
+      <h1 id="return-title">AkiBusiness</h1><p class="native-return-desc"></p>
+      <p class="native-return-count" role="status" aria-live="off"><span></span> <strong id="return-seconds">5</strong> <span></span></p>
+      <div class="native-return-track" aria-hidden="true"><span></span></div>
+      <a class="native-return-button" id="native-return" href="#"><span></span><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12h15m-6-6 6 6-6 6"/></svg></a>
+      <p class="native-return-help"></p>
+    </section><p class="native-return-foot"></p>`;
+  shell.querySelector(".native-return-label-text").textContent = copy.title;
+  shell.querySelector(".native-return-desc").textContent = copy.description;
+  shell.querySelector(".native-return-count span:first-child").textContent = copy.count;
+  shell.querySelector(".native-return-count span:last-child").textContent = copy.unit;
+  shell.querySelector(".native-return-button span").textContent = copy.button;
+  shell.querySelector(".native-return-help").textContent = copy.help;
+  shell.querySelector(".native-return-foot").textContent = copy.footer;
+  const link = shell.querySelector("#native-return");
   link.href = target.toString();
-  link.textContent = es ? "Volver a AkiBusiness" : "Return to AkiBusiness";
-  document.getElementById("app").replaceChildren(title, message, link);
-  window.setTimeout(() => location.assign(target.toString()), 2000);
+  document.getElementById("app").replaceChildren(shell);
+  let remaining = 5;
+  const counter = shell.querySelector("#return-seconds");
+  const ticker = window.setInterval(() => {
+    remaining = Math.max(0, remaining - 1);
+    counter.textContent = String(remaining);
+    if (!remaining) window.clearInterval(ticker);
+  }, 1000);
+  window.setTimeout(() => location.assign(link.href), 5000);
 })();
