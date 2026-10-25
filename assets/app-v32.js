@@ -7751,6 +7751,10 @@
   function renderLoginScreen(errorMsg) {
     // The public site lives at /. Keep unauthenticated users on /login.
     try { if (location.pathname !== "/login") history.replaceState(null, "", "/login"); } catch {}
+    try {
+      const theme = localStorage.getItem("akipasa.theme");
+      if (theme === "light" || theme === "dark") state.settings.theme = theme;
+    } catch {}
     applySettings();
     appRoot.className = "login-mode";
     appRoot.innerHTML = `
@@ -7777,6 +7781,11 @@
           </section>
 
           <section class="suite-login-panel">
+            <nav class="suite-login-utilities" aria-label="${state.settings.locale === "es" ? "Controles de cuenta" : "Account controls"}">
+              <a href="/?locale=${state.settings.locale}">${state.settings.locale === "es" ? "Inicio" : "Home"}</a>
+              <button type="button" id="login-language">${state.settings.locale === "es" ? "EN" : "ES"}</button>
+              <button type="button" id="login-theme">${state.settings.theme === "dark" ? (state.settings.locale === "es" ? "Claro" : "Light") : (state.settings.locale === "es" ? "Oscuro" : "Dark")}</button>
+            </nav>
             <div class="suite-login-brand">
               <img src="assets/logo.svg" alt="" />
               <div><strong>AkiHQ</strong><small>by AkiPasa</small></div>
@@ -7813,6 +7822,31 @@
     portal.innerHTML = "";
     requestAnimationFrame(() => window.scrollTo(0, 0));
 
+    if (state.settings.locale === "es") {
+      appRoot.querySelector(".suite-login-intro h1").textContent = "Gestiona tu negocio.";
+      appRoot.querySelector(".suite-product-label").textContent = "Elige tu espacio";
+      appRoot.querySelector(".suite-login-form-head h2").textContent = "Entra en AkiBusiness";
+      appRoot.querySelector(".suite-login-form-head > span").textContent = "TE DAMOS LA BIENVENIDA";
+      appRoot.querySelector(".suite-google-btn span").textContent = "Continuar con Google";
+      appRoot.querySelector(".login-divider span").textContent = "o con email";
+      appRoot.querySelector('label[for="login-password"]').firstChild.textContent = "Contraseña";
+      document.getElementById("login-submit").textContent = "Entrar";
+    }
+    const preserveLoginDraft = (change) => {
+      const email = document.getElementById("login-email")?.value || "";
+      const password = document.getElementById("login-password")?.value || "";
+      change(); applySettings(); renderLoginScreen(errorMsg);
+      document.getElementById("login-email").value = email;
+      document.getElementById("login-password").value = password;
+    };
+    document.getElementById("login-language")?.addEventListener("click", () => preserveLoginDraft(() => {
+      state.settings.locale = state.settings.locale === "es" ? "en" : "es";
+      window.AkiSuiteNavigation.remember(state.settings.locale);
+    }));
+    document.getElementById("login-theme")?.addEventListener("click", () => preserveLoginDraft(() => {
+      state.settings.theme = state.settings.theme === "dark" ? "light" : "dark";
+      try { localStorage.setItem("akipasa.theme", state.settings.theme); } catch {}
+    }));
     document.getElementById("forgot-password-btn")?.addEventListener("click", () => renderPasswordRecovery(false));
 
     document.getElementById("google-login-btn")?.addEventListener("click", async () => {
