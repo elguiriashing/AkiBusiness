@@ -7763,21 +7763,7 @@
           <section class="suite-login-intro">
             <div class="suite-login-kicker">AKIHQ</div>
             <h1>Run the<br>business.</h1>
-            <div class="suite-product-label">Choose your workspace</div>
-            <nav class="suite-product-switcher" aria-label="AkiPasa products">
-              <a class="suite-product-card" href="${window.AkiSuiteNavigation.href("pasa", state.settings.locale, { path: "/auth" })}">
-                <i class="suite-product-dot suite-product-dot-akipasa"></i>
-                <span><strong>AkiPasa</strong></span>
-              </a>
-              <a class="suite-product-card" href="https://business.akipasa.com/es/auth?next=/es/business">
-                <i class="suite-product-dot suite-product-dot-business"></i>
-                <span><strong>AkiBusiness</strong></span>
-              </a>
-              <a class="suite-product-card active" href="/login">
-                <i class="suite-product-dot suite-product-dot-hq"></i>
-                <span><strong>AkiHQ</strong></span>
-              </a>
-            </nav>
+            <aside id="login-workspace-selector" class="aki-workspace-picker"></aside>
           </section>
 
           <section class="suite-login-panel">
@@ -7819,12 +7805,12 @@
         </main>
       </div>
     `;
+    window.AkiWorkspaceSelector.mount(document.getElementById("login-workspace-selector"), state.settings.locale, "business");
     portal.innerHTML = "";
     requestAnimationFrame(() => window.scrollTo(0, 0));
 
     if (state.settings.locale === "es") {
       appRoot.querySelector(".suite-login-intro h1").textContent = "Gestiona tu negocio.";
-      appRoot.querySelector(".suite-product-label").textContent = "Elige tu espacio";
       appRoot.querySelector(".suite-login-form-head h2").textContent = "Entra en AkiBusiness";
       appRoot.querySelector(".suite-login-form-head > span").textContent = "TE DAMOS LA BIENVENIDA";
       appRoot.querySelector(".suite-google-btn span").textContent = "Continuar con Google";

@@ -40,6 +40,7 @@ async function fixture(
     calls = [],
     destinations = [];
   w.eval(navigation);
+  w.eval(readFileSync(new URL("../assets/workspace-selector.js", import.meta.url), "utf8"));
   const profile = {
     display_name: "Shared Alex",
     username: "shared_alex",
@@ -257,6 +258,12 @@ test("signout remains host-local", async (t) => {
 test("guest signup and Google entry stay native using the established callback", async (t) => {
   const f = await fixture(t, { guest: true });
   assert.ok(f.w.document.getElementById("signup"));
+  assert.equal(f.w.document.querySelectorAll(".aki-workspace-picker [role=radio]").length, 5);
+  const email = f.w.document.querySelector("#signin [name=email]");
+  email.value = "draft@example.invalid";
+  f.w.document.querySelector(".aki-workspace-picker [aria-label=AkiDuermo]").click();
+  assert.equal(email.value, "draft@example.invalid");
+  assert.match(f.w.document.querySelector(".aki-workspace-picker a").href, /^https:\/\/akiduermo.com\/account/);
   f.w.document.getElementById("google").click();
   await tick();
   assert.equal(

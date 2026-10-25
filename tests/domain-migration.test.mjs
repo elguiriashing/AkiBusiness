@@ -13,6 +13,7 @@ for (const origin of ['https://akibusiness.com', 'https://akihq.app', 'https://c
   test(`OAuth stays on its initiating origin: ${origin}`, async () => {
     const handlers = {};
     let oauth;
+    let selector;
     const elements = new Map();
     for (const id of ['google-login-btn', 'login-form']) elements.set(id, {
       addEventListener: (event, fn) => { handlers[`${id}:${event}`] = fn; },
@@ -20,13 +21,15 @@ for (const origin of ['https://akibusiness.com', 'https://akihq.app', 'https://c
     });
     const context = {
       appRoot: {}, portal: {}, state: { settings: { locale: 'en' } }, applySettings() {}, escapeHtml: String,
-      window: { AkiSuiteNavigation: { href: (product, locale) => `https://akipasa.com/${locale}/auth` }, location: { origin }, scrollTo() {} },
+      window: { AkiWorkspaceSelector: { mount: (...args) => { selector = args; } }, AkiSuiteNavigation: { href: (product, locale) => `https://akipasa.com/${locale}/auth` }, location: { origin }, scrollTo() {} },
       document: { getElementById: id => elements.get(id) }, requestAnimationFrame: fn => fn(),
       getSupabaseClient: () => ({ auth: { signInWithOAuth: async options => { oauth = options; return {}; } } })
     };
     const login = source.slice(source.indexOf('  function renderLoginScreen('), source.indexOf('  function renderAccessDenied('));
     vm.runInNewContext(`${login}\nrenderLoginScreen();`, context);
-    assert.match(context.appRoot.innerHTML, /suite-product-card active" href="\/login"/);
+    assert.match(context.appRoot.innerHTML, /id="login-workspace-selector"/);
+    assert.equal(selector[1], "en");
+    assert.equal(selector[2], "business");
     await handlers['google-login-btn:click']();
     assert.equal(oauth.options.redirectTo, origin + '/login');
     assert.equal(oauth.provider, 'google');

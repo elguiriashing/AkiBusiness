@@ -35,7 +35,7 @@ jobs:
       - name: Verify the exact source in the paid AkiBusiness release
         run: |
           node tools/build-product-release.mjs "$RUNNER_TEMP/akibusiness-variants-release"
-          node --input-type=module -e "import {readFileSync as read} from 'node:fs';const p=process.env.RUNNER_TEMP+'/akibusiness-variants-release/';const meta=JSON.parse(read(p+'release-source.json'));if(meta.product!=='AkiBusiness'||meta.sourceTreeDirty||meta.sourceCommit!==process.env.EXPECTED_HEAD)throw Error('Release source mismatch');for(const name of ['pos-variants.js?v=1','pos-variants.css?v=1','hospitality-pos.js?v=19','pos-v4.js?v=3'])if(!read(p+'login.html','utf8').includes(name)||!read(p+'sw.js','utf8').includes(name))throw Error('Missing versioned asset '+name);if(!read(p+'sw.js','utf8').includes('akihq-v153'))throw Error('Wrong paid-release cache');"
+          node --input-type=module -e "import {readFileSync as read} from 'node:fs';const p=process.env.RUNNER_TEMP+'/akibusiness-variants-release/';const meta=JSON.parse(read(p+'release-source.json'));if(meta.product!=='AkiBusiness'||meta.sourceTreeDirty||meta.sourceCommit!==process.env.EXPECTED_HEAD)throw Error('Release source mismatch');for(const name of ['pos-variants.js?v=1','pos-variants.css?v=1','hospitality-pos.js?v=19','pos-v4.js?v=3'])if(!read(p+'login.html','utf8').includes(name)||!read(p+'sw.js','utf8').includes(name))throw Error('Missing versioned asset '+name);if(!read(p+'sw.js','utf8').includes('akihq-v154'))throw Error('Wrong paid-release cache');"
         env:
           NEXT_PUBLIC_AKISUITE_ROLE_SWAP: 'true'
           EXPECTED_HEAD: ${{ github.event.pull_request.head.sha }}
