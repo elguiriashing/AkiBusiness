@@ -10,28 +10,30 @@ function fixture(locale) {
   const host=dom.window.document.getElementById('picker');dom.window.AkiWorkspaceSelector.mount(host,locale,'business');
   return {dom,host,document:dom.window.document};
 }
-for (const locale of ['en','es']) test(`five-product selector previews localized destinations and retains the form in ${locale}`,()=>{
+for (const locale of ['en','es']) test(`five-product icons are direct localized links in ${locale}`,()=>{
   const {dom,host,document}=fixture(locale);
-  assert.equal(host.querySelectorAll('[role="radio"]').length,5);
-  assert.equal(host.querySelector('[aria-checked="true"]').getAttribute('aria-label'),'AkiBusiness');
-  assert.equal(host.querySelector('a'),null);
-  for (const [name,origin,path] of [['AkiPasa','https://akipasa.com',`/${locale}/auth`],['AkiDuermo','https://akiduermo.com','/account'],['AkiCoches','https://akicoches.com','/account'],['AkiHQ','https://akihq.app',`/${locale}/auth`]]) {
-    host.querySelector(`[aria-label="${name}"]`).click();
-    const target=new URL(host.querySelector('a').href);
+  assert.equal(host.querySelectorAll('a.aks-selector__card').length,5);
+  assert.equal(host.querySelector('[data-selected="true"]').getAttribute('aria-label'),'AkiBusiness');
+  assert.equal(host.querySelector('[aria-current="page"]').getAttribute('aria-label'),'AkiBusiness');
+  assert.equal(host.querySelector('.aks-selector__footer, .aki-workspace-picker__action, button'),null);
+  for (const [name,origin,path] of [['AkiPasa','https://akipasa.com',`/${locale}/auth`],['AkiDuermo','https://akiduermo.com','/account'],['AkiCoches','https://akicoches.com','/account'],['AkiHQ','https://akihq.app',`/${locale}/auth`],['AkiBusiness','https://akibusiness.com','/login']]) {
+    const target=new URL(host.querySelector(`[aria-label="${name}"]`).href);
     assert.equal(target.origin,origin);assert.equal(target.pathname,path);assert.equal(target.searchParams.get('ref'),'AKI12345');assert.equal(target.searchParams.has('access_token'),false);
     if (['AkiDuermo','AkiCoches'].includes(name)) assert.equal(target.searchParams.get('lang'),locale);
     assert.equal(document.querySelector('input').value,'fixture@example.invalid');assert.equal(dom.window.location.pathname,'/login');
   }
   dom.window.close();
 });
-test('keyboard and previous/next controls keep selection and focus together',()=>{
+test('keyboard browsing keeps the draft and focuses the icon itself',()=>{
   const {dom,host,document}=fixture('en');
   const initial=host.querySelector('[aria-label="AkiBusiness"]');initial.focus();
   initial.dispatchEvent(new dom.window.KeyboardEvent('keydown',{key:'Home',bubbles:true}));
-  assert.equal(document.activeElement.getAttribute('aria-label'),'AkiPasa');
-  host.querySelector('[aria-label="Next option"]').click();
+  const first=host.querySelector('[aria-label="AkiPasa"]');
+  assert.equal(document.activeElement,first);
+  first.dispatchEvent(new dom.window.KeyboardEvent('keydown',{key:'ArrowRight',bubbles:true}));
   assert.equal(document.activeElement.getAttribute('aria-label'),'AkiDuermo');
-  assert.equal(host.querySelector('[aria-checked="true"]').getAttribute('aria-label'),'AkiDuermo');
-  assert.match(host.querySelector('a').textContent,/Open AkiDuermo/);
+  assert.equal(host.querySelector('[data-selected="true"]').getAttribute('aria-label'),'AkiDuermo');
+  assert.match(document.activeElement.href,/akiduermo.com/);
+  assert.equal(dom.window.location.pathname,'/login');
   dom.window.close();
 });

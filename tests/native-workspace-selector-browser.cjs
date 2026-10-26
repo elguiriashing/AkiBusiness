@@ -17,27 +17,37 @@ const server=http.createServer((req,res)=>{
   for(const locale of ['en','es'])for(const theme of ['light','dark'])for(const width of [390,820,1440]){
    const page=await browser.newPage({viewport:{width,height:900},reducedMotion:theme==='dark'?'reduce':'no-preference'}),errors=[];page.on('pageerror',e=>errors.push(e.message));
    await page.goto(`http://127.0.0.1:${server.address().port}/selector?locale=${locale}&theme=${theme}&ref=AKI12345`);
-   await expect(page.getByRole('radio')).toHaveCount(5);await expect(page.getByRole('radio',{name:'AkiBusiness',exact:true})).toHaveAttribute('aria-checked','true');
-   await page.getByRole('radio',{name:'AkiBusiness',exact:true}).focus();await page.keyboard.press('Home');
+   await expect(page.locator('.aki-workspace-picker').getByRole('link')).toHaveCount(5);await expect(page.getByRole('link',{name:'AkiBusiness',exact:true})).toHaveAttribute('data-selected','true');
+   await page.getByRole('link',{name:'AkiBusiness',exact:true}).focus();await page.keyboard.press('Home');
    for(const name of ['AkiPasa','AkiDuermo','AkiCoches','AkiHQ','AkiBusiness']){
-    await expect(page.getByRole('radio',{name,exact:true})).toHaveAttribute('aria-checked','true');await expect(page.getByRole('radio',{name,exact:true})).toBeFocused();
-    await expect(page.getByRole('textbox',{name:'Draft email'})).toHaveValue('fixture@example.invalid');const link=page.locator('.aki-workspace-picker__action a');if(await link.count())expect(new URL(await link.getAttribute('href')).searchParams.get('ref')).toBe('AKI12345');await page.keyboard.press('ArrowRight');
+    await expect(page.getByRole('link',{name,exact:true})).toHaveAttribute('data-selected','true');await expect(page.getByRole('link',{name,exact:true})).toBeFocused();
+    await expect(page.getByRole('textbox',{name:'Draft email'})).toHaveValue('fixture@example.invalid');const link=page.getByRole('link',{name,exact:true});expect(new URL(await link.getAttribute('href')).searchParams.get('ref')).toBe('AKI12345');await page.keyboard.press('ArrowRight');
    }
    await page.keyboard.press('End');expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1)).toBe(true);expect(await page.locator('.aks-selector__symbol img').evaluateAll(nodes=>nodes.every(image=>image.complete&&image.naturalWidth>0))).toBe(true);expect(await page.locator(".aks-selector__scene").evaluate(node=>node.scrollLeft)).toBe(0);expect(errors).toEqual([]);
-   for(const bounds of await page.locator('.aks-selector__nav').evaluateAll(nodes=>nodes.map(node=>({width:node.getBoundingClientRect().width,height:node.getBoundingClientRect().height})))){expect(bounds.width).toBeGreaterThanOrEqual(44);expect(bounds.height).toBeGreaterThanOrEqual(44);}
+   for(const bounds of await page.locator('.aks-selector__card[data-selected=true]').evaluateAll(nodes=>nodes.map(node=>({width:node.getBoundingClientRect().width,height:node.getBoundingClientRect().height})))){expect(bounds.width).toBeGreaterThanOrEqual(44);expect(bounds.height).toBeGreaterThanOrEqual(44);}
    if(theme==='dark')expect(await page.locator('.aks-selector__effect-orbit').first().evaluate(node=>getComputedStyle(node).animationName)).toBe('none');
    await page.screenshot({path:path.join(output,`business-${locale}-${theme}-${width}.png`),fullPage:true,animations:'disabled'});
    await page.route('**/config.js',route=>route.fulfill({contentType:'text/javascript',body:'window.AKIHQ_CONFIG={SUPABASE_URL:"https://fixture.invalid",SUPABASE_ANON_KEY:"disposable"}'}));
    await page.route('**/assets/supabase.js',route=>route.fulfill({contentType:'text/javascript',body:'window.supabase={createClient:()=>({auth:{getUser:async()=>({data:{user:null}})}})}'}));
    await page.addInitScript(value=>localStorage.setItem('akipasa.theme',value),theme);
    await page.goto(`http://127.0.0.1:${server.address().port}/account?locale=${locale}&ref=AKI12345`);
-   await expect(page.getByRole('radio')).toHaveCount(5);
+   await expect(page.locator('.aki-workspace-picker').getByRole('link')).toHaveCount(5);
    const draft=page.locator('#signin input[name=email]');await draft.fill('draft@example.invalid');
-   await page.getByRole('radio',{name:'AkiBusiness',exact:true}).focus();await page.keyboard.press('Home');await page.keyboard.press('ArrowRight');
-   await expect(draft).toHaveValue('draft@example.invalid');await expect(page.locator('.aki-workspace-picker a')).toHaveAttribute('href',`https://akiduermo.com/account?lang=${locale}&ref=AKI12345`);
+   await page.getByRole('link',{name:'AkiBusiness',exact:true}).focus();await page.keyboard.press('Home');await page.keyboard.press('ArrowRight');
+   await expect(draft).toHaveValue('draft@example.invalid');await expect(page.getByRole('link',{name:'AkiDuermo',exact:true})).toHaveAttribute('href',`https://akiduermo.com/account?lang=${locale}&ref=AKI12345`);
    expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1)).toBe(true);
    if(width<800){const picker=await page.locator('.aki-workspace-picker').boundingBox(),forms=await page.locator('.auth-forms').boundingBox();expect(picker.y).toBeGreaterThanOrEqual(forms.y+forms.height);}
-   expect(await page.locator(".aks-selector__scene").evaluate(node=>node.scrollLeft)).toBe(0);expect(errors).toEqual([]);await page.screenshot({path:path.join(output,`account-guest-${locale}-${theme}-${width}.png`),fullPage:true,animations:'disabled'});await page.close();
+   expect(await page.locator(".aks-selector__scene").evaluate(node=>node.scrollLeft)).toBe(0);expect(errors).toEqual([]);await page.screenshot({path:path.join(output,`account-guest-${locale}-${theme}-${width}.png`),fullPage:true,animations:'disabled'});await expect(page.locator('.aks-selector__footer, .aki-workspace-picker__action')).toHaveCount(0);
+   const opened=[];await page.route(/^https:\/\/(akipasa\.com|akiduermo\.com|akicoches\.com|akihq\.app|akibusiness\.com)\//,route=>{opened.push(route.request().url());return route.fulfill({contentType:'text/html',body:'<h1>Workspace destination</h1>'});});
+   const scene=page.locator('.aks-selector__scene');
+   await scene.dispatchEvent('pointerdown',{pointerType:'touch',pointerId:7,clientX:240,clientY:80,bubbles:true});
+   await scene.dispatchEvent('pointerup',{pointerType:'touch',pointerId:7,clientX:130,clientY:82,bubbles:true});
+   await expect(page.getByRole('link',{name:'AkiCoches',exact:true})).toHaveAttribute('data-selected','true');
+   await page.getByRole('link',{name:'AkiDuermo',exact:true}).dispatchEvent('click',{bubbles:true,cancelable:true});
+   await expect(draft).toHaveValue('draft@example.invalid');expect(opened).toEqual([]);
+   await page.getByRole('link',{name:'AkiHQ',exact:true}).click();
+   await expect(page).toHaveURL(`https://akihq.app/${locale}/auth?ref=AKI12345`);expect(opened).toHaveLength(1);
+   await page.close();
   }
   console.log(JSON.stringify({cases:12,status:'passed',scope:'Static AkiSelector login adapter; language/theme/viewport/keyboard/referral/draft/reduced-motion fixtures'}));
  }finally{await browser?.close();await new Promise(resolve=>server.close(resolve));}
