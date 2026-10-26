@@ -70,6 +70,7 @@
     });
     scene.addEventListener("pointermove", event => {
       const start = startPoint;if (!start || start.id !== event.pointerId) return;
+      if(event.pointerType==="mouse"&&event.buttons===0){startPoint=null;resetDrag(event.pointerId);return;}
       const dx=event.clientX-start.x,dy=event.clientY-start.y;
       if (!start.dragging && (Math.abs(dx)<10 || Math.abs(dx)<Math.abs(dy)*1.3)) return;
       if (!start.dragging) { start.dragging=true;suppressClick=true;scene.setPointerCapture?.(event.pointerId);scene.dataset.dragging="true"; }
@@ -77,6 +78,7 @@
       scene.style.setProperty("--aks-drag-offset",`${Math.max(-limit,Math.min(limit,dx))}px`);
     });
     for (const type of ["pointercancel","lostpointercapture"]) scene.addEventListener(type,event=>{
+      if(type==="lostpointercapture"&&event.target!==scene)return;
       if(startPoint?.id!==event.pointerId)return;startPoint=null;resetDrag(event.pointerId);
     });
     scene.addEventListener("pointerup", event => {
