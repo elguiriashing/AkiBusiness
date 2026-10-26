@@ -26,6 +26,13 @@
     const scene = element("div", "aks-selector__scene");
     scene.setAttribute("role", "group");scene.setAttribute("aria-label", es ? "Espacios AkiSuite" : "AkiSuite workspaces");
     for (const name of ["ambient", "floor"]) { const node = element("div", `aks-selector__${name}`);node.setAttribute("aria-hidden", "true");scene.append(node); }
+    function handleKey(event) {
+        hovered = null;energize();
+        suppressClick = false;
+        const delta = ["ArrowRight", "ArrowDown"].includes(event.key) ? 1 : ["ArrowLeft", "ArrowUp"].includes(event.key) ? -1 : 0;
+        if (!delta && !["Home", "End"].includes(event.key)) return;
+        event.preventDefault();choose(event.key === "Home" ? 0 : event.key === "End" ? products.length - 1 : (selected + delta + products.length) % products.length, true);
+    }
     const buttons = products.map((item, index) => {
       const button = element("a", "aks-selector__card");
       button.href = root.AkiSuiteNavigation.href(item.id, locale, {path:item.path});
@@ -46,24 +53,50 @@
       for (const part of ["trail", "actor", "detail"]) arrival.append(element("span", `aks-selector__arrival-${part}`));
       button.append(effect, arrival, face);
       button.addEventListener("click", event => { if (suppressClick) { event.preventDefault(); suppressClick = false; } });
-      button.addEventListener("pointerenter", event => { if (event.pointerType === "mouse") { hovered = index;energize(); } });
+      button.addEventListener("pointerenter", event => { if (event.pointerType === "mouse" && !startPoint) { hovered = index;energize(); } });
       button.addEventListener("pointerdown", () => { hovered = null;energize(); });
-      button.addEventListener("keydown", event => {
-        hovered = null;energize();
-        suppressClick = false;
-        const delta = ["ArrowRight", "ArrowDown"].includes(event.key) ? 1 : ["ArrowLeft", "ArrowUp"].includes(event.key) ? -1 : 0;
-        if (!delta && !["Home", "End"].includes(event.key)) return;
-        event.preventDefault();choose(event.key === "Home" ? 0 : event.key === "End" ? products.length - 1 : (selected + delta + products.length) % products.length, true);
-      });scene.append(button);return button;
+      button.addEventListener("keydown", handleKey);
+      scene.append(button);return button;
     });
-    scene.addEventListener("pointerdown", event => { suppressClick = false; startPoint = ["touch", "pen"].includes(event.pointerType) ? {x:event.clientX,y:event.clientY,id:event.pointerId} : null; });
-    scene.addEventListener("pointercancel", () => { startPoint = null; });
+    function resetDrag(pointerId) {
+      delete scene.dataset.dragging;scene.style.removeProperty("--aks-drag-offset");
+      if (scene.hasPointerCapture?.(pointerId)) scene.releasePointerCapture(pointerId);
+    }
+    scene.addEventListener("dragstart", event => event.preventDefault());
+    scene.addEventListener("pointerdown", event => {
+      if (event.isPrimary === false || (event.pointerType === "mouse" && event.button !== 0)) return;
+      suppressClick = false;hovered = null;energize();
+      startPoint = {x:event.clientX,y:event.clientY,id:event.pointerId,dragging:false};
+    });
+    scene.addEventListener("pointermove", event => {
+      const start = startPoint;if (!start || start.id !== event.pointerId) return;
+      if(event.pointerType==="mouse"&&event.buttons===0){startPoint=null;resetDrag(event.pointerId);return;}
+      const dx=event.clientX-start.x,dy=event.clientY-start.y;
+      if (!start.dragging && (Math.abs(dx)<10 || Math.abs(dx)<Math.abs(dy)*1.3)) return;
+      if (!start.dragging) { start.dragging=true;suppressClick=true;scene.setPointerCapture?.(event.pointerId);scene.dataset.dragging="true"; }
+      event.preventDefault();const limit=scene.clientWidth*.3;
+      scene.style.setProperty("--aks-drag-offset",`${Math.max(-limit,Math.min(limit,dx))}px`);
+    });
+    for (const type of ["pointercancel","lostpointercapture"]) scene.addEventListener(type,event=>{
+      if(type==="lostpointercapture"&&event.target!==scene)return;
+      if(startPoint?.id!==event.pointerId)return;startPoint=null;resetDrag(event.pointerId);
+    });
     scene.addEventListener("pointerup", event => {
-      const start = startPoint;startPoint = null;if (!start || start.id !== event.pointerId) return;
-      const dx = event.clientX - start.x, dy = event.clientY - start.y;
-      if (Math.abs(dx) < 45 || Math.abs(dx) < Math.abs(dy) * 1.3) return;
-      suppressClick = true;choose((selected + (dx < 0 ? 1 : -1) + products.length) % products.length);
+      const start=startPoint;if(!start||start.id!==event.pointerId)return;startPoint=null;resetDrag(event.pointerId);
+      const dx=event.clientX-start.x,dy=event.clientY-start.y;
+      if(Math.hypot(dx,dy)>=10)suppressClick=true;
+      if(Math.abs(dx)<45||Math.abs(dx)<Math.abs(dy)*1.3)return;
+      suppressClick=true;choose((selected+(dx<0?1:-1)+products.length)%products.length);
     });
+    for(const delta of [-1,1]) {
+      const button=element("button",`aks-selector__browse aks-selector__browse--${delta<0?"previous":"next"}`);
+      button.type="button";button.setAttribute("aria-label",delta<0?(es?"Opción anterior":"Previous option"):(es?"Opción siguiente":"Next option"));
+      const chevron=element("span","",delta<0?"‹":"›");chevron.setAttribute("aria-hidden","true");button.append(chevron);
+      button.addEventListener("pointerdown",event=>event.stopPropagation());
+      button.addEventListener("keydown",handleKey);
+      button.addEventListener("click",()=>{hovered=null;choose((selected+delta+products.length)%products.length);});
+      scene.append(button);
+    }
     scene.addEventListener("pointerleave", () => { hovered = null;energize(); });
     selector.append(scene);host.append(selector);
     function choose(index, focus = false) {

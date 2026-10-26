@@ -1,14 +1,15 @@
 "use strict";
 const { chromium, expect } = require(process.env.AKIBUSINESS_PLAYWRIGHT_PATH || require('node:path').resolve(__dirname,'../../akipasa/node_modules/@playwright/test'));
+const exercisePointerBrowsing=require("./selector-pointer-acceptance.cjs");
 const fs=require('node:fs'),path=require('node:path'),http=require('node:http');
 const root=path.resolve(__dirname,'..'),output=path.join(root,'test-results/native-account/workspace-selector');fs.mkdirSync(output,{recursive:true});
 const server=http.createServer((req,res)=>{
  const url=new URL(req.url,'http://fixture');
  if(url.pathname==='/selector'){
-  res.setHeader('Content-Type','text/html');res.end(`<!doctype html><html data-theme="${url.searchParams.get('theme')==='light'?'light':'dark'}"><head><meta name="viewport" content="width=device-width,initial-scale=1"><link rel="stylesheet" href="/assets/aki-selector.css"><link rel="stylesheet" href="/assets/workspace-selector.css"><style>*{box-sizing:border-box}html{--surface:#17213a;--ink:#f6f4f1;--muted:#b4bfd1;--line:#ffffff30;background:#11192e;color:var(--ink)}html[data-theme=light]{--surface:#fff;--ink:#172238;--muted:#526078;--line:#d5dce6;background:#f8f9fc}body{margin:0;padding:24px;font:16px system-ui}main{max-width:480px;margin:auto}input{width:100%;min-height:44px;background:var(--surface);color:var(--ink);border:1px solid var(--line);border-radius:10px;padding:8px}</style></head><body><main><input aria-label="Draft email" value="fixture@example.invalid"><aside id="picker"></aside></main><script src="/assets/suite-navigation.js"></script><script src="/assets/workspace-selector.js"></script><script>AkiWorkspaceSelector.mount(document.getElementById('picker'),new URLSearchParams(location.search).get('locale'),'business')</script></body></html>`);return;
+  res.setHeader('Content-Type','text/html; charset=utf-8');res.end(`<!doctype html><html data-theme="${url.searchParams.get('theme')==='light'?'light':'dark'}"><head><meta name="viewport" content="width=device-width,initial-scale=1"><link rel="stylesheet" href="/assets/aki-selector.css"><link rel="stylesheet" href="/assets/workspace-selector.css"><style>*{box-sizing:border-box}html{--surface:#17213a;--ink:#f6f4f1;--muted:#b4bfd1;--line:#ffffff30;background:#11192e;color:var(--ink)}html[data-theme=light]{--surface:#fff;--ink:#172238;--muted:#526078;--line:#d5dce6;background:#f8f9fc}body{margin:0;padding:24px;font:16px system-ui}main{max-width:480px;margin:auto}input{width:100%;min-height:44px;background:var(--surface);color:var(--ink);border:1px solid var(--line);border-radius:10px;padding:8px}</style></head><body><main><input aria-label="Draft email" value="fixture@example.invalid"><aside id="picker"></aside></main><script src="/assets/suite-navigation.js"></script><script src="/assets/workspace-selector.js"></script><script>AkiWorkspaceSelector.mount(document.getElementById('picker'),new URLSearchParams(location.search).get('locale'),'business')</script></body></html>`);return;
  }
  const target=path.resolve(root,'.'+(url.pathname==='/account'?'/account.html':url.pathname));if(!target.startsWith(root+path.sep)){res.writeHead(404).end();return;}
- try{res.setHeader('Content-Type',url.pathname.endsWith('.js')?'text/javascript':url.pathname.endsWith('.css')?'text/css':url.pathname.endsWith('.svg')?'image/svg+xml':'text/html');res.end(fs.readFileSync(target));}catch{res.writeHead(404).end();}
+ try{res.setHeader('Content-Type',url.pathname.endsWith('.js')?'text/javascript':url.pathname.endsWith('.css')?'text/css':url.pathname.endsWith('.svg')?'image/svg+xml':url.pathname.endsWith('.woff2')?'font/woff2':'text/html');res.end(fs.readFileSync(target));}catch{res.writeHead(404).end();}
 });
 (async()=>{
  await new Promise(resolve=>server.listen(0,'127.0.0.1',resolve));let browser;
@@ -18,6 +19,7 @@ const server=http.createServer((req,res)=>{
    const page=await browser.newPage({viewport:{width,height:900},reducedMotion:theme==='dark'?'reduce':'no-preference'}),errors=[];page.on('pageerror',e=>errors.push(e.message));
    await page.goto(`http://127.0.0.1:${server.address().port}/selector?locale=${locale}&theme=${theme}&ref=AKI12345`);
    await expect(page.locator('.aki-workspace-picker').getByRole('link')).toHaveCount(5);await expect(page.getByRole('link',{name:'AkiBusiness',exact:true})).toHaveAttribute('data-selected','true');
+   await exercisePointerBrowsing(page,expect,locale);
    await page.getByRole('link',{name:'AkiBusiness',exact:true}).focus();await page.keyboard.press('Home');
    for(const name of ['AkiPasa','AkiDuermo','AkiCoches','AkiHQ','AkiBusiness']){
     await expect(page.getByRole('link',{name,exact:true})).toHaveAttribute('data-selected','true');await expect(page.getByRole('link',{name,exact:true})).toBeFocused();
@@ -48,8 +50,8 @@ const server=http.createServer((req,res)=>{
    expect(await page.locator(".aks-selector__scene").evaluate(node=>node.scrollLeft)).toBe(0);expect(errors).toEqual([]);await page.screenshot({path:path.join(output,`account-guest-${locale}-${theme}-${width}.png`),fullPage:true,animations:'disabled'});await expect(page.locator('.aks-selector__footer, .aki-workspace-picker__action')).toHaveCount(0);
    const opened=[];await page.route(/^https:\/\/(akipasa\.com|akiduermo\.com|akicoches\.com|akihq\.app|akibusiness\.com)\//,route=>{opened.push(route.request().url());return route.fulfill({contentType:'text/html',body:'<h1>Workspace destination</h1>'});});
    const scene=page.locator('.aks-selector__scene');
-   await scene.dispatchEvent('pointerdown',{pointerType:'touch',pointerId:7,clientX:240,clientY:80,bubbles:true});
-   await scene.dispatchEvent('pointerup',{pointerType:'touch',pointerId:7,clientX:130,clientY:82,bubbles:true});
+   await scene.dispatchEvent('pointerdown',{pointerType:'touch',isPrimary:true,pointerId:7,clientX:240,clientY:80,bubbles:true});
+   await scene.dispatchEvent('pointerup',{pointerType:'touch',isPrimary:true,pointerId:7,clientX:130,clientY:82,bubbles:true});
    await expect(page.getByRole('link',{name:'AkiCoches',exact:true})).toHaveAttribute('data-selected','true');
    await page.getByRole('link',{name:'AkiDuermo',exact:true}).dispatchEvent('click',{bubbles:true,cancelable:true});
    await expect(draft).toHaveValue('draft@example.invalid');expect(opened).toEqual([]);
