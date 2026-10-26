@@ -18,11 +18,9 @@ order and explicit remaining shared safety/onboarding and provider acceptance.
 
 Workspace picker now rechecks crm_workspace_access and opens the native dashboard directly for authorized operating locations. Unentitled locations remain on native setup; access lookup failures do not navigate. Three focused positive/denial/error cases pass.
 
-
 ### 2026-10-24 — Preserve concurrent staff rotas release
 
 Merged reviewed main 8fa3e279, retaining staff rotas, tool guides and existing operation gates. Resolved version-only overlaps by keeping source cache 144 and advancing paid cache to 146 and paid app asset to 49, beyond the separately released cache 145. Native account/pricing flows and the direct authorized workspace picker remain intact. Full combined operation/release and hosted journey checks are required.
-
 
 ## 2026-10-25 | Shared icon family v3
 
@@ -53,7 +51,6 @@ provider setting, customer record or native signing change. Source revert is the
 rollback. Full source, browser/CI and exact production checks remain required;
 device/authenticated acceptance must not be inferred from fixtures.
 
-
 ## 2026-10-25 | Login stylesheet cache continuity
 
 Live release verification found returning browsers could reuse the previous
@@ -62,7 +59,6 @@ login stylesheet revision to v2 so the existing home/language/theme controls
 receive their 44px target and surface styling. Applies to EN/ES guest login,
 light/dark, desktop/mobile. No auth, billing, tenant or data changes. Rollback
 is a source revert; exact-source production visual verification follows CI.
-
 
 ## 2026-10-25 | AkiSelector workspace login integration
 
@@ -79,7 +75,6 @@ no framework runtime or third-party dependency added. The private lab keeps
 its administrator-only route. No pricing, session, tenant, permissions or
 provider setting changes. Source revert is rollback. Source, responsive
 browser, exact live source and physical device acceptance remain distinct.
-
 
 ### Login selector focus and clipping acceptance
 
@@ -116,7 +111,6 @@ hosted source/browser/Cloudflare checks and exact live-source verification are
 required before release; installed native/device acceptance remains separate.
 Rollback is a source revert and renewed Business asset/cache versions.
 
-
 ## 2026-10-26 | Cinematic AkiSelector energy and transitions
 
 The login selector now uses five distinct vector-mask materials: Pasa flame
@@ -143,7 +137,6 @@ analytics, payment, provider configuration or Android binary change. This is
 web-delivered presentation. Rollback restores source and advances static asset
 versions/cache again. Source and real-browser evidence is recorded in the PR;
 full CI, production deployment and physical-device acceptance are separate gates.
-
 
 ## 2026-10-26 | Product-specific AkiSelector opening stories
 
@@ -175,3 +168,41 @@ No production data, SQL, storage, billing, analytics, provider configuration or
 Android binary changes. Source revert plus fresh static versions is rollback.
 GitHub publication is still awaiting the explicit authorization requested earlier;
 no push, PR, merge or deployment is implied by this design refinement.
+
+## 2026-10-26 | Shared business marketing header
+
+Public landing header adopts the same frame and byte-identical stylesheet as
+AkiHQ SuiteMarketingHeader: brand, Tools, Pricing, sibling app, language,
+appearance, Aki Apps, sign-in. Shared fixed slots and scrollbar gutter align
+buttons exactly; brand artwork is 40px and actions are 44px. Responsive two-row
+phone controls retain Tools/Pricing, and the Apps menu retains the sibling link
+when its direct tablet/phone shortcut is hidden. Original purple branding stays.
+
+The public page now exposes the existing akipasa.theme preference and real light
+surface styling, plus a five-app localized menu with outside/Escape dismissal.
+Login remains local /login?locale=..., operating plan actions remain /account,
+legacy OAuth/hash recovery remains intact, and Apps use fixed canonical origins.
+No identity, session, paid access, tenant, RLS, database, payment, analytics,
+provider configuration or Android package is changed. Only this public marketing
+header uses the new CSS; operations/account chrome is unchanged.
+
+Landing CSS/JS versions advance to v2/v4. The existing legacy source cache146 is
+retained; the actual paid-product transform advances cache155 to156 and all
+review/deploy workflow cache assertions follow it. New header CSS is precached.
+Source revert plus a fresh cache revision is rollback. main and the existing
+akibusiness-selfowned-staging target retain production authority; no deployment
+is implied by this candidate.
+
+Validation: real Chromium compared HQ/Business header coordinates and dimensions
+across 40 surfaces (EN/ES, both themes, 360/600/900/1280/1536px), all within 1px.
+Menus, Escape, localized actions, 40px logo, 44px sign-in and overflow passed;
+desktop/mobile screenshots inspected. Full static gateway check, transformed
+release packaging, hosted CI and exact-source live readback are tracked separately.
+
+Verification update: the complete gateway/static `npm run check` passed712 tests,
+with the existing one skipped case. After adding public-header interaction
+coverage, all12 focused landing/release/cache tests passed. They execute the
+actual landing script in JSDOM and verify EN/ES, local login, theme persistence,
+canonical app links, outside/Escape dismissal and focus return. The earlier
+cache-workflow assertion failure was corrected by advancing all five existing
+review/deployment assertions to the effective paid cache156. No gate was removed.

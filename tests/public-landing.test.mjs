@@ -66,3 +66,35 @@ test("public operating tools are exactly the twelve authoritative membership cat
   assert.match(page, /€97\.99/);
   assert.doesNotMatch(page, /data-i18n="toolTogether"|data-i18n="toolReports"/);
 });
+
+test("shared header keeps local login, language, real appearance and canonical app menu working", async () => {
+  const { JSDOM } = await import("../cloudflare/node_modules/jsdom/lib/api.js");
+  for (const locale of ["en", "es"]) {
+    const dom = new JSDOM(read("index.html"), {url: `https://akibusiness.com/?locale=${locale}`, runScripts: "outside-only"});
+    const {window} = dom;
+    window.eval(read("assets/landing.js"));
+    const header = window.document.querySelector(".suite-marketing-header");
+    assert.deepEqual(Array.from(header.children).map(el => el.className), ["suite-marketing-brand", "suite-marketing-links", "portal-header-tools", "suite-marketing-signin"]);
+    assert.equal(header.querySelector(".suite-marketing-signin").href, `https://akibusiness.com/login?locale=${locale}`);
+    const menu = header.querySelector("details");
+    menu.open = true;
+    window.document.dispatchEvent(new window.KeyboardEvent("keydown", {key: "Escape", bubbles: true}));
+    assert.equal(menu.open, false);
+    assert.equal(window.document.activeElement, menu.querySelector("summary"));
+    menu.open = true;
+    window.document.body.dispatchEvent(new window.Event("pointerdown", {bubbles: true}));
+    assert.equal(menu.open, false);
+    header.querySelector("#ab-theme").click();
+    assert.equal(window.document.documentElement.dataset.theme, "light");
+    assert.equal(window.localStorage.getItem("akipasa.theme"), "light");
+    header.querySelector("#ab-language").click();
+    const other = locale === "en" ? "es" : "en";
+    assert.equal(window.document.documentElement.lang, other);
+    assert.equal(header.querySelector(".suite-marketing-signin").href, `https://akibusiness.com/login?locale=${other}`);
+    assert.equal(header.querySelector('[data-suite-product="hq"]').href, `https://akihq.app/${other}/business`);
+    assert.equal(header.querySelector('[data-suite-product="pasa"]').href, `https://akipasa.com/${other}`);
+    assert.equal(header.querySelector('[data-suite-product="business"]').getAttribute("aria-current"), "page");
+    assert.equal(window.document.documentElement.dataset.theme, "light");
+    dom.window.close();
+  }
+});
