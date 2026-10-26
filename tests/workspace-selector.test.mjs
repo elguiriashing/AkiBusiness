@@ -15,7 +15,8 @@ for (const locale of ['en','es']) test(`five-product icons are direct localized 
   assert.equal(host.querySelectorAll('a.aks-selector__card').length,5);
   assert.equal(host.querySelector('[data-selected="true"]').getAttribute('aria-label'),'AkiBusiness');
   assert.equal(host.querySelector('[aria-current="page"]').getAttribute('aria-label'),'AkiBusiness');
-  assert.equal(host.querySelector('.aks-selector__footer, .aki-workspace-picker__action, button'),null);
+  assert.equal(host.querySelectorAll('button.aks-selector__browse').length,2);
+  assert.equal(host.querySelector('.aks-selector__footer, .aki-workspace-picker__action'),null);
   for (const [name,origin,path] of [['AkiPasa','https://akipasa.com',`/${locale}/auth`],['AkiDuermo','https://akiduermo.com','/account'],['AkiCoches','https://akicoches.com','/account'],['AkiHQ','https://akihq.app',`/${locale}/auth`],['AkiBusiness','https://akibusiness.com','/login']]) {
     const target=new URL(host.querySelector(`[aria-label="${name}"]`).href);
     assert.equal(target.origin,origin);assert.equal(target.pathname,path);assert.equal(target.searchParams.get('ref'),'AKI12345');assert.equal(target.searchParams.has('access_token'),false);
@@ -67,4 +68,16 @@ test('each login icon has its own decorative one-shot story and separate idle ma
   assert(card.querySelector('.aks-selector__arrival-actor'));assert(card.querySelector('.aks-selector__sustain'));
  }
  assert.equal(host.querySelectorAll('[data-energized=true]').length,1);dom.window.close();
+});
+test('mouse drag and circular controls browse in place, cancel safely, and preserve direct clicks',()=>{
+ const {dom,host,document}=fixture('en'),scene=host.querySelector('.aks-selector__scene');
+ const send=(type,x)=>{const event=new dom.window.Event(type,{bubbles:true,cancelable:true});Object.assign(event,{pointerType:'mouse',pointerId:4,clientX:x,clientY:100,button:0,isPrimary:true});scene.dispatchEvent(event);};
+ send('pointerdown',220);send('pointermove',140);assert.equal(scene.dataset.dragging,'true');send('pointerup',100);
+ assert.equal(host.querySelector('[data-selected=true]').getAttribute('aria-label'),'AkiPasa');assert.equal(scene.dataset.dragging,undefined);
+ const outcomes=[];document.addEventListener('click',event=>{if(event.target.closest('a')){outcomes.push(event.defaultPrevented);event.preventDefault();}});
+ host.querySelector('[aria-label=AkiDuermo]').click();send('pointerdown',200);send('pointerup',202);host.querySelector('[aria-label=AkiDuermo]').click();assert.deepEqual(outcomes,[true,false]);
+ host.querySelector('[aria-label="Next option"]').click();assert.equal(host.querySelector('[data-selected=true]').getAttribute('aria-label'),'AkiDuermo');
+ send('pointerdown',220);send('pointermove',140);send('pointercancel',140);assert.equal(scene.dataset.dragging,undefined);assert.equal(scene.style.getPropertyValue('--aks-drag-offset'),'');
+ host.querySelector('[aria-label="Previous option"]').click();assert.equal(host.querySelector('[data-selected=true]').getAttribute('aria-label'),'AkiPasa');
+ assert.equal(document.querySelector('input').value,'fixture@example.invalid');dom.window.close();
 });

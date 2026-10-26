@@ -83,7 +83,7 @@ for (const enabled of [false, true]) {
         assert.match(context.appRoot.innerHTML, /id="login-workspace-selector"/);
         assert.equal(selectorMount[1], "en");
         assert.equal(selectorMount[2], "business");
-        assert.match(await read("login.html"), /workspace-selector.js\?v=4/);
+        assert.match(await read("login.html"), /workspace-selector.js\?v=5/);
 
         await handlers['google-login-btn:click']();
         assert.equal(oauth.options.redirectTo, origin + '/login');
