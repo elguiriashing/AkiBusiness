@@ -21,7 +21,15 @@ const server=http.createServer((req,res)=>{
    await page.getByRole('link',{name:'AkiBusiness',exact:true}).focus();await page.keyboard.press('Home');
    for(const name of ['AkiPasa','AkiDuermo','AkiCoches','AkiHQ','AkiBusiness']){
     await expect(page.getByRole('link',{name,exact:true})).toHaveAttribute('data-selected','true');await expect(page.getByRole('link',{name,exact:true})).toBeFocused();
-    await expect(page.getByRole('textbox',{name:'Draft email'})).toHaveValue('fixture@example.invalid');const link=page.getByRole('link',{name,exact:true});expect(new URL(await link.getAttribute('href')).searchParams.get('ref')).toBe('AKI12345');await page.keyboard.press('ArrowRight');
+    await expect(page.getByRole('textbox',{name:'Draft email'})).toHaveValue('fixture@example.invalid');const link=page.getByRole('link',{name,exact:true});expect(new URL(await link.getAttribute('href')).searchParams.get('ref')).toBe('AKI12345');
+    if(locale==='en'&&theme==='light'&&width===820){
+     const actor=link.locator('.aks-selector__arrival-actor');
+     await expect.poll(()=>actor.evaluate(node=>+getComputedStyle(node).opacity)).toBeGreaterThan(.4);
+     expect(await actor.evaluate(node=>getComputedStyle(node).animationIterationCount)).toBe('1');
+     await expect.poll(()=>actor.evaluate(node=>+getComputedStyle(node).opacity)).toBe(0);
+     await expect.poll(()=>link.locator('.aks-selector__sustain').evaluate(node=>+getComputedStyle(node).opacity)).toBe(1);
+    }
+    await page.keyboard.press('ArrowRight');
    }
    await page.keyboard.press('End');expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1)).toBe(true);expect(await page.locator('.aks-selector__symbol img').evaluateAll(nodes=>nodes.every(image=>image.complete&&image.naturalWidth>0))).toBe(true);expect(await page.locator(".aks-selector__scene").evaluate(node=>node.scrollLeft)).toBe(0);expect(errors).toEqual([]);
    for(const bounds of await page.locator('.aks-selector__card[data-selected=true]').evaluateAll(nodes=>nodes.map(node=>({width:node.getBoundingClientRect().width,height:node.getBoundingClientRect().height})))){expect(bounds.width).toBeGreaterThanOrEqual(44);expect(bounds.height).toBeGreaterThanOrEqual(44);}

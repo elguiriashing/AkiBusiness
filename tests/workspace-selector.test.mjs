@@ -45,3 +45,26 @@ test('swipe compatibility clicks are blocked but later keyboard activation is al
  swipe();const icon=host.querySelector('[data-selected=true]');icon.dispatchEvent(new dom.window.KeyboardEvent('keydown',{key:'Enter',bubbles:true}));icon.click();
  assert.deepEqual(outcomes,[true,false]);dom.window.close();
 });
+test('mouse energy previews crossfade independently from link selection and touch',()=>{
+ const {dom,host,document}=fixture('en');
+ const initial=host.querySelector('[data-selected=true]'),pasa=host.querySelector('[aria-label=AkiPasa]');
+ initial.focus();const left=pasa.style.left;
+ const enter=type=>{const event=new dom.window.Event('pointerenter');Object.assign(event,{pointerType:type});pasa.dispatchEvent(event);};
+ enter('touch');assert.equal(initial.dataset.energized,'true');
+ enter('mouse');assert.equal(pasa.dataset.energized,'true');assert.equal(initial.dataset.energized,'false');
+ assert.equal(initial.dataset.selected,'true');assert.equal(document.activeElement,initial);assert.equal(pasa.style.left,left);
+ assert.equal(initial.querySelectorAll('.aks-selector__particles i').length,10);
+ assert(initial.querySelector('.aks-selector__ignition'));
+ host.querySelector('.aks-selector__scene').dispatchEvent(new dom.window.Event('pointerleave'));
+ assert.equal(initial.dataset.energized,'true');assert.equal(pasa.dataset.energized,'false');
+ assert.equal(document.querySelector('input').value,'fixture@example.invalid');dom.window.close();
+});
+test('each login icon has its own decorative one-shot story and separate idle material',()=>{
+ const {dom,host}=fixture('en');
+ for(const id of ['pasa','duermo','coches','hq','business']){
+  const card=host.querySelector(`[data-arrival="${id}"]`);assert(card);
+  assert.equal(card.querySelector('.aks-selector__arrival').getAttribute('aria-hidden'),'true');
+  assert(card.querySelector('.aks-selector__arrival-actor'));assert(card.querySelector('.aks-selector__sustain'));
+ }
+ assert.equal(host.querySelectorAll('[data-energized=true]').length,1);dom.window.close();
+});
