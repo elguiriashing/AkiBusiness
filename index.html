@@ -9,7 +9,8 @@
   <link rel="canonical" href="https://akibusiness.com/" />
   <title>AkiBusiness | Run the day. Grow the business.</title>
   <link rel="icon" href="/assets/brand/v3/business.svg" type="image/svg+xml" />
-  <link rel="stylesheet" href="assets/landing.css?v=1" />
+  <link rel="stylesheet" href="assets/landing.css?v=2" />
+  <link rel="stylesheet" href="assets/suite-marketing-header.css?v=1" />
   <script>
     // Legacy OAuth callbacks and bookmarked hash routes must reach the preserved application.
     // Do not store or send authentication tokens to analytics on this public page.
@@ -22,13 +23,19 @@
       }
     })();
   </script>
-  <script defer src="assets/landing.js?v=3"></script>
+  <script defer src="assets/landing.js?v=4"></script>
 </head>
 <body>
 <div class="ab-landing" id="top">
-  <header class="ab-header">
-    <a href="/" class="ab-brand" aria-label="AkiBusiness home"><img src="assets/logo.svg" width="41" height="41" alt=""/><span>Aki<strong>Business</strong><i>.</i></span></a>
-    <nav aria-label="Main navigation"><a href="#tools" data-i18n="navTools">Tools</a><a href="#pricing" data-i18n="navPlans">Pricing</a><a href="https://akihq.app" data-i18n="navHq">AkiHQ</a><button type="button" id="ab-language" aria-label="Switch language">ES</button><a class="ab-signin" data-login-link href="/login" data-i18n="signIn">Sign in ↗</a></nav>
+  <header class="suite-marketing-header" data-brand="business">
+    <a href="/" class="suite-marketing-brand" aria-label="AkiBusiness home"><img src="assets/brand/v3/business.svg" width="40" height="40" alt=""/><span>Aki<strong>Business.</strong></span></a>
+    <nav class="suite-marketing-links" aria-label="Primary navigation"><a href="#tools" data-i18n="navTools">Tools</a><a href="#pricing" data-i18n="navPlans">Pricing</a><a class="suite-marketing-peer" href="https://akihq.app" data-i18n="navHq">AkiHQ</a></nav>
+    <nav class="portal-header-tools" aria-label="Aki Apps controls">
+      <button type="button" id="ab-language" aria-label="Switch to Spanish">ES</button>
+      <button type="button" id="ab-theme" aria-label="Switch to light mode" aria-pressed="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2m0 16v2M2 12h2m16 0h2M5 5l1.5 1.5m11 11L19 19M5 19l1.5-1.5m11-11L19 5"/></svg></button>
+      <details class="portal-product-menu"><summary aria-label="Aki Apps" title="Aki Apps"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><circle cx="5" cy="12" r="1.5"/><circle cx="12" cy="12" r="1.5"/><circle cx="19" cy="12" r="1.5"/></svg></summary><div class="portal-product-popover"><a href="https://akipasa.com/en" data-suite-product="pasa"><img src="assets/brand/v3/pasa.svg" width="36" height="36" alt=""/><span>AkiPasa</span></a><a href="https://akiduermo.com/?lang=en" data-suite-product="duermo"><img src="assets/brand/v3/duermo.svg" width="36" height="36" alt=""/><span>AkiDuermo</span></a><a href="https://akicoches.com/?lang=en" data-suite-product="coches"><img src="assets/brand/v3/coches.svg" width="36" height="36" alt=""/><span>AkiCoches</span></a><a href="https://akihq.app/en/business" data-suite-product="hq"><img src="assets/brand/v3/hq.svg" width="36" height="36" alt=""/><span>AkiHQ</span></a><a href="/?locale=en" data-suite-product="business"><img src="assets/brand/v3/business.svg" width="36" height="36" alt=""/><span>AkiBusiness</span></a></div></details>
+    </nav>
+    <a class="suite-marketing-signin" data-login-link href="/login"><span data-i18n="headerSignIn">Sign in</span><span aria-hidden="true">↗</span></a>
   </header>
   <main>
     <section class="ab-hero">

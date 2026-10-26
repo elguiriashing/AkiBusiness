@@ -1,7 +1,7 @@
 (() => {
   "use strict";
   const es = {
-    navTools:"Herramientas", navPlans:"Precios", navHq:"AkiHQ", signIn:"Entrar ↗",
+    headerSignIn:"Entrar", navTools:"Herramientas", navPlans:"Precios", navHq:"AkiHQ", signIn:"Entrar ↗",
     eyebrow:"EL SISTEMA OPERATIVO DE TU NEGOCIO",
     headline1:"Dirige el día.", headline2:"Haz crecer tu negocio.",
     heroIntro:"Elige entre las 12 herramientas reales de AkiBusiness, incluyendo TPV, CRM, inventario, chat de equipo y más. Las herramientas activas dependen del plan y los permisos de tu ubicación.",
@@ -42,7 +42,8 @@
   };
   const original = new Map([...document.querySelectorAll("[data-i18n]")].map(el => [el, el.textContent]));
   const languageButton = document.getElementById("ab-language");
-  const urlLocale = new URLSearchParams(location.search).get("locale");
+  const params = new URLSearchParams(location.search);
+  const urlLocale = params.get("locale") || params.get("lang");
   let saved = null;
   try { saved = localStorage.getItem("akisuite.language"); } catch {}
   let locale = urlLocale === "es" || urlLocale === "en" ? urlLocale : saved === "es" ? "es" : "en";
@@ -53,6 +54,7 @@
       el.textContent = locale === "es" ? (es[key] || en) : en;
     }
     languageButton.textContent = locale === "es" ? "EN" : "ES";
+    updateHeader();
     languageButton.setAttribute("aria-label", locale === "es" ? "Cambiar a inglés" : "Switch to Spanish");
     document.querySelectorAll("[data-login-link]").forEach(link => {
       link.href = "/login?locale=" + locale;
@@ -63,7 +65,7 @@
       link.textContent = (locale === "es" ? "Elegir " : "Choose ") + name + " →";
     });
     document.querySelectorAll('a[href^="https://akihq.app"]').forEach(link => {
-      link.href = "https://akihq.app/?lang=" + locale;
+      if (!link.hasAttribute("data-suite-product")) link.href = "https://akihq.app/?lang=" + locale;
     });
   }
   languageButton.addEventListener("click", () => {
@@ -74,5 +76,33 @@
     history.replaceState(history.state, "", url);
     renderLanguage();
   });
+  let theme = "dark";
+  try { theme = localStorage.getItem("akipasa.theme") === "light" ? "light" : "dark"; } catch {}
+  const themeButton = document.getElementById("ab-theme");
+  const menu = document.querySelector(".suite-marketing-header .portal-product-menu");
+  function updateHeader() {
+    const es = locale === "es";
+    document.querySelector(".suite-marketing-brand").setAttribute("aria-label", es ? "Inicio de AkiBusiness" : "AkiBusiness home");
+    document.querySelector(".suite-marketing-links").setAttribute("aria-label", es ? "Navegación principal" : "Primary navigation");
+    document.querySelector(".portal-header-tools").setAttribute("aria-label", es ? "Controles de Aki Apps" : "Aki Apps controls");
+    document.documentElement.dataset.theme = theme;
+    themeButton.setAttribute("aria-pressed", String(theme === "dark"));
+    themeButton.setAttribute("aria-label", es ? `Cambiar a modo ${theme === "dark" ? "claro" : "oscuro"}` : `Switch to ${theme === "dark" ? "light" : "dark"} mode`);
+    themeButton.innerHTML = theme === "dark" ? '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2m0 16v2M2 12h2m16 0h2M5 5l1.5 1.5m11 11L19 19M5 19l1.5-1.5m11-11L19 5"/></svg>' : '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><path d="M20.9 13A9 9 0 0 1 11 3.1 9 9 0 1 0 20.9 13Z"/></svg>';
+    document.querySelectorAll("[data-suite-product]").forEach(link => {
+      const id = link.dataset.suiteProduct;
+      const urls = {pasa:`https://akipasa.com/${locale}`,duermo:`https://akiduermo.com/?lang=${locale}`,coches:`https://akicoches.com/?lang=${locale}`,hq:`https://akihq.app/${locale}/business`,business:`/?locale=${locale}`};
+      link.href = urls[id];
+      if (id === "business") link.setAttribute("aria-current", "page");
+    });
+  }
+  themeButton.addEventListener("click", () => {
+    theme = theme === "dark" ? "light" : "dark";
+    try { localStorage.setItem("akipasa.theme", theme); } catch {}
+    updateHeader();
+  });
+  document.addEventListener("pointerdown", event => { if (!menu.contains(event.target)) menu.open = false; });
+  document.addEventListener("keydown", event => { if (event.key === "Escape" && menu.open) { menu.open = false; menu.querySelector("summary").focus(); } });
+  menu.querySelectorAll("a").forEach(link => link.addEventListener("click", () => { menu.open = false; }));
   renderLanguage();
 })();
