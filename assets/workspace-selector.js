@@ -38,6 +38,7 @@
       face.append(symbol, element("span", "aks-selector__label", item.label));button.append(effect, face);
       button.addEventListener("click", event => { if (suppressClick) { event.preventDefault(); suppressClick = false; } });
       button.addEventListener("keydown", event => {
+        suppressClick = false;
         const delta = ["ArrowRight", "ArrowDown"].includes(event.key) ? 1 : ["ArrowLeft", "ArrowUp"].includes(event.key) ? -1 : 0;
         if (!delta && !["Home", "End"].includes(event.key)) return;
         event.preventDefault();choose(event.key === "Home" ? 0 : event.key === "End" ? products.length - 1 : (selected + delta + products.length) % products.length, true);

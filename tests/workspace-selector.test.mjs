@@ -37,3 +37,11 @@ test('keyboard browsing keeps the draft and focuses the icon itself',()=>{
   assert.equal(dom.window.location.pathname,'/login');
   dom.window.close();
 });
+test('swipe compatibility clicks are blocked but later keyboard activation is allowed',()=>{
+ const {dom,host,document}=fixture('en'),scene=host.querySelector('.aks-selector__scene'),outcomes=[];
+ const swipe=()=>{for(const [type,x] of [['pointerdown',220],['pointerup',100]]){const event=new dom.window.Event(type,{bubbles:true});Object.assign(event,{pointerType:'touch',pointerId:1,clientX:x,clientY:100});scene.dispatchEvent(event);}};
+ document.addEventListener('click',event=>{outcomes.push(event.defaultPrevented);event.preventDefault();});
+ swipe();host.querySelector('[aria-label=AkiBusiness]').click();
+ swipe();const icon=host.querySelector('[data-selected=true]');icon.dispatchEvent(new dom.window.KeyboardEvent('keydown',{key:'Enter',bubbles:true}));icon.click();
+ assert.deepEqual(outcomes,[true,false]);dom.window.close();
+});
