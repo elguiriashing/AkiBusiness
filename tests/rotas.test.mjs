@@ -112,11 +112,11 @@ test("CSV neutralizes formulas and quotes, print escapes markup, ICS escapes and
   for (const line of ics.split("\r\n")) assert(Buffer.byteLength(line) <= 75);
   assert(!ics.includes("\nEND:VEVENT\n"));
 });
-test("all twelve tools have distinct bilingual instructions without promising execution", () => {
-  assert.equal(Object.keys(G.guides).length, 12);
+test("all thirteen working areas have distinct bilingual instructions", () => {
+  assert.equal(Object.keys(G.guides).length, 13);
   for (const key of Object.keys(G.guides)) {
-    assert.match(G.render(key, "en"), /Getting started/);
-    assert.match(G.render(key, "es"), /Cómo empezar/);
+    assert.match(G.render(key, "en"), /Quick guide/);
+    assert.match(G.render(key, "es"), /Guía rápida/);
   }
   assert.match(G.render("automation", "en"), /does not execute/);
   assert.match(G.render("employees", "en"), /data-route="rotas"/);

@@ -1,0 +1,97 @@
+/* Operational workspace refresh. Public acquisition and sign-in retain their own design. */
+.app-shell:has(.app-main) {
+  --sidebar-width: 216px;
+  --topbar-height: 56px;
+  --radius: 12px;
+  --radius-sm: 8px;
+  --pad: 14px;
+  --shadow-soft: 0 3px 12px #00000012;
+}
+.app-main { background: var(--bg); }
+.app-main .topbar { background: var(--topbar); border-bottom: 1px solid var(--border); }
+.app-main .top-actions :is(.top-btn,.suite-app-toggle) svg { width: 18px; height: 18px; flex: 0 0 18px; }
+.app-main .contextbar { padding: 16px 22px 12px; gap: 12px; }
+.app-main .context-title h1 { font-size: clamp(20px, 2vw, 25px); letter-spacing: -.035em; line-height: 1.2; }
+.app-main .context-title p { font-size: 12px; margin-top: 5px; }
+.app-main .context-actions { gap: 6px; flex-wrap: wrap; }
+.app-main .content { padding: 0 22px 22px; }
+.app-main .view, .app-main .page-grid { gap: 14px; }
+.app-main .panel { box-shadow: var(--shadow-soft); background: var(--surface); }
+.app-main .panel-header { padding: 14px 16px; gap: 12px; }
+.app-main .panel-header h2 { font-size: 14px; letter-spacing: -.015em; }
+.app-main .panel-body { padding: 16px; }
+.app-main .metric-card { padding: 16px; min-height: 106px; }
+.app-main .metric-value { font-size: 28px; letter-spacing: -.04em; }
+.app-main .entity-card { padding: 14px; border-radius: 12px; }
+.app-main .entity-card-stats { gap: 12px; padding-top: 12px; }
+.app-main .data-table td { padding: 10px 14px; }
+.app-main .data-table th { padding: 10px 14px; font-size: 10px; letter-spacing: .05em; }
+.app-main .table-avatar { width: 32px; height: 32px; border-radius: 9px; }
+.app-main .kanban-column, .app-main .task-column { border: 1px solid var(--border); border-radius: 12px; background: var(--surface-2); }
+.app-main .task-card, .app-main .deal-card { box-shadow: none; border: 1px solid var(--border); }
+.app-main .segmented { padding: 3px; border: 1px solid var(--border); border-radius: 9px; background: var(--surface-2); }
+.app-main .segmented button { border-radius: 6px; min-height: 32px; }
+.app-main .segmented button.active { background: var(--surface-3); box-shadow: 0 1px 3px #00000015; color: var(--text); }
+.app-main .action-btn { min-height: 34px; border-radius: 8px; }
+.app-main .action-btn.primary { background: var(--accent); color: #fff; box-shadow: none; }
+.app-main .empty-state { min-height: 230px; padding: 28px 20px; }
+.app-main .empty-state p { max-width: 52ch; margin: 10px auto 18px; line-height: 1.65; }
+.app-main .tool-guide { padding: 0; background: transparent; box-shadow: none; border: 1px solid var(--border); }
+.tool-guide summary { display: flex; align-items: center; gap: 12px; padding: 11px 14px; cursor: pointer; font-size: 12px; }
+.tool-guide summary::before { content: '+'; color: var(--accent-2); font-size: 18px; }
+.tool-guide[open] summary::before { content: '−'; }
+.tool-guide summary span:first-child { font-weight: 700; flex-shrink: 0; }
+.tool-guide summary span:last-child { color: var(--muted); font-weight: 400; }
+.tool-guide ol { padding: 0 32px; margin: 4px 0 14px; color: var(--muted); font-size: 12px; line-height: 1.85; }
+.tool-guide > button { margin: 0 0 14px 14px; }
+.workflow-toolbar { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; }
+.workflow-search { display: flex; align-items: center; gap: 8px; padding: 0 12px; min-height: 38px; flex: 1 1 220px; max-width: 420px; border: 1px solid var(--border); border-radius: 9px; background: var(--surface); color: var(--muted); }
+.workflow-search input { min-width: 0; width: 100%; border: 0; background: transparent; color: var(--text); padding: 8px 0; font: inherit; font-size: 12px; outline: none; }
+.workflow-search:focus-within { outline: 2px solid var(--accent); outline-offset: 2px; }
+.workflow-search svg { width: 16px; height: 16px; flex-shrink: 0; }
+.agenda-list { overflow: hidden; }
+.business-mail .conversation-item { width: 100%; text-align: left; background: transparent; color: var(--text); border: 0; border-bottom: 1px solid var(--border); display: block; }
+.business-mail-back { display: none; }
+.business-mail .conversation-item.active { background: var(--surface-3); }
+.business-mail .conversation-item span { display: block; }
+.business-mail .conversation-item strong { overflow-wrap: anywhere; }
+.business-mail-body { padding: 18px; white-space: pre-wrap; overflow-wrap: anywhere; max-height: 55vh; overflow: auto; font-size: 13px; line-height: 1.65; }
+.business-mail .composer label { flex: 1; min-width: 0; font-size: 12px; }
+.business-mail .composer textarea { display: block; width: 100%; min-height: 110px; margin-top: 8px; }
+.mail-feedback { padding: 14px 18px; margin: 0; background: var(--surface-2); color: var(--text); line-height: 1.6; }
+.agenda-row { width: 100%; display: grid; grid-template-columns: minmax(140px, 1fr) 2fr minmax(140px, 1fr); gap: 16px; padding: 16px; border: 0; border-bottom: 1px solid var(--border); background: transparent; text-align: left; color: var(--text); cursor: pointer; }
+.agenda-row:hover { background: var(--surface-2); }
+.agenda-row small { display: block; margin-top: 4px; color: var(--muted); }
+.agenda-row time, .agenda-row > span:last-child { color: var(--muted); font-size: 12px; }
+.app-main .knowledge-layout { min-height: 420px; }
+.app-main .knowledge-article { padding: 24px; }
+.app-main .article-wrap { max-width: 780px; }
+.app-main .article-wrap h1 { font-size: 26px; letter-spacing: -.025em; }
+.app-main :is(button, a, input, select, textarea):focus-visible { outline: 2px solid var(--accent-2); outline-offset: 3px; }
+.app-main :is(button, a) { transition: background-color 140ms ease, border-color 140ms ease; }
+@media (max-width: 1100px) {
+  .app-main .contextbar { align-items: flex-start; flex-wrap: wrap; }
+  .app-main .context-actions { width: 100%; }
+}
+@media (max-width: 700px) {
+  .business-mail .business-mail-back { display: inline-flex; }
+  .app-main .contextbar { padding: 14px 12px 10px; }
+  .app-main .content { padding: 0 12px 20px; }
+  .app-main .context-title p { line-height: 1.5; }
+  .app-main .context-actions { flex-wrap: wrap; padding: 3px 0 7px; }
+  .app-main .context-actions > .segmented { max-width: 100%; overflow-x: auto; }
+  .app-main .context-actions > * { flex-shrink: 0; }
+  .app-main .action-btn, .app-main .mini-btn, .app-main .segmented button { min-height: 40px; }
+  .tool-guide summary { align-items: flex-start; gap: 8px; }
+  .tool-guide summary span:last-child { line-height: 1.5; }
+  .workflow-search { max-width: none; }
+  .workflow-toolbar > .segmented { max-width: 100%; overflow-x: auto; }
+  .workflow-toolbar > .segmented button { white-space: nowrap; }
+  .agenda-row { grid-template-columns: 1fr; gap: 6px; }
+  .app-main .knowledge-article { padding: 18px; }
+  .app-main .knowledge-layout { grid-template-columns: 1fr; }
+  .app-main .knowledge-nav { display: block; max-height: 180px; overflow: auto; border-bottom: 1px solid var(--border); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .app-main *, .app-main *::before, .app-main *::after { animation: none !important; transition: none !important; scroll-behavior: auto !important; }
+}

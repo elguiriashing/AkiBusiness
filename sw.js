@@ -1,9 +1,11 @@
-const CACHE = "akihq-v146";
+const CACHE = "akihq-v147";
 const ASSETS = [
   "./assets/rotas-core.js?v=1",
   "./assets/rotas.js?v=2",
   "./assets/rotas.css?v=2",
-  "./assets/tool-guides.js?v=1",
+  "./assets/tool-guides.js?v=2",
+  "./assets/business-workspace.css?v=1",
+  "./assets/business-mail.js?v=1",
   "./assets/suite-navigation.js?v=2",
   "./assets/operational-analytics.js?v=1",
   "./assets/operational-analytics.css?v=1",
