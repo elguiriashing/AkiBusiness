@@ -94,7 +94,11 @@ test('invalid dates, duplicate references and invalid amounts are rejected befor
 test('sales totals exclude quotes and cancelled invoices and derive overdue from dates',async()=>{
   const {dom,a}=await fixture();try{
     a.state.invoices=[{id:'i',number:'real',type:'Invoice',status:'Sent',total:10,dueDate:'2000-01-01'},{id:'q',number:'quote',type:'Quote',status:'Sent',total:999},{id:'c',number:'cancelled',type:'Invoice',status:'Cancelled',total:999}];
-    a.ui.route='sales';a.ui.salesFilter='overdue';const html=a.render.sales();assert.match(html,/real/);assert.doesNotMatch(html,/data-id="[qc]"|1,?998/);assert.match(html,/metric-value">€10</);
+    a.ui.route='sales';a.ui.salesFilter='overdue';const html=a.render.sales();assert.match(html,/real/);assert.doesNotMatch(html,/data-id="[qc]"|1,?998/);
+    const rendered=new JSDOM(html);try {
+      const outstanding=[...rendered.window.document.querySelectorAll('.metric-card')].find(card=>card.querySelector('.metric-label')?.textContent==='Outstanding');
+      assert.equal(Number(outstanding.querySelector('.metric-value').textContent.replace(/[^0-9.]/g,'')),10);
+    }finally{rendered.window.close();}
   }finally{dom.window.close();}
 });
 test('task filters, calendar agenda and knowledge search select actual records',async()=>{
