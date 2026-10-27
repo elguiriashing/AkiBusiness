@@ -207,6 +207,9 @@ const close = async (page) => {
         await page.waitForFunction(
           () => fixture.data.shifts[0].notes === "Keep my draft",
         );
+        // The RPC fixture changes before the native modal finishes closing.
+        // A real user can only begin a board drag after that modal is gone.
+        await page.locator("dialog[open]").waitFor({ state: "detached" });
         assert.equal(
           await page.evaluate(() => fixture.published.shifts[0].notes),
           "",
