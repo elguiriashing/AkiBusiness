@@ -3,6 +3,15 @@ main = "worker.js"
 compatibility_date = "2026-07-28"
 workers_dev = true
 
+# New, isolated per-business OAuth mailbox storage; no existing KV data moves.
+[[durable_objects.bindings]]
+name = "BUSINESS_MAIL"
+class_name = "BusinessMailbox"
+
+[[migrations]]
+tag = "business-mail-v1"
+new_sqlite_classes = ["BusinessMailbox"]
+
 # Persist invocation and application logs for publishing diagnostics.
 [observability.logs]
 enabled = true

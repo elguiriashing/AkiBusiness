@@ -19,7 +19,11 @@ export async function buildProductRelease(output, roleSwap = process.env.NEXT_PU
     const changes = JSON.parse(await readFile(new URL('./operations-product-release.json', import.meta.url), 'utf8'));
     for (const [file, rules] of Object.entries(changes)) {
       let source = await readFile(path.join(destination, file), 'utf8');
-      for (const { from, to } of rules) {
+      for (const rule of rules) {
+        // Windows checkouts use CRLF; match the checkout's line endings without
+        // changing untouched runtime bytes or weakening exact-once transforms.
+        const ending = source.includes('\r\n') ? '\r\n' : '\n';
+        const from = rule.from.replace(/\r?\n/g, ending), to = rule.to.replace(/\r?\n/g, ending);
         if (!from || source.split(from).length !== 2) throw new Error(`Release transformation no longer matches exactly once: ${file}. Review the source changes before release.`);
         source = source.replace(from, to);
       }

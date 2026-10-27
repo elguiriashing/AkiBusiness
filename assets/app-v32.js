@@ -5,6 +5,16 @@
   const APP_VERSION = "0.1.0";
   const initialRouteParts = location.hash.replace(/^#\/?/, "").split("/").filter(Boolean);
   const initialSearchParams = new URLSearchParams(location.search);
+  try {
+    if (initialSearchParams.has("mail_code") || initialSearchParams.has("mail_error")) {
+      const mailIntent=JSON.parse(sessionStorage.getItem("business-mail-oauth") || "null");
+      if(mailIntent?.state===initialSearchParams.get("mail_state")) {
+        initialSearchParams.set("workspace",mailIntent.workspace);
+        initialRouteParts[0]=["marketing","integrations"].includes(mailIntent.route)?mailIntent.route:"inbox";
+        history.replaceState(null,"",location.pathname+location.search+"#/"+initialRouteParts[0]);
+      }
+    }
+  } catch {} // The authenticated workspace check remains authoritative.
   // Keep only the explicit location intent in this tab across same-origin OAuth.
   // It is never an authorisation grant or a cross-domain session transfer.
   try {
@@ -2163,10 +2173,10 @@
               <span class="nav-icon">${icon("settings")}</span>
               <span class="nav-text">${state.settings?.locale === "es" ? "Planes AkiBusiness" : "AkiBusiness plans"}</span>
             </a>
-            <a class="nav-item" href="${window.AkiSuiteNavigation.href("pasa", state.settings.locale)}" target="_blank" rel="noopener noreferrer" title="Open public website (akipasa.com)" style="text-decoration:none;">
+            ${isPlatformWorkspace() ? `<a class="nav-item" href="${window.AkiSuiteNavigation.href("pasa", state.settings.locale)}" target="_blank" rel="noopener noreferrer" title="Open public website (akipasa.com)" style="text-decoration:none;">
               <span class="nav-icon">${icon("external")}</span>
               <span class="nav-text">AkiPasa Web</span>
-            </a>
+            </a>` : ""}
           </div>
         </nav>
         <div class="sidebar-footer">
@@ -2332,7 +2342,7 @@
           ${authRole === "administrator" ? `<button class="action-btn" data-action="ask-ai-current">${icon("sparkles")} Ask AI</button>` : ""}
           ${authRole === "administrator" && ["leads", "companies"].includes(ui.crmTab) ? `<button class="action-btn" data-action="open-prospect-import">${icon("upload")} Import Excel</button>` : ""}
           <button class="action-btn" data-action="export-csv" data-entity="${ui.crmTab}">${icon("download")} CSV</button>
-          <button class="action-btn primary" data-action="open-form" data-entity="${ui.crmTab === "deals" ? "deal" : ui.crmTab.slice(0, -1)}">${icon("plus")} ${escapeHtml(t("newRecord"))}</button>`}`;
+          <button class="action-btn primary" data-action="open-form" data-entity="${({deals:"deal",leads:"lead",contacts:"contact",companies:"company"})[ui.crmTab] || "contact"}">${icon("plus")} ${escapeHtml(t("newRecord"))}</button>`}`;
       case "tasks":
         return `
           <div class="segmented">
@@ -2358,6 +2368,7 @@
       case "sales":
         return `<span class="context-spacer"></span><button class="action-btn" data-action="open-form" data-entity="invoice" data-type="Quote">${icon("plus")} Quote</button><button class="action-btn primary" data-action="open-form" data-entity="invoice" data-type="Invoice">${icon("plus")} Invoice</button>`;
       case "marketing":
+        if (!isPlatformWorkspace()) return `<button class="action-btn primary" data-action="open-form" data-entity="campaign">${icon("plus")} ${state.settings.locale === "es" ? "Campaña" : "Campaign"}</button>`;
         return `
           <div class="segmented">
             <button class="${ui.marketingTab === "campaigns" ? "active" : ""}" data-action="set-marketing-tab" data-tab="campaigns">${icon("marketing")} Campaigns</button>
@@ -2444,7 +2455,20 @@
     if (!canUseRoute(ui.route)) {
       return `<div class="view"><section class="panel"><div class="panel-empty"><div><strong>Tool not enabled</strong><span>This module is not included in the current workspace. Ask a workspace owner about Business Pro tools.</span></div></div></section></div>`;
     }
-    return `<div class="view">${window.AkiToolGuides?.render(ui.route,state.settings.locale)||""}${(views[ui.route] || renderDashboard)()}</div>`;
+    return `<div class="view" data-tool="${escapeHtml(ui.route)}">${window.AkiToolGuides?.render(ui.route,state.settings.locale,{canOperate:state.workspace.canOperate})||""}${renderWorkflowToolbar()}${(views[ui.route] || renderDashboard)()}</div>`;
+  }
+
+  function workflowMatches(record, fields) {
+    const query = String(ui.workflowSearch?.[ui.route] || "").trim().toLocaleLowerCase();
+    return !query || fields.some(key => String(record[key] || "").toLocaleLowerCase().includes(query));
+  }
+
+  function renderWorkflowToolbar() {
+    const es = state.settings.locale === "es";
+    if (!["tasks", "knowledge", "calendar", "sales", "employees", "crm", "marketing", "automation"].includes(ui.route)) return "";
+    const filters = ui.route === "tasks" ? [["all", es ? "Todas" : "All tasks"], ["mine", es ? "Mis tareas" : "Assigned to me"], ["overdue", es ? "Vencidas" : "Overdue"], ["open", es ? "Pendientes" : "Open"]] : ui.route === "sales" ? [["all", es ? "Todos" : "All documents"], ["due", es ? "Pendientes de cobro" : "Receivables"], ["overdue", es ? "Vencidas" : "Overdue"]] : ui.route === "calendar" ? [["month", es ? "Mes" : "Month"], ["agenda", "Agenda"]] : ui.route === "knowledge" ? [["all", es ? "Todos" : "All articles"], ["review", es ? "Revisión pendiente" : "Review due"]] : [];
+    const key = `${ui.route}Filter`, selected = ui[key] || (ui.route === "calendar" ? "month" : "all");
+    return `<div class="workflow-toolbar"><label class="workflow-search">${icon("search")}<input type="search" data-workflow-search aria-label="${es ? "Buscar en esta herramienta" : "Search this tool"}" placeholder="${es ? "Buscar en esta herramienta…" : "Search this tool…"}" value="${escapeHtml(ui.workflowSearch?.[ui.route] || "")}"></label>${filters.length ? `<div class="segmented">${filters.map(([value,label]) => `<button data-action="workflow-filter" data-key="${key}" data-value="${value}" aria-pressed="${selected === value}" class="${selected === value ? "active" : ""}">${label}</button>`).join("")}</div>` : ""}</div>`;
   }
 
   function renderMetric(label, value, foot, iconName, color, change = "") {
@@ -2680,7 +2704,8 @@
 
   function renderDeals() {
     const pipeline = state.pipelines.find(item => item.id === ui.pipelineId) || state.pipelines[0];
-    const deals = state.deals.filter(deal => deal.pipelineId === pipeline.id);
+    if (!pipeline?.stages?.length) return `<section class="panel empty-state"><div><h2>${state.settings.locale === "es" ? "Prepara tu embudo" : "Set up your pipeline"}</h2><p>${state.settings.locale === "es" ? "Añade un embudo y sus etapas para organizar las oportunidades. Ya puedes crear contactos y empresas." : "Add a pipeline and its stages to organize deals. You can already create contacts and companies."}</p><button class="action-btn primary" data-action="add-pipeline">${icon("plus")} ${state.settings.locale === "es" ? "Crear embudo" : "Create pipeline"}</button></div></section>`;
+    const deals = state.deals.filter(deal => deal.pipelineId === pipeline.id && workflowMatches(deal, ["title", "notes"]));
     if (ui.dealView === "list") return renderDealsTable(deals, pipeline);
     return `
       <div class="kanban-wrap">
@@ -2753,7 +2778,7 @@
           <table class="data-table">
             <thead><tr><th>Lead</th><th>Status</th><th>Source</th><th>Score</th><th>Owner</th><th>Updated</th><th></th></tr></thead>
             <tbody>
-              ${state.leads.map(lead => `<tr class="clickable" data-action="view-entity" data-entity="lead" data-id="${lead.id}">
+              ${state.leads.filter(lead => workflowMatches(lead, ["name", "email", "company"])).map(lead => `<tr class="clickable" data-action="view-entity" data-entity="lead" data-id="${lead.id}">
                 <td><div class="table-primary"><div class="table-avatar">${initials(lead.name)}</div><div class="table-primary-copy"><strong>${escapeHtml(lead.name)}</strong><span>${escapeHtml(lead.email || lead.company)}</span></div></div></td>
                 <td><span class="status-pill ${lead.status === "Qualified" ? "success" : lead.status === "Contacted" ? "info" : ""}">${escapeHtml(lead.status)}</span></td>
                 <td>${escapeHtml(lead.source)}</td>
@@ -2771,12 +2796,12 @@
   function renderContacts() {
     return `
       <section class="panel table-panel">
-        <div class="panel-header"><div><h2>Contacts</h2><p>${state.contacts.length} people across ${state.companies.length} venues · synced from AkiPasa database</p></div></div>
+        <div class="panel-header"><div><h2>Contacts</h2><p>${state.contacts.length} people across ${state.companies.length} companies in this workspace</p></div></div>
         <div class="table-scroll">
           <table class="data-table">
             <thead><tr><th>Contact</th><th>Company</th><th>Role</th><th>Phone</th><th>Source</th><th>Updated</th><th></th></tr></thead>
             <tbody>
-              ${state.contacts.map(contact => `<tr class="clickable" data-action="view-entity" data-entity="contact" data-id="${contact.id}">
+              ${state.contacts.filter(contact => workflowMatches(contact, ["name", "email", "phone", "role"])).map(contact => `<tr class="clickable" data-action="view-entity" data-entity="contact" data-id="${contact.id}">
                 <td><div class="table-primary"><div class="table-avatar">${initials(contact.name)}</div><div class="table-primary-copy"><strong>${escapeHtml(contact.name)}</strong><span>${escapeHtml(contact.email)}</span></div></div></td>
                 <td>${escapeHtml(companyName(contact.companyId))}</td>
                 <td>${escapeHtml(contact.role || "—")}</td>
@@ -2795,19 +2820,19 @@
     if (isPlatformWorkspace()) return companyManager.render();
     return `
       <section class="panel table-panel">
-        <div class="panel-header"><div><h2>Venues</h2><p>${state.companies.length} venue${state.companies.length !== 1 ? "s" : ""} · synced live from AkiPasa database</p></div><button class="action-btn" data-action="publish-all-companies">${icon("map")} Publish valid companies to map</button></div>
+        <div class="panel-header"><div><h2>${state.settings.locale === "es" ? "Empresas" : "Companies"}</h2><p>${state.companies.length} ${state.settings.locale === "es" ? "empresas en este espacio" : "companies in this workspace"}</p></div></div>
         <div class="table-scroll">
           <table class="data-table">
             <thead><tr><th>Company</th><th>Type</th><th>City</th><th>Status</th><th>Owner</th><th>Employees</th><th></th></tr></thead>
             <tbody>
-              ${state.companies.map(company => `<tr class="clickable" data-action="view-entity" data-entity="company" data-id="${company.id}">
+              ${state.companies.filter(company => workflowMatches(company, ["name", "email", "city", "type"])).map(company => `<tr class="clickable" data-action="view-entity" data-entity="company" data-id="${company.id}">
                 <td><div class="table-primary"><div class="table-avatar">${initials(company.name)}</div><div class="table-primary-copy"><strong>${escapeHtml(company.name)}</strong><span>${escapeHtml(company.email || company.website)}</span></div></div></td>
                 <td>${escapeHtml(company.type || "—")}</td>
                 <td>${escapeHtml(company.city || "—")}</td>
                 <td><span class="status-pill ${company.status === "Customer" ? "success" : company.status === "Partner" ? "info" : "warning"}">${escapeHtml(company.status || "Prospect")}</span></td>
                 <td>${escapeHtml(employeeName(company.ownerId))}</td>
                 <td>${Number(company.employees || 0)}</td>
-                <td><div class="row-actions"><button class="mini-btn" data-action="publish-company-unclaimed" data-id="${company.id}" title="${company.catalogueVenueId ? "Already published as an unclaimed venue" : "Publish as an unclaimed venue and add to map"}" ${company.catalogueVenueId ? "disabled" : ""}>${icon("arrowRight")}</button><button class="mini-btn" data-action="edit-entity" data-entity="company" data-id="${company.id}">${icon("edit")}</button><button class="mini-btn danger" data-action="delete-entity" data-entity="company" data-id="${company.id}" title="Delete venue">${icon("trash")}</button></div></td>
+                <td><div class="row-actions"><button class="mini-btn" data-action="edit-entity" data-entity="company" data-id="${company.id}" title="Edit company">${icon("edit")}</button><button class="mini-btn danger" data-action="delete-entity" data-entity="company" data-id="${company.id}" title="Delete company">${icon("trash")}</button></div></td>
               </tr>`).join("")}
             </tbody>
           </table>
@@ -2899,7 +2924,7 @@
   }
 
   function renderInbox() {
-    if (!isPlatformWorkspace()) return renderLegacyInbox();
+    if (!isPlatformWorkspace()) return `${getBusinessMail().render()}<details class="panel"><summary class="panel-header">${state.settings.locale === "es" ? "Notas y conversaciones internas" : "Internal conversation records"}</summary>${renderLegacyInbox()}</details>`;
     const conversations = mailboxConversations();
     const selected = conversations.find(conversation => conversation.id === ui.selectedConversationId) || conversations[0] || null;
     const aliases = mailboxOverviewState.aliases?.length ? mailboxOverviewState.aliases : ["support@akipasa.com"];
@@ -2926,16 +2951,26 @@
       </section>`;
   }
 
+  let businessMail = null, businessMailKey = "";
+  function getBusinessMail() {
+    const key = `${authUser?.id}:${state.workspace.id}:${ui.route === "inbox" ? "inbox" : "setup"}`;
+    if (!businessMail || businessMailKey !== key) {
+      businessMail?.dispose(); businessMailKey=key;
+      businessMail=window.AkiBusinessMail.create({request:socialGatewayRequest,refresh:render,escapeHtml,scope:()=>({workspace:state.workspace.id,locale:state.settings.locale,route:ui.route})});
+    }
+    return businessMail;
+  }
+
   function renderLegacyInbox() {
     state.conversations ||= [];
     const selected = state.conversations.find(conversation => conversation.id === ui.selectedConversationId) || state.conversations[0];
     if (!selected && !state.conversations.length) {
-      return `<section class="panel empty-state"><div><div class="empty-state-icon">${icon("inbox")}</div><h2>No conversation records yet</h2><p>External email and messaging delivery is not enabled for this business workspace. Provider connections are in pilot; configuring a record does not activate delivery.</p><button class="action-btn primary" data-action="navigate" data-route="integrations">Open integrations</button></div></section>`;
+      return `<section class="panel empty-state"><div><div class="empty-state-icon">${icon("inbox")}</div><h2>${state.settings.locale === "es" ? "Sin conversaciones internas" : "No internal conversation records yet"}</h2><p>${state.settings.locale === "es" ? "Registra llamadas o conversaciones presenciales. Usa el buzón conectado para enviar correo." : "Record calls and in-person conversations here. Use the connected mailbox to send email."}</p>${state.workspace.canOperate ? `<button class="action-btn primary" data-action="open-form" data-entity="conversation">${state.settings.locale === "es" ? "Crear conversación" : "Create conversation"}</button>` : ""}</div></section>`;
     }
     return `
       <div class="inbox-route-note" style="margin-bottom:12px;padding:10px 14px;background:rgba(124,140,255,.08);border:1px solid rgba(124,140,255,.2);border-radius:var(--radius);display:flex;align-items:center;gap:12px">
         <div style="font-size:11px;color:var(--text);flex:1">
-          💬 <strong>Conversation records · provider pilot</strong> — Notes saved here stay in this workspace. They are not sent as email or WhatsApp messages. Looking for internal staff channels & DMs?
+          💬 <strong>Internal conversation records</strong> — Notes saved here stay in this workspace. Use the connected business mailbox above for email delivery.
         </div>
         <button class="action-btn primary" data-action="navigate" data-route="collaboration" style="height:28px;font-size:10px;padding:0 12px">Go to Team Chat →</button>
       </div>
@@ -2996,6 +3031,10 @@
       (expanded && tasks.length ? '<div class="project-task-list">' + rows + '</div>' : "") + '</div>';
   }
   function renderTasks() {
+    const visibleTasks = state.tasks.filter(task => workflowMatches(task, ["title", "description"]) &&
+      (ui.tasksFilter !== "mine" || task.assigneeId === state.currentUserId) &&
+      (ui.tasksFilter !== "overdue" || (task.status !== "done" && isOverdue(task.dueDate))) &&
+      (ui.tasksFilter !== "open" || task.status !== "done"));
     const statuses = [
       { id: "todo", name: "To do" },
       { id: "progress", name: "In progress" },
@@ -3003,7 +3042,7 @@
       { id: "done", name: "Done" }
     ];
     if (ui.taskView === "projects") {
-      const orderedProjects = [...(state.projects || [])].sort((a, b) => {
+      const orderedProjects = [...(state.projects || [])].filter(project => workflowMatches(project, ["name"]) && (!ui.tasksFilter || ui.tasksFilter === "all" || visibleTasks.some(task => task.projectId === project.id))).sort((a, b) => {
         const rank = { Active: 0, Planning: 1, "On hold": 2, Completed: 3 };
         return (rank[a.status] ?? 9) - (rank[b.status] ?? 9) || String(a.name).localeCompare(String(b.name));
       });
@@ -3031,7 +3070,7 @@
           <div class="table-scroll">
             <table class="data-table">
               <thead><tr><th>Task</th><th>Status</th><th>Priority</th><th>Project</th><th>Assignee</th><th>Due</th><th></th></tr></thead>
-              <tbody>${state.tasks.map(task => `<tr class="clickable" data-action="view-entity" data-entity="task" data-id="${task.id}">
+              <tbody>${visibleTasks.map(task => `<tr class="clickable" data-action="view-entity" data-entity="task" data-id="${task.id}">
                 <td><div class="table-primary"><div class="table-avatar">${initials(task.title)}</div><div class="table-primary-copy"><strong>${escapeHtml(task.title)}</strong><span>${escapeHtml(task.description || "")}</span></div></div></td>
                 <td><span class="status-pill ${task.status === "done" ? "success" : task.status === "review" ? "warning" : task.status === "progress" ? "info" : ""}">${escapeHtml(statuses.find(item => item.id === task.status)?.name || task.status)}</span></td>
                 <td><span class="status-pill ${task.priority === "high" ? "danger" : task.priority === "medium" ? "warning" : "success"}">${escapeHtml(capitalize(task.priority))}</span></td>
@@ -3048,7 +3087,7 @@
       <div class="kanban-wrap">
         <div class="task-board">
           ${statuses.map(status => {
-            const tasks = state.tasks.filter(task => task.status === status.id);
+            const tasks = visibleTasks.filter(task => task.status === status.id);
             return `<section class="task-column" data-drop-entity="task" data-stage-id="${status.id}">
               <div class="task-column-head"><strong>${escapeHtml(status.name)}</strong><span>${tasks.length} tasks</span></div>
               ${tasks.map(task => renderTaskCard(task)).join("")}
@@ -3076,12 +3115,16 @@
   }
 
   function calendarEventsForDate(value) {
-    return state.events.filter(item => sameCalendarDate(item.start, value)).sort((a, b) => new Date(a.start) - new Date(b.start));
+    return state.events.filter(item => sameCalendarDate(item.start, value) && workflowMatches(item, ["title", "location", "notes"])).sort((a, b) => new Date(a.start) - new Date(b.start));
   }
 
   function renderCalendar() {
     const year = ui.calendarDate.getFullYear();
     const month = ui.calendarDate.getMonth();
+    if (ui.calendarFilter === "agenda") {
+      const events = state.events.filter(item => { const d = new Date(item.start); return d.getFullYear() === year && d.getMonth() === month && workflowMatches(item, ["title", "location", "notes"]); }).sort((a,b) => new Date(a.start)-new Date(b.start));
+      return `<section class="panel agenda-list">${events.map(item => `<button class="agenda-row" data-action="view-entity" data-entity="event" data-id="${escapeHtml(item.id)}"><time>${escapeHtml(formatDate(item.start, {time:true}))}</time><span><strong>${escapeHtml(item.title)}</strong><small>${escapeHtml(item.location || item.type || "")}</small></span><span>${escapeHtml(formatDate(item.end, {time:true}))}</span></button>`).join("") || `<div class="panel-empty">${state.settings.locale === "es" ? "No hay eventos en este mes con estos filtros." : "No events match this month and search."}</div>`}</section>`;
+    }
     const first = new Date(year, month, 1);
     const mondayIndex = (first.getDay() + 6) % 7;
     const gridStart = new Date(year, month, 1 - mondayIndex);
@@ -3091,7 +3134,7 @@
       return date;
     });
     const today = new Date();
-    const upcoming = [...state.events].filter(event => new Date(event.start) >= new Date(Date.now() - 86400000)).sort((a, b) => new Date(a.start) - new Date(b.start)).slice(0, 8);
+    const upcoming = [...state.events].filter(event => new Date(event.start) >= new Date(Date.now() - 86400000) && workflowMatches(event, ["title", "location", "notes"])).sort((a, b) => new Date(a.start) - new Date(b.start)).slice(0, 8);
     const weekdays = state.settings.locale === "es" ? ["Lun", "Mar", "Mié", "Jue", "Vie", "Sáb", "Dom"] : ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
     return `<div class="calendar-shell">
       <section class="panel calendar">
@@ -3099,7 +3142,7 @@
         <div class="calendar-grid">
           ${days.map(date => {
             const dayEvents = calendarEventsForDate(date);
-            return `<div class="calendar-day ${date.getMonth() !== month ? "muted" : ""} ${sameCalendarDate(date, today) ? "today" : ""}" data-action="calendar-day" data-date="${date.toISOString()}" data-event-count="${dayEvents.length}">
+            return `<div class="calendar-day ${date.getMonth() !== month ? "muted" : ""} ${sameCalendarDate(date, today) ? "today" : ""}" role="button" tabindex="0" aria-label="${escapeHtml(formatDate(date))}: ${dayEvents.length}" data-action="calendar-day" data-date="${date.toISOString()}" data-event-count="${dayEvents.length}">
               <div class="day-number">${date.getDate()}</div>
               ${dayEvents.slice(0, 4).map(event => `<div class="calendar-event" style="--event-color:${event.color || "#7c8cff"}" data-action="view-entity" data-entity="event" data-id="${event.id}" title="${escapeHtml(event.title)}">${escapeHtml(event.title)}</div>`).join("")}
             </div>`;
@@ -3236,9 +3279,10 @@
   }
 
   function renderSales() {
-    const outstanding = state.invoices.filter(invoice => !["Paid", "Draft"].includes(invoice.status)).reduce((sum, invoice) => sum + Number(invoice.total || 0), 0);
-    const paid = state.invoices.filter(invoice => invoice.status === "Paid").reduce((sum, invoice) => sum + Number(invoice.total || 0), 0);
-    const overdue = state.invoices.filter(invoice => invoice.status === "Overdue").length;
+    const receivables = state.invoices.filter(invoice => invoice.type === "Invoice" && ["Sent", "Overdue"].includes(invoice.status));
+    const outstanding = receivables.reduce((sum, invoice) => sum + Number(invoice.total || 0), 0);
+    const paid = state.invoices.filter(invoice => invoice.type === "Invoice" && invoice.status === "Paid").reduce((sum, invoice) => sum + Number(invoice.total || 0), 0);
+    const overdue = receivables.filter(invoice => isOverdue(invoice.dueDate)).length;
     return `<div class="page-grid">
       <div class="page-grid grid-3">
         ${renderMetric("Paid", formatMoney(paid, true), "collected across invoices", "check", "#49d7a0")}
@@ -3249,7 +3293,7 @@
         <div class="panel-header"><div><h2>Legacy documents and quotes</h2><p>Operational documents. Fiscal issuance is currently disabled.</p><button class="action-btn" data-action="open-business-controls">Fiscal setup and records</button></div></div>
         <div class="table-scroll"><table class="data-table">
           <thead><tr><th>Document</th><th>Customer</th><th>Type</th><th>Issue date</th><th>Due</th><th>Total</th><th>Status</th><th></th></tr></thead>
-          <tbody>${state.invoices.map(invoice => `<tr class="clickable" data-action="view-entity" data-entity="invoice" data-id="${invoice.id}">
+          <tbody>${state.invoices.filter(invoice => workflowMatches(invoice, ["number", "notes", "status"]) && (ui.salesFilter !== "due" || receivables.includes(invoice)) && (ui.salesFilter !== "overdue" || (receivables.includes(invoice) && isOverdue(invoice.dueDate)))).map(invoice => `<tr class="clickable" data-action="view-entity" data-entity="invoice" data-id="${invoice.id}">
             <td><div class="table-primary"><div class="table-avatar">${invoice.type === "Quote" ? "Q" : "I"}</div><div class="table-primary-copy"><strong>${escapeHtml(invoice.number)}</strong><span>${escapeHtml(invoice.notes || "")}</span></div></div></td>
             <td>${escapeHtml(companyName(invoice.companyId))}</td>
             <td>${escapeHtml(invoice.type)}</td>
@@ -3265,26 +3309,28 @@
   }
 
   function renderMarketing() {
-    if (ui.marketingTab === "media") return renderMediaLibrary();
+    if (ui.marketingTab === "media" && isPlatformWorkspace()) return renderMediaLibrary();
+    const preview = state.campaigns.find(campaign => campaign.id === ui.campaignPreview);
     const totals = state.campaigns.reduce((acc, campaign) => {
       acc.sent += Number(campaign.sent || 0); acc.opened += Number(campaign.opened || 0); acc.clicked += Number(campaign.clicked || 0); acc.conversions += Number(campaign.conversions || 0); return acc;
     }, { sent: 0, opened: 0, clicked: 0, conversions: 0 });
     const openRate = totals.sent ? Math.round(totals.opened / totals.sent * 100) : 0;
     const clickRate = totals.opened ? Math.round(totals.clicked / totals.opened * 100) : 0;
-    return `<div class="page-grid">
+    return `<div class="page-grid">${!isPlatformWorkspace() ? getBusinessMail().render() : ""}${preview ? `<section class="panel"><div class="panel-header"><div><h2>${escapeHtml(preview.subject || preview.name)}</h2><p>${state.settings.locale === "es" ? "Revisa el contenido y un destinatario con consentimiento antes de enviar desde tu buzón conectado." : "Review the content and one consented recipient before sending from your connected mailbox."}</p></div><button class="action-btn" data-action="edit-entity" data-entity="campaign" data-id="${escapeHtml(preview.id)}">${t("edit")}</button></div><div class="business-mail-body">${escapeHtml(preview.content || "")}</div><form class="panel-body workflow-toolbar" data-form="campaign-send" data-id="${escapeHtml(preview.id)}"><label>${state.settings.locale === "es" ? "Correo del destinatario" : "Recipient email"}<input name="email" type="email" required autocomplete="off"></label><p>${state.settings.locale === "es" ? "El servidor comprueba consentimiento, bajas y remitente verificado. Añade la identidad de empresa y el enlace de baja automáticamente." : "The server checks consent, suppression and verified sender. Business identity and an unsubscribe link are added automatically."}</p><button class="action-btn primary" type="submit">${state.settings.locale === "es" ? "Enviar correo revisado" : "Send reviewed email"}</button></form>${ui.campaignSendStatus ? `<p class="mail-feedback" role="status">${escapeHtml(ui.campaignSendStatus)}</p>` : ""}</section>` : ""}
       <div class="page-grid grid-4">
-        ${renderMetric("Messages sent", totals.sent.toLocaleString(), "across all campaigns", "send", "#7c8cff")}
+        ${renderMetric("Recorded sends", totals.sent.toLocaleString(), "manually recorded campaign figures", "send", "#7c8cff")}
         ${renderMetric("Open rate", `${openRate}%`, "of recorded messages sent", "mail", "#52d9e9")}
         ${renderMetric("Click rate", `${clickRate}%`, "of opened messages", "link", "#ffbd55")}
-        ${renderMetric("Conversions", totals.conversions.toLocaleString(), "tracked actions", "check", "#49d7a0")}
+        ${renderMetric("Recorded conversions", totals.conversions.toLocaleString(), "manually recorded outcomes", "check", "#49d7a0")}
       </div>
       <div class="cards-grid">
-        ${state.campaigns.map(campaign => {
+        ${state.campaigns.filter(campaign => workflowMatches(campaign, ["name", "audience", "channel"])).map(campaign => {
           const open = campaign.sent ? Math.round(campaign.opened / campaign.sent * 100) : 0;
           const click = campaign.opened ? Math.round(campaign.clicked / campaign.opened * 100) : 0;
           return `<article class="entity-card" data-action="view-entity" data-entity="campaign" data-id="${campaign.id}" role="button" tabindex="0">
             <div class="entity-card-top"><div class="entity-logo">${campaign.channel[0]}</div><div class="entity-card-copy"><h3>${escapeHtml(campaign.name)}</h3><p>${escapeHtml(campaign.channel)} · ${escapeHtml(campaign.audience)}</p></div><span class="status-pill ${campaign.status === "Running" ? "success" : campaign.status === "Scheduled" ? "info" : campaign.status === "Completed" ? "" : "warning"}">${escapeHtml(campaign.status)}</span></div>
             <div class="entity-card-stats"><div class="entity-stat"><span>Sent</span><strong>${Number(campaign.sent).toLocaleString()}</strong></div><div class="entity-stat"><span>Conversions</span><strong>${Number(campaign.conversions).toLocaleString()}</strong></div><div class="entity-stat"><span>Open rate</span><strong>${open}%</strong></div><div class="entity-stat"><span>Click rate</span><strong>${click}%</strong></div></div>
+            ${campaign.channel === "Email" ? `<button class="action-btn" data-action="campaign-preview" data-id="${escapeHtml(campaign.id)}">${state.settings.locale === "es" ? "Revisar correo" : "Review email"}</button>` : ""}
           </article>`;
         }).join("")}
       </div>
@@ -3374,17 +3420,17 @@
   }
 
   function renderAutomation() {
-    return `<div class="page-grid"><section class="panel" style="padding:16px"><h3>Workflow planning</h3><p>These definitions are planning records. Saving or toggling one does not run an external action or send a message.</p></section>
-      ${state.automations.map(automation => `<section class="panel">
-        <div class="panel-header"><div><h2>${escapeHtml(automation.name)}</h2><p>${Number(automation.runs || 0)} runs · ${Number(automation.failures || 0)} failures · updated ${escapeHtml(relativeTime(automation.updatedAt))}</p></div><div class="panel-actions"><span class="status-pill ${automation.status === "Active" ? "success" : "warning"}">${escapeHtml(automation.status)}</span><button class="mini-btn" data-action="toggle-automation" data-id="${automation.id}" title="Toggle">${automation.status === "Active" ? icon("timer") : icon("check")}</button><button class="mini-btn" data-action="edit-entity" data-entity="automation" data-id="${automation.id}">${icon("edit")}</button></div></div>
-        <div class="panel-body"><div class="automation-flow">
+    return `<div class="page-grid"><section class="panel" style="padding:16px"><h3>${state.settings.locale === "es" ? "Flujos de trabajo" : "Workflows"}</h3><p>${state.settings.locale === "es" ? "Revisa y ejecuta reglas para crear tareas de seguimiento. Los planes personalizados no se ejecutan; no se envían mensajes ni se ejecutan tareas en segundo plano." : "Preview and run supported rules to create follow-up tasks. Custom plans do not execute; rules do not send messages or run in the background."}</p></section>
+      ${state.automations.filter(automation => workflowMatches(automation,["name","trigger"])).map(automation => `<section class="panel">
+        <div class="panel-header"><div><h2>${escapeHtml(automation.name)}</h2><p>${state.tasks.filter(task => String(task.automationKey || "").startsWith(automation.id + ":")).length} follow-up tasks · updated ${escapeHtml(relativeTime(automation.updatedAt))}</p></div><div class="panel-actions"><span class="status-pill ${automation.status === "Active" ? "success" : "warning"}">${escapeHtml(automation.status)}</span><button class="mini-btn" data-action="toggle-automation" data-id="${automation.id}" title="Toggle">${automation.status === "Active" ? icon("timer") : icon("check")}</button><button class="mini-btn" data-action="edit-entity" data-entity="automation" data-id="${automation.id}">${icon("edit")}</button></div></div>
+        <div class="panel-body">${automation.recipe && automation.recipe !== "manual" ? `<div class="workflow-toolbar"><span>${automation.recipe === "overdue" ? "Overdue task follow-up" : "Low-stock follow-up"}</span><button class="action-btn" data-action="automation-preview" data-id="${escapeHtml(automation.id)}">${state.settings.locale === "es" ? "Previsualizar tareas" : "Preview tasks"}</button></div>${ui.automationPreview?.id === automation.id ? `<div class="mail-feedback"><strong>${ui.automationPreview.rows.length} ${state.settings.locale === "es" ? "tareas nuevas" : "new tasks"}</strong><ul>${ui.automationPreview.rows.map(row=>`<li>${escapeHtml(row.title)}</li>`).join("")}</ul><button class="action-btn primary" data-action="automation-run" data-id="${escapeHtml(automation.id)}" ${!ui.automationPreview.rows.length ? "disabled" : ""}>${state.settings.locale === "es" ? "Crear tareas revisadas" : "Create reviewed tasks"}</button></div>` : ""}` : ""}<div class="automation-flow">
           <div class="flow-node"><div class="flow-node-type">Trigger</div><strong>${escapeHtml(automation.trigger)}</strong><p>Planned trigger.</p></div>
-          ${automation.conditions.map(condition => `<div class="flow-node"><div class="flow-node-type">Condition</div><strong>${escapeHtml(condition)}</strong><p>Continue only when the rule matches.</p></div>`).join("")}
-          ${automation.actions.map(action => `<div class="flow-node"><div class="flow-node-type">Action</div><strong>${escapeHtml(action)}</strong><p>Planned action; no automatic execution.</p></div>`).join("")}
+          ${(automation.conditions || []).map(condition => `<div class="flow-node"><div class="flow-node-type">Condition</div><strong>${escapeHtml(condition)}</strong><p>Continue only when the rule matches.</p></div>`).join("")}
+          ${(automation.actions || []).map(action => `<div class="flow-node"><div class="flow-node-type">Action</div><strong>${escapeHtml(action)}</strong><p>Planned action; no automatic execution.</p></div>`).join("")}
         </div></div>
       </section>`).join("")}
-      <section class="panel"><div class="panel-header"><div><h2>Execution log</h2><p>Latest workflow runs</p></div></div><div class="panel-body activity-list">
-        ${state.activities.filter(activity => activity.entityType === "automation").map(activity => `<div class="activity-item"><div class="activity-icon">${icon("automation")}</div><div class="activity-copy"><strong>${escapeHtml(employeeName(activity.actorId))}</strong> ${escapeHtml(activity.verb)}<br><span>${escapeHtml(activity.detail)}</span></div><div class="activity-time">${escapeHtml(relativeTime(activity.at))}</div></div>`).join("") || `<div class="panel-empty"><div><strong>No logged runs yet</strong><span>Toggle or edit a workflow to create activity.</span></div></div>`}
+      <section class="panel"><div class="panel-header"><div><h2>Workflow activity</h2><p>Edits, status changes and explicitly requested task creation</p></div></div><div class="panel-body activity-list">
+        ${state.activities.filter(activity => activity.entityType === "automation").map(activity => `<div class="activity-item"><div class="activity-icon">${icon("automation")}</div><div class="activity-copy"><strong>${escapeHtml(employeeName(activity.actorId))}</strong> ${escapeHtml(activity.verb)}<br><span>${escapeHtml(activity.detail)}</span></div><div class="activity-time">${escapeHtml(relativeTime(activity.at))}</div></div>`).join("") || `<div class="panel-empty"><div><strong>No workflow activity yet</strong><span>Preview a supported rule before creating tasks.</span></div></div>`}
       </div></section>
     </div>`;
   }
@@ -3572,6 +3618,7 @@
                     }).join("")}
                     <button class="chip ghost" data-action="toggle-reaction-picker" data-msg-id="${msg.id}" style="height:22px;padding:0 7px;font-size:10px" title="Add reaction">+ 😊</button>
                     <button class="mini-btn ghost" data-action="reply-team-msg" data-msg-id="${msg.id}" style="height:22px;font-size:10px;margin-left:4px;padding:0 6px">${icon("send")} Reply</button>
+                    ${canUseTool("tasks") && state.workspace.canOperate ? `<button class="mini-btn ghost" data-action="message-to-task" data-msg-id="${escapeHtml(msg.id)}">${icon("tasks")} ${state.settings.locale === "es" ? "Crear tarea" : "Create task"}</button>` : ""}
                     ${(msg.authorId === authUser?.id || canManageTeamChat()) ? `<button class="mini-btn ghost" data-action="delete-team-message" data-msg-id="${msg.id}" style="height:22px;font-size:10px;padding:0 6px" title="Delete message">${icon("trash")} Delete</button>` : ""}
 
                     ${ui.activeReactionPicker === msg.id ? `
@@ -3665,7 +3712,7 @@
         ${renderMetric("Open assignments", String(state.tasks.filter(task => task.status !== "done").length), "tasks assigned", "tasks", "#ffbd55")}
       </div>
       <div class="cards-grid">
-        ${state.employees.map(employee => {
+        ${state.employees.filter(employee => workflowMatches(employee, ["name", "email", "department", "role"])).map(employee => {
           const openTasks = state.tasks.filter(task => task.assigneeId === employee.id && task.status !== "done").length;
           const online = isUserOnline(employee);
           return `<article class="entity-card" data-action="view-entity" data-entity="employee" data-id="${employee.id}" role="button" tabindex="0">
@@ -3685,18 +3732,21 @@
   }
 
   function renderKnowledge() {
-    const article = state.knowledge.find(item => item.id === ui.selectedArticleId) || state.knowledge[0];
+    const articles = state.knowledge.filter(item => workflowMatches(item, ["title", "content", "category"]) && (ui.knowledgeFilter !== "review" || (item.reviewDate && isOverdue(item.reviewDate))));
+    const article = articles.find(item => item.id === ui.selectedArticleId) || articles[0];
+    if (!article && state.knowledge.length) return `<section class="panel empty-state"><div><h2>${state.settings.locale === "es" ? "No hay artículos con estos filtros" : "No articles match these filters"}</h2><p>${state.settings.locale === "es" ? "Cambia la búsqueda o el filtro de revisión." : "Try a different search or review filter."}</p></div></section>`;
     if (!article) return `<section class="panel empty-state"><div><div class="empty-state-icon">${icon("knowledge")}</div><h2>No articles yet</h2><p>Create the first article to document a process, policy or playbook.</p><button class="action-btn primary" data-action="open-form" data-entity="article">Create article</button></div></section>`;
-    const categories = [...new Set(state.knowledge.map(item => item.category))];
+    const categories = [...new Set(articles.map(item => item.category))];
     return `<section class="panel knowledge-layout">
       <aside class="knowledge-nav">
-        ${categories.map(category => `<div class="nav-label" style="opacity:1;padding-left:8px">${escapeHtml(category)}</div>${state.knowledge.filter(item => item.category === category).map(item => `<button class="knowledge-item ${item.id === article.id ? "active" : ""}" data-action="select-article" data-id="${item.id}">${escapeHtml(item.title)}</button>`).join("")}`).join("")}
+        ${categories.map(category => `<div class="nav-label" style="opacity:1;padding-left:8px">${escapeHtml(category)}</div>${articles.filter(item => item.category === category).map(item => `<button class="knowledge-item ${item.id === article.id ? "active" : ""}" data-action="select-article" data-id="${item.id}">${escapeHtml(item.title)}</button>`).join("")}`).join("")}
       </aside>
       <article class="knowledge-article">
         <div class="article-wrap">
           <div class="flex items-center"><span class="status-pill info">${escapeHtml(article.category)}</span><div class="ml-auto flex gap-8"><button class="action-btn" data-action="edit-entity" data-entity="article" data-id="${article.id}">${icon("edit")} Edit</button><button class="action-btn ghost" aria-label="${state.settings.locale === 'es' ? 'Eliminar artículo' : 'Delete article'}" data-action="delete-entity" data-entity="article" data-id="${article.id}">${icon("trash")}</button></div></div>
           <h1>${escapeHtml(article.title)}</h1>
           <div class="article-meta">Written by ${escapeHtml(employeeName(article.authorId))} · updated ${escapeHtml(relativeTime(article.updatedAt))}</div>
+          ${article.reviewDate ? `<p class="status-pill ${isOverdue(article.reviewDate) ? "warning" : "info"}">${state.settings.locale === "es" ? "Revisar antes de" : "Review by"} ${escapeHtml(formatDate(article.reviewDate))}</p>` : ""}
           <div class="article-content">${markdown(article.content)}</div>
         </div>
       </article>
@@ -4035,6 +4085,10 @@
   }
 
   function renderIntegrations() {
+    if (!isPlatformWorkspace()) {
+      const es = state.settings.locale === "es", mail = canUseTool("inbox") || canUseTool("marketing");
+      return `<div class="page-grid"><section class="panel"><div class="panel-header"><div><h2>${es ? "Conexiones de empresa" : "Business connections"}</h2><p>${es ? "Conecta las cuentas que utiliza tu equipo." : "Connect the accounts your team uses."}</p></div></div><div class="panel-body"><ol><li>${es ? "Elige el proveedor e inicia sesión con la cuenta de empresa." : "Choose your provider and sign in with the business account."}</li><li>${es ? "Revisa y autoriza los permisos en Google o Microsoft." : "Review and approve permissions at Google or Microsoft."}</li><li>${es ? "Vuelve aquí para comprobar la cuenta conectada." : "Return here to check the connected account."}</li></ol><p>${es ? "No necesitas copiar contraseñas ni claves API. La autorización no sincroniza calendarios ni contactos." : "No passwords or API keys to copy. This connection does not sync calendars or contacts."}</p></div></section>${mail ? getBusinessMail().render() : `<section class="panel"><div class="panel-body">${es ? "Activa Buzón o Marketing para conectar un correo de empresa." : "Enable Inbox or Marketing to connect business email."}</div></section>`}<section class="panel"><div class="panel-body"><h3>${es ? "Otras conexiones" : "Other connections"}</h3><p>${es ? "Aquí solo aparecen conexiones implementadas. No guardes claves API ni contraseñas en notas de equipo." : "Only implemented connections appear here. Do not put API keys or passwords in team notes."}</p></div></section></div>`;
+    }
     const categories = ["All", ...new Set(integrationCatalog.map(item => item.category))];
     const query = ui.integrationSearch.trim().toLowerCase();
     const filtered = integrationCatalog.filter(item => (ui.integrationCategory === "All" || item.category === ui.integrationCategory) && (!query || `${item.name} ${item.description} ${item.category}`.toLowerCase().includes(query)));
@@ -4269,7 +4323,8 @@
     const contactOptions = [["", "No contact"], ...state.contacts.map(contact => [contact.id, contact.name])];
     const projectOptions = [["", "No project"], ...state.projects.map(project => [project.id, project.name])];
     const pipelineId = existing?.pipelineId || ui.formDefaults.pipelineId || ui.pipelineId || state.pipelines[0]?.id;
-    const pipeline = state.pipelines.find(item => item.id === pipelineId) || state.pipelines[0];
+    const pipelines = state.pipelines.filter(item => item && Array.isArray(item.stages));
+    const pipeline = pipelines.find(item => item.id === pipelineId) || pipelines[0] || { stages: [] };
     const configs = {
       deal: {
         label: "Deal",
@@ -4278,7 +4333,7 @@
           { name: "title", label: "Deal title", required: true, full: true },
           { name: "companyId", label: "Company", type: "select", options: companyOptions },
           { name: "contactId", label: "Contact", type: "select", options: contactOptions },
-          { name: "pipelineId", label: "Pipeline", type: "select", options: state.pipelines.map(item => [item.id, item.name]), value: pipelineId },
+          { name: "pipelineId", label: "Pipeline", type: "select", options: pipelines.map(item => [item.id, item.name]), value: pipelineId },
           { name: "stageId", label: "Stage", type: "select", options: pipeline.stages.map(stage => [stage.id, stage.name]), value: ui.formDefaults.stageId || pipeline.stages[0]?.id },
           { name: "value", label: "Value", type: "number", step: "0.01", value: 0 },
           { name: "probability", label: "Probability %", type: "number", min: 0, max: 100, value: 20 },
@@ -4305,6 +4360,14 @@
           { name: "email", label: "Email", type: "email" }, { name: "phone", label: "Phone" },
           { name: "role", label: "Role" }, { name: "source", label: "Source", value: "Manual" },
           { name: "tags", label: "Tags", help: "Comma separated", full: true }
+        ]
+      },
+      conversation: {
+        label: "Conversation record", icon: "inbox", fields: [
+          { name: "name", label: "Customer or subject", required: true, full: true },
+          { name: "channel", label: "Source", type: "select", options: ["Phone", "In person", "Email", "Other"], value: "Phone" },
+          { name: "assignedTo", label: "Assigned to", type: "select", options: [["", "Unassigned"], ...employeeOptions], value: state.currentUserId },
+          { name: "status", label: "Status", type: "select", options: ["Open", "Resolved"], value: "Open" }
         ]
       },
       company: {
@@ -4345,7 +4408,7 @@
         label: "Event", icon: "calendar", fields: [
           { name: "title", label: "Event title", required: true, full: true },
           { name: "start", label: "Starts", type: "datetime-local", value: ui.formDefaults.start || dateOffset(1) },
-          { name: "end", label: "Ends", type: "datetime-local", value: ui.formDefaults.end || dateOffset(1) },
+          { name: "end", label: "Ends", type: "datetime-local", value: ui.formDefaults.end || new Date(new Date(ui.formDefaults.start || dateOffset(1)).getTime() + 3600000).toISOString() },
           { name: "type", label: "Type", type: "select", options: ["Team", "Client", "Sales", "Production", "Milestone", "Booking"], value: "Team" },
           { name: "color", label: "Colour", type: "color", value: "#7c8cff" },
           { name: "location", label: "Location", full: true },
@@ -4383,6 +4446,8 @@
       campaign: {
         label: "Campaign", icon: "marketing", fields: [
           { name: "name", label: "Campaign name", required: true, full: true },
+          { name: "subject", label: "Email subject", full: true },
+          { name: "content", label: "Email content", type: "textarea", full: true },
           { name: "channel", label: "Channel", type: "select", options: ["Email", "SMS", "Push", "Instagram", "Facebook"], value: "Email" },
           { name: "audience", label: "Audience", value: "All contacts" },
           { name: "status", label: "Status", type: "select", options: ["Draft", "Scheduled", "Running", "Paused", "Completed"], value: "Draft" },
@@ -4409,10 +4474,11 @@
       automation: {
         label: "Automation", icon: "automation", fields: [
           { name: "name", label: "Automation name", required: true, full: true },
+          { name: "recipe", label: "Executable rule", type: "select", options: [["manual", "Custom plan (no execution)"], ["overdue", "Create follow-up tasks for overdue work"], ["stock", "Create low-stock follow-up tasks"]], value: "manual" },
           { name: "status", label: "Status", type: "select", options: ["Active", "Paused"], value: "Paused" },
-          { name: "trigger", label: "Trigger", required: true, full: true },
-          { name: "conditions", label: "Conditions", type: "textarea", help: "One condition per line", full: true },
-          { name: "actions", label: "Actions", type: "textarea", help: "One action per line", full: true, required: true }
+          { name: "trigger", label: "Planning notes: trigger", full: true },
+          { name: "conditions", label: "Planning notes: conditions", type: "textarea", help: "Documentation only. Executable rules use their built-in filter, not these notes.", full: true },
+          { name: "actions", label: "Planning notes: actions", type: "textarea", help: "Documentation only. Supported rules only create reviewed follow-up tasks.", full: true }
         ]
       },
       article: {
@@ -4420,6 +4486,7 @@
           { name: "title", label: "Article title", required: true, full: true },
           { name: "category", label: "Category", value: "General" },
           { name: "authorId", label: "Author", type: "select", options: employeeOptions, value: state.currentUserId },
+          { name: "reviewDate", label: "Review by", type: "date" },
           { name: "content", label: "Content (Markdown)", type: "textarea", full: true, required: true, value: "## Overview\n\nWrite the process here." }
         ]
       },
@@ -4583,6 +4650,37 @@
     return map[type] || Object.entries(entity).filter(([key]) => !["id", "createdAt", "updatedAt"].includes(key)).map(([key, value]) => [capitalize(key), Array.isArray(value) ? value.join(", ") : String(value ?? "—")]);
   }
 
+  function relatedRecords(type, entity) {
+    const rows = [], seen = new Set();
+    const add = (kind, id) => {
+      if (!id || !collectionFor[kind] || !canUseEntityType(kind) || (kind === type && id === entity.id)) return;
+      const record = getEntity(kind, id), key = `${kind}:${id}`;
+      if (!record || seen.has(key)) return;
+      seen.add(key); rows.push({type:kind, id, title:titleForEntity(kind, record)});
+    };
+    add("company", entity.companyId); add("contact", entity.contactId);
+    add("project", entity.projectId); add("employee", entity.assigneeId || entity.ownerId || entity.authorId);
+    if (entity.sourceRecord) add(entity.sourceRecord.type, entity.sourceRecord.id);
+    const matching = (kind, predicate) => (state[collectionFor[kind]] || []).filter(predicate).forEach(row => add(kind, row.id));
+    if (type === "company") {
+      matching("contact", row => row.companyId === entity.id);
+      matching("deal", row => row.companyId === entity.id);
+      matching("invoice", row => row.companyId === entity.id);
+    }
+    if (type === "contact") {
+      matching("deal", row => row.contactId === entity.id);
+      matching("conversation", row => row.contactId === entity.id);
+    }
+    if (type === "project") matching("task", row => row.projectId === entity.id);
+    if (type === "employee") matching("task", row => row.assigneeId === entity.id);
+    if (type === "event") (entity.attendees || []).forEach(id => {
+      if (getEntity("employee", id)) add("employee", id); else add("contact", id);
+    });
+    if (["employee", "contact"].includes(type)) matching("event", row => (row.attendees || []).includes(entity.id));
+    matching("task", row => row.sourceRecord?.type === type && row.sourceRecord.id === entity.id);
+    return rows;
+  }
+
   function renderDrawer() {
     const { type, id } = ui.drawer;
     const entity = getEntity(type, id);
@@ -4591,7 +4689,7 @@
       return "";
     }
     const timeline = state.activities.filter(activity => activity.entityType === type && activity.entityId === id).slice(0, 12);
-    const relatedDeals = type === "company" ? state.deals.filter(deal => deal.companyId === id) : type === "contact" ? state.deals.filter(deal => deal.contactId === id) : [];
+    const related = relatedRecords(type, entity);
     return `
       <div class="drawer-backdrop" data-action="close-drawer"></div>
       <aside class="drawer" role="dialog" aria-modal="true" aria-label="${escapeHtml(titleForEntity(type, entity))}">
@@ -4606,7 +4704,7 @@
           </div>
           ${type === "task" ? `<div class="detail-section"><h3>Time progress</h3><div style="height:10px;background:var(--surface-3);border-radius:999px;overflow:hidden"><div style="height:100%;width:${clamp(Number(entity.estimate) ? Number(entity.tracked) / Number(entity.estimate) * 100 : 0, 0, 100)}%;background:linear-gradient(90deg,var(--accent),var(--accent-2))"></div></div><div class="subtle" style="font-size:9px;margin-top:7px">${Number(entity.tracked || 0)} of ${Number(entity.estimate || 0)} minutes tracked</div></div>` : ""}
           ${type === "page" ? `<div class="detail-section"><h3>Page preview</h3><div class="panel" style="padding:25px;text-align:center;background:linear-gradient(135deg,rgba(124,140,255,.16),rgba(82,217,233,.10))"><span class="status-pill info">/${escapeHtml(entity.slug)}</span><h2 style="font-size:24px;margin:18px 0 8px">${escapeHtml(entity.headline)}</h2><p class="muted" style="line-height:1.6">${escapeHtml(entity.body)}</p><button class="action-btn primary">Primary call to action</button></div></div>` : ""}
-          ${relatedDeals.length ? `<div class="detail-section"><h3>Related deals</h3>${relatedDeals.map(deal => `<button class="action-btn ghost" style="width:100%;justify-content:flex-start;margin-bottom:6px" data-action="view-entity" data-entity="deal" data-id="${deal.id}"><span>${escapeHtml(deal.title)}</span><strong class="ml-auto">${escapeHtml(formatMoney(deal.value))}</strong></button>`).join("")}</div>` : ""}
+          ${related.length ? `<div class="detail-section"><h3>${state.settings.locale === "es" ? "Registros relacionados" : "Related records"}</h3>${related.map(row => `<button class="action-btn ghost" style="width:100%;justify-content:flex-start;margin-bottom:6px" data-action="view-entity" data-entity="${escapeHtml(row.type)}" data-id="${escapeHtml(row.id)}">${escapeHtml(capitalize(row.type))}: ${escapeHtml(row.title)}</button>`).join("")}</div>` : ""}
           <div class="detail-section"><h3>Timeline</h3>
             <div class="timeline">
               ${timeline.length ? timeline.map(activity => `<div class="timeline-item"><strong>${escapeHtml(employeeName(activity.actorId))} ${escapeHtml(activity.verb)}</strong><p>${escapeHtml(activity.detail || "Record updated")}</p><time>${escapeHtml(formatDate(activity.at, { time: true }))}</time></div>`).join("") : `<div class="timeline-item"><strong>Record created</strong><p>No additional activity has been logged yet.</p><time>${escapeHtml(formatDate(entity.createdAt || entity.issueDate || entity.start))}</time></div>`}
@@ -4615,7 +4713,8 @@
         </div>
         <footer class="drawer-foot">
           ${authRole === "administrator" && ["deal", "lead", "contact", "company", "task", "project"].includes(type) ? `<button class="action-btn primary" data-action="ask-ai-record" data-entity="${escapeHtml(type)}" data-id="${escapeHtml(id)}">${icon("sparkles")} Ask AI</button>` : ""}
-          ${type === "company" ? `<button class="action-btn success" data-action="publish-company-unclaimed" data-id="${entity.id}" ${entity.catalogueVenueId ? "disabled" : ""}>${icon("arrowRight")} ${entity.catalogueVenueId ? "On catalogue map" : "Publish unclaimed venue"}</button>` : ""}
+          ${type === "company" && isPlatformWorkspace() ? `<button class="action-btn success" data-action="publish-company-unclaimed" data-id="${entity.id}" ${entity.catalogueVenueId ? "disabled" : ""}>${icon("arrowRight")} ${entity.catalogueVenueId ? "On catalogue map" : "Publish unclaimed venue"}</button>` : ""}
+          ${["contact", "company", "lead", "deal", "invoice", "conversation"].includes(type) && canUseTool("tasks") && state.workspace.canOperate ? `<button class="action-btn" data-action="follow-up-record" data-entity="${type}" data-id="${escapeHtml(id)}">${icon("tasks")} ${state.settings.locale === "es" ? "Crear seguimiento" : "Create follow-up"}</button>` : ""}
           ${type === "invoice" ? `<button class="action-btn" data-action="print-invoice" data-id="${entity.id}">${icon("download")} Print</button>` : ""}
           ${type === "product" ? `<button class="action-btn" data-action="adjust-stock" data-id="${entity.id}">${icon("plus")} Adjust stock</button>` : ""}
           ${type === "employee" && !isPlatformWorkspace() && canManageCurrentWorkspace() ? `<button class="action-btn" data-action="adjust-worker-tip" data-id="${entity.id}">${icon("money")} Adjust tip balance</button>` : ""}
@@ -5094,7 +5193,7 @@
     const { entity: type, id } = ui.modal;
     const existing = id ? getEntity(type, id) : null;
     // For new employee forms, use formDefaults as a virtual record so picker selections survive re-renders
-    const record = existing || (type === "employee" && Object.keys(ui.formDefaults).length ? ui.formDefaults : null);
+    const record = existing || (Object.keys(ui.formDefaults).length ? ui.formDefaults : null);
     const config = entityFormConfig(type, existing);
     if (!config) return "";
     const hasPickerSelection = type === "employee" && !existing && ui.formDefaults.name;
@@ -5306,6 +5405,7 @@
   }
 
   function openEntityForm(type, id = null, defaults = {}) {
+    if (!state.workspace.canOperate) { toast("Read-only workspace", "Your role can view records but cannot change them.", "info"); return; }
     if (!canUseEntityType(type)) {
       toast("Tool not enabled", "This record belongs to a tool that is not included in the current workspace.", "info");
       return;
@@ -5315,7 +5415,18 @@
     renderPortal();
   }
 
+  function automationTaskPreview(automation) {
+    if (!canUseTool("automation") || !canUseTool("tasks") || !state.workspace.canOperate) throw new Error("Automation and Tasks editing access are required.");
+    if (automation.status !== "Active") throw new Error("Activate this rule before previewing it.");
+    let source;
+    if (automation.recipe === "overdue") source = state.tasks.filter(task => !task.automationKey && task.status !== "done" && isOverdue(task.dueDate));
+    else if (automation.recipe === "stock" && canUseTool("inventory")) source = state.products.filter(product => product.status !== "Archived" && Number(product.stock) <= Number(product.reorderAt || 0));
+    else throw new Error("Choose a supported rule and enable its source tool.");
+    return source.map(item => ({ sourceRecord: {type: automation.recipe === "stock" ? "product" : "task", id:item.id}, automationKey: `${automation.id}:${item.id}:${dateOffset(0).slice(0,10)}`, title: `${automation.recipe === "stock" ? "Reorder" : "Follow up"}: ${item.title || item.name}`, description: `Created by reviewed rule: ${automation.name}\nSource reference: ${item.id}`, assigneeId:item.assigneeId || state.currentUserId })).filter(row => !state.tasks.some(task => task.automationKey === row.automationKey));
+  }
+
   async function handleAction(target, event) {
+    if (target.dataset.action?.startsWith("business-mail-")) return getBusinessMail().action(target);
     if (target.dataset.action?.startsWith("hp-")) return getHospitality().action(target);
     if (target.dataset.action?.startsWith("suite-")) { await getSuiteControls().action(target); return; }
     if (["pos-add","pos-decrement","pos-clear","pos-tender"].includes(target.dataset.action) && pendingPOSSale()) {
@@ -5324,6 +5435,48 @@
     const action = target.dataset.action;
     if (action === "reload-inventory-page") { window.location.reload(); return; }
     switch (action) {
+      case "campaign-preview":
+        ui.campaignPreview=target.dataset.id;ui.campaignSendStatus="";render();break;
+      case "automation-preview": {
+        const rule = getEntity("automation",target.dataset.id);
+        if (!rule) break;
+        ui.automationPreview={id:rule.id,workspace:state.workspace.id,rows:automationTaskPreview(rule)};render();break;
+      }
+      case "automation-run": {
+        const rule=getEntity("automation",target.dataset.id), preview=ui.automationPreview;
+        if (!rule || !preview || preview.id!==rule.id || preview.workspace!==state.workspace.id) throw new Error("Preview this rule first.");
+        const rows=automationTaskPreview(rule);
+        if (JSON.stringify(rows)!==JSON.stringify(preview.rows)) { ui.automationPreview=null; throw new Error("Source records changed. Preview this rule again."); }
+        const now=isoNow();
+        state.tasks.unshift(...rows.map(row=>({...row,id:uid("tk"),createdAt:now,updatedAt:now,status:"todo",priority:"medium",dueDate:dateOffset(1),projectId:"",estimate:0,tracked:0})));
+        ui.automationPreview=null;
+        addActivity("automation",rule.id,`created ${rows.length} reviewed follow-up tasks`,rule.name,"automation");
+        persist(); await syncCloudWorkspacePushNow(); render(); break;
+      }
+      case "add-pipeline": {
+        if (!state.workspace.canOperate || !canUseTool("crm")) throw new Error("CRM editing access required.");
+        if (state.pipelines.some(p => p.stages?.length)) { render(); break; }
+        const pipeline = { id: uid("pipeline"), name: state.settings.locale === "es" ? "Ventas" : "Sales", stages: [
+          { id: "new", name: "New", color: "#8b7cf8" }, { id: "qualified", name: "Qualified", color: "#5ca8ef" },
+          { id: "proposal", name: "Proposal", color: "#e6b85c" }, { id: "won", name: "Won", color: "#4bc59b" }, { id: "lost", name: "Lost", color: "#ee8098" }
+        ] };
+        state.pipelines.push(pipeline); ui.pipelineId = pipeline.id; persist();
+        await syncCloudWorkspacePushNow(); render(); break;
+      }
+      case "workflow-filter":
+        ui[target.dataset.key] = target.dataset.value; render(); break;
+      case "follow-up-record": {
+        if (!canUseEntityType(target.dataset.entity)) break;
+        const record = getEntity(target.dataset.entity, target.dataset.id);
+        if (!record) break;
+        openEntityForm("task", null, { title: `${state.settings.locale === "es" ? "Seguimiento" : "Follow up"}: ${titleForEntity(target.dataset.entity, record)}`, description: `${capitalize(target.dataset.entity)}: ${titleForEntity(target.dataset.entity, record)}\nReference: ${record.id}`, sourceRecord: { type: target.dataset.entity, id: record.id }, assigneeId: record.ownerId || state.currentUserId });
+        break;
+      }
+      case "message-to-task": {
+        const msg = state.teamChat?.messages?.[ui.activeTeamChannel]?.find(m => m.id === target.dataset.msgId);
+        if (msg) openEntityForm("task", null, { title: msg.text.slice(0, 100), description: `${msg.authorName}: ${msg.text}\nChannel: ${ui.activeTeamChannel} · Message: ${msg.id}` });
+        break;
+      }
       case "workspace-retry":
         await pushWorkspaceSnapshot(workspaceMutationVersion); render(); break;
       case "workspace-reload":
@@ -5453,7 +5606,7 @@
         if (ui.drag?.moved) return;
         const entityType = target.dataset.entity;
         const id = target.dataset.id;
-        if (!id) break;
+        if (!id || !collectionFor[entityType] || !canUseEntityType(entityType) || !getEntity(entityType, id)) break;
         ui.drawer = { type: entityType, id };
         ui.dropdown = null;
         renderPortal();
@@ -5711,6 +5864,7 @@
         ui.mobileChatOpen = false; render();
         break;
       case "toggle-conversation-status": {
+        if (!canUseTool("inbox") || !state.workspace.canOperate) throw new Error("Inbox editing access is required.");
         const conversation = getEntity("conversation", target.dataset.id);
         if (conversation) {
           conversation.status = conversation.status === "Resolved" ? "Open" : "Resolved";
@@ -5896,6 +6050,7 @@
         printInvoice(target.dataset.id);
         break;
       case "toggle-automation": {
+        if (!canUseTool("automation") || !state.workspace.canOperate) throw new Error("Automation editing access is required.");
         const automation = getEntity("automation", target.dataset.id);
         if (automation) {
           automation.status = automation.status === "Active" ? "Paused" : "Active";
@@ -5913,6 +6068,7 @@
         ui.integrationCategory = target.dataset.category; render();
         break;
       case "connect-integration":
+        if (!isPlatformWorkspace()) break;
         ui.modal = { kind: "integration", id: target.dataset.id }; renderPortal();
         break;
       case "test-integration": {
@@ -6387,6 +6543,14 @@
   }
 
   function handleInput(target) {
+    if (target.closest?.('[data-form="business-mail-reply"]')) return getBusinessMail().input(target);
+    if (target.matches("[data-workflow-search]")) {
+      ui.workflowSearch ||= {}; ui.workflowSearch[ui.route] = target.value;
+      const position = target.selectionStart; render();
+      const input = document.querySelector("[data-workflow-search]");
+      if (input) { input.focus(); input.setSelectionRange(position, position); }
+      return;
+    }
     if (target.matches("[data-inventory-search]")) {
       ui.inventorySearch = target.value;
       const position = target.selectionStart;
@@ -6485,6 +6649,26 @@
     return data;
   }
 
+  function validateEntityRecord(type, data, existing) {
+    const es = state.settings.locale === "es";
+    const fail = (en, spanish) => { throw new Error(es ? spanish : en); };
+    for (const field of entityFormConfig(type, existing).fields) {
+      const value = data[field.name];
+      if (field.required && (Array.isArray(value) ? !value.length : !String(value ?? "").trim())) fail(`${field.label} is required.`, `Completa el campo ${field.label}.`);
+      if (field.type === "number" && (!Number.isFinite(value) || (field.min !== undefined && value < field.min) || (field.max !== undefined && value > field.max))) fail(`${field.label} is outside the allowed range.`, `${field.label} está fuera del intervalo permitido.`);
+    }
+    if (type === "deal" && !state.pipelines.some(p => p.id === data.pipelineId && p.stages?.length)) fail("Create a pipeline with at least one stage before adding a deal.", "Crea un embudo con al menos una etapa antes de añadir una oportunidad.");
+    if (type === "event" && (!data.start || !data.end || new Date(data.end) <= new Date(data.start))) fail("The event must end after it starts.", "El evento debe terminar después de su inicio.");
+    if (["invoice", "campaign"].includes(type)) {
+      const start = type === "invoice" ? data.issueDate : data.startDate;
+      const end = type === "invoice" ? data.dueDate : data.endDate;
+      if (start && end && end < start) fail("The end or due date cannot precede the start or issue date.", "La fecha final o de vencimiento no puede ser anterior a la fecha inicial.");
+    }
+    if (type === "invoice" && data.tax > data.total) fail("Tax cannot exceed the total including tax.", "El impuesto no puede superar el total con impuestos.");
+    const unique = type === "product" ? ["products", "sku"] : type === "invoice" ? ["invoices", "number"] : null;
+    if (unique && state[unique[0]].some(row => row.id !== existing?.id && String(row[unique[1]] || "").trim().toLowerCase() === String(data[unique[1]] || "").trim().toLowerCase())) fail("This reference already exists. Use a unique reference.", "Esta referencia ya existe. Utiliza una referencia única.");
+  }
+
   async function saveEntityFromForm(form) {
     const originalState=state,actor=authUser?.id,workspace=state.workspace.id,tools=JSON.stringify(state.workspace.toolKeys);
     const stillCurrent=()=>state===originalState && authUser?.id===actor && state.workspace.id===workspace && JSON.stringify(state.workspace.toolKeys)===tools;
@@ -6496,6 +6680,11 @@
     if (!collection || !state[collection]) return;
     const existing = id ? getEntity(type, id) : null;
     const data = parseEntityForm(form, type, existing);
+    if (type === "task" && !existing && ui.formDefaults.sourceRecord) {
+      const source = ui.formDefaults.sourceRecord;
+      if (collectionFor[source.type] && canUseEntityType(source.type) && getEntity(source.type, source.id)) data.sourceRecord = {type:source.type,id:source.id};
+    }
+    validateEntityRecord(type, data, existing);
     if (type === "product") {
       const client = getSupabaseClient();
       if (!client || !authUser) throw new Error("Database authentication is unavailable.");
@@ -6507,8 +6696,8 @@
           name: String(data.name || "").trim(),
           unit: String(data.unit || existing?.unit || "unit").trim() || "unit",
           reorder_point: Math.max(0, Number(data.reorderAt || 0)),
-          safety_stock: Math.max(0, Number(data.safetyStock || existing?.safetyStock || 0)),
-          lead_time_days: Math.max(0, Math.min(365, Number(data.leadTimeDays || existing?.leadTimeDays || 3))),
+          safety_stock: Number(data.safetyStock ?? existing?.safetyStock ?? 0),
+          lead_time_days: Number(data.leadTimeDays ?? existing?.leadTimeDays ?? 3),
           category: String(data.category || "General").trim() || "General",
           cost_cents: Math.max(0, Math.round(Number(data.cost || 0) * 100)),
           sale_price_cents: Math.max(0, Math.round(Number(data.price || 0) * 100)),
@@ -6523,8 +6712,8 @@
           name: String(data.name || "").trim(),
           unit: String(data.unit || "unit").trim(),
           reorder_point: Math.max(0, Number(data.reorderAt || 0)),
-          safety_stock: 0,
-          lead_time_days: 3,
+          safety_stock: Number(data.safetyStock ?? 0),
+          lead_time_days: Number(data.leadTimeDays ?? 3),
           category: String(data.category || "General").trim() || "General",
           cost_cents: Math.max(0, Math.round(Number(data.cost || 0) * 100)),
           sale_price_cents: Math.max(0, Math.round(Number(data.price || 0) * 100)),
@@ -6589,6 +6778,7 @@
       }
     }
     if (type === "article") data.authorId ||= state.currentUserId;
+    if (type === "conversation") Object.assign(data, { messages: existing?.messages || [], unread: existing?.unread || 0 });
 
     if(!stillCurrent()) return;
     if (existing) {
@@ -6604,9 +6794,6 @@
     if (type === "article") ui.selectedArticleId = data.id;
     if (type === "deal") { ui.crmTab = "deals"; ui.pipelineId = data.pipelineId; }
     const durableVersion = isDurableRecordType(type) ? markDurableRecordDirty() : null;
-    if (type === "project") {
-      state.tasks = state.tasks.map(task => task.projectId === id ? { ...task, projectId: "", updatedAt: isoNow() } : task);
-    }
     clearFormDraft(form);
     ui.modal = null;
     ui.formDefaults = {};
@@ -6625,6 +6812,24 @@
   }
 
   async function handleSubmit(form, event) {
+    if (form.dataset.form === "business-mail-reply") return getBusinessMail().submit(form);
+    if (form.dataset.form === "campaign-send") {
+      if (ui.campaignSending) return;
+      if (!state.workspace.canAdminister || !canUseTool("marketing")) throw new Error("Administrator and Marketing access are required.");
+      const campaign=getEntity("campaign",form.dataset.id);
+      if (!campaign?.subject?.trim() || !campaign?.content?.trim()) throw new Error("Add an email subject and content before sending.");
+      const actor=authUser.id,workspace=state.workspace.id;
+      const payload={email:String(new FormData(form).get("email")||"").trim(),subject:campaign.subject,text:campaign.content};
+      const digest=Array.from(new Uint8Array(await crypto.subtle.digest("SHA-256",new TextEncoder().encode(JSON.stringify(payload))))).map(n=>n.toString(16).padStart(2,"0")).join("");
+      const key=`akibusiness:campaign-send:${actor}:${workspace}:${campaign.id}:${digest}`;
+      payload.requestId=sessionStorage.getItem(key)||crypto.randomUUID(); sessionStorage.setItem(key,payload.requestId);
+      if (authUser.id!==actor || state.workspace.id!==workspace) return;
+      ui.campaignSending=true;form.querySelector('button[type="submit"]').disabled=true;
+      try { const result=await socialGatewayRequest("/api/business-mail/campaign",{method:"POST",body:payload}); ui.campaignSendStatus=result.status==="accepted" ? "Accepted by your provider; delivery is not confirmed. This draft/reference will not be sent twice." : "Send outcome is unknown. Check your provider before sending another message."; }
+      catch(error) { ui.campaignSendStatus=error.message; }
+      finally {ui.campaignSending=false;if(authUser?.id===actor && state.workspace.id===workspace)render();}
+      return;
+    }
     if (form.dataset.form?.startsWith("hp-")) { event?.preventDefault(); return getHospitality().submit(form); }
     const kind = form.dataset.form;
     if (kind?.startsWith("suite-")) return getSuiteControls().submit(form);
@@ -6882,10 +7087,11 @@
       return;
     }
     if (kind === "message") {
+      if (!canUseTool("inbox") || !state.workspace.canOperate) throw new Error("Inbox editing access is required.");
       const text = String(new FormData(form).get("text") || "").trim();
       const conversation = getEntity("conversation", form.dataset.conversationId);
       if (!text || !conversation) return;
-      conversation.messages.push({ id: uid("m"), direction: "out", text: "[Internal note — not sent] " + text, at: isoNow() });
+      (conversation.messages ||= []).push({ id: uid("m"), direction: "out", text: "[Internal note — not sent] " + text, at: isoNow() });
       conversation.status = "Open";
       addActivity("conversation", conversation.id, "added an internal note", conversation.name, "inbox");
       persist();
@@ -6941,6 +7147,7 @@
       return;
     }
     if (kind === "integration") {
+      if (!isPlatformWorkspace() || !state.workspace.canOperate) throw new Error("Connection notes are not available for this workspace.");
       const id = form.dataset.id;
       const integration = integrationCatalog.find(item => item.id === id);
       const values = Object.fromEntries(new FormData(form));
@@ -6951,8 +7158,8 @@
         connectedAt: isoNow(),
         updatedAt: isoNow()
       };
-      addActivity("integration", id, "connected integration", integration?.name || id, "integrations");
-      addAudit("integration.connected", { provider: id });
+      addActivity("integration", id, "saved configuration notes", integration?.name || id, "integrations");
+      addAudit("integration.notes_saved", { provider: id });
       ui.modal = null; persist(); render();
       toast("Configuration notes saved", "Provider setup and verification are still required.", "info");
       return;
@@ -7070,6 +7277,7 @@
     const originalIndex = state[collection].findIndex(item => item.id === id);
     const durableVersion = isDurableRecordType(type) ? markDurableRecordDirty() : null;
     state[collection] = state[collection].filter(item => item.id !== id);
+    if (type === "project") state.tasks = state.tasks.map(task => task.projectId === id ? {...task,projectId:"",updatedAt:isoNow()} : task);
     state.activities = state.activities.filter(activity => !(activity.entityType === type && activity.entityId === id));
     if (type === "article") ui.selectedArticleId = state.knowledge[0]?.id || null;
     if (type === "conversation") ui.selectedConversationId = state.conversations[0]?.id || null;
