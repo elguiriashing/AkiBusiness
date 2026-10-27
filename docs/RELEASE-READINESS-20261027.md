@@ -26,3 +26,5 @@ These checks do not settle every jurisdiction, contractual promise, customer pro
 ## Deployment controls
 
 Ship the tested source via a reviewed GitHub PR. Preserve the shared gateway's existing bindings, secrets and remote variables. The mailbox Durable Object migration is additive. Verify deployed source stamps and service responses; record actual deployment identifiers before claiming success. Never enable gated transmission or fiscal functions merely to complete a release.
+
+Use `cloudflare/wrangler.business-production.toml` for this shared-gateway release. It retains the live sender allowlist (including Anna), resource bindings and single daily schedule, and keeps remote variables/secrets. The general development config includes an additional unactivated two-minute schedule and must not replace these production settings. Reconcile live configuration again before future deployments.

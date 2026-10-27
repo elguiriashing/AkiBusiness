@@ -1,0 +1,44 @@
+# Shared gateway release target, reconciled against live settings 2026-10-27.
+# Keep remote variables/secrets; do not activate development cron schedules.
+name = "akihq-integration-gateway"
+main = "worker.js"
+account_id = "501bc9434d8ae555a6ac984a26dd2725"
+compatibility_date = "2026-07-28"
+workers_dev = true
+keep_vars = true
+
+[[durable_objects.bindings]]
+name = "BUSINESS_MAIL"
+class_name = "BusinessMailbox"
+
+[[migrations]]
+tag = "business-mail-v1"
+new_sqlite_classes = ["BusinessMailbox"]
+
+[[kv_namespaces]]
+binding = "SOCIAL_STORE"
+id = "d9fe3743bdfb4c9ab3ee31dc2764c61b"
+
+[[r2_buckets]]
+binding = "MEDIA_BUCKET"
+bucket_name = "akihq-media"
+
+[[services]]
+binding = "TELEGRAM_AUTOMATION"
+service = "akipasa-automation"
+
+[[services]]
+binding = "AI_GATEWAY"
+service = "akipasa"
+
+[[send_email]]
+name = "EMAIL"
+allowed_sender_addresses = [
+  "alex@akipasa.com", "andrew@akipasa.com", "anna@akipasa.com",
+  "business@akipasa.com", "contact@akipasa.com", "info@akipasa.com",
+  "legal@akipasa.com", "press@akipasa.com", "social@akipasa.com",
+  "social.en@akipasa.com", "social.es@akipasa.com", "support@akipasa.com"
+]
+
+[triggers]
+crons = ["15 4 * * *"]
