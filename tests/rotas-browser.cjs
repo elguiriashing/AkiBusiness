@@ -219,7 +219,15 @@ const close = async (page) => {
             target = page
               .locator('.rp-table td[data-date="2026-10-23"]')
               .last();
-          await card.dragTo(target);
+          // Begin a real pointer drag with a small movement before traversing
+          // the scrollable board. One jump can miss native drag initiation.
+          await card.hover();
+          const start = await card.boundingBox();
+          await page.mouse.down();
+          await page.mouse.move(start.x + start.width / 2 + 10, start.y + start.height / 2, {steps:5});
+          await target.hover();
+          await target.hover();
+          await page.mouse.up();
           await page.waitForFunction(() =>
             fixture.data.shifts.some((s) => s.date === "2026-10-23"),
           );
