@@ -25,6 +25,8 @@ async function fixture(status,workspace='tenant-a',station='kitchen'){
 }
 test.before(async()=>{
  db=new PGlite();await setupKitchenDatabase(db);
+ // Shared account completion is represented explicitly, not silently omitted.
+ await db.exec(`create function public.account_features_allowed() returns boolean language sql stable as $$select coalesce(current_setting('test.account_complete',true),'true')::boolean$$;`);
  // First reproduce the original PR regression against the unchanged backend.
  paired=(await asRole('authenticated',"select public.crm_printer_manage('tenant-a','pair',$1::jsonb) value",[JSON.stringify({name:'Recovery fixture',stations:['kitchen']})])).rows[0].value;
  const original=await fixture('spooled');
@@ -104,4 +106,15 @@ test('legacy begin/spooled contract and private table restrictions remain intact
  await assert.rejects(asRole('authenticated','select * from akihq_hospitality.events'),/permission denied/);
  const permissions=(await db.query("select count(*)::int n from pg_proc p cross join lateral aclexplode(p.proacl) a where p.oid='public.crm_printer_report(uuid,text,uuid,text)'::regprocedure and a.grantee=0 and a.privilege_type='EXECUTE'")).rows[0];
  assert.equal(permissions.n,0);
+});
+
+
+test('signed-in incomplete accounts remain blocked while paired headless devices retain their narrow contract',async()=>{
+ const id=await fixture('claimed');
+ await db.exec("select set_config('test.account_complete','false',false)");
+ try{
+  await assert.rejects(asRole('authenticated','select public.crm_printer_report($1::uuid,$2::text,$3::uuid,$4::text)',[paired.device_id,paired.token,id,'recover']),/account completion required/);
+  assert.equal((await row(id)).status,'claimed');assert.equal((await audits(id)).length,0);
+  assert.equal((await report(id)).status,'uncertain');
+ }finally{await db.exec("select set_config('test.account_complete','true',false)");}
 });

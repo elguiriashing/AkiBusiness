@@ -4,6 +4,13 @@ begin;
 set local lock_timeout = '2s';
 set local statement_timeout = '8s';
 
+-- Account-completion enforcement is installed by the shared AkiPasa schema.
+do $$begin
+ if to_regprocedure('public.account_features_allowed()') is null then
+  raise exception 'Shared account-completion prerequisite is missing';
+ end if;
+end $$;
+
 create unique index hospitality_printer_recovery_once
  on akihq_hospitality.events(workspace_id,(metadata->>'device_id'),(metadata->>'ticket_id'))
  where action='printer_recover';
@@ -12,6 +19,10 @@ create or replace function public.crm_printer_report(p_device uuid,p_token text,
 language plpgsql security definer set search_path='' as $$
 declare d akihq_hospitality.printers; t akihq_hospitality.tickets; prior_status text;
 begin
+ -- Preserve the live shared account-completion wrapper as well as token scope.
+ if auth.uid() is not null and not coalesce(public.account_features_allowed(),false) then
+  raise exception 'account completion required [coverage-v1]' using errcode='42501';
+ end if;
  d:=akihq_hospitality.printer_guard(p_device,p_token);
  perform pg_advisory_xact_lock(hashtextextended('akihq-hospitality:'||d.workspace_id,0));
  d:=akihq_hospitality.printer_guard(p_device,p_token);
