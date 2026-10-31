@@ -2480,6 +2480,16 @@
       </article>`;
   }
 
+  // These legacy editable records are not issued fiscal invoices or provider receipts.
+  // A manually selected Paid status must never be labelled collected bank revenue.
+  function recordedPaidDocuments() {
+    return (state.invoices || []).filter(doc => doc && doc.type === "Invoice" &&
+      doc.status === "Paid" && Number.isFinite(Number(doc.total)) && Number(doc.total) >= 0);
+  }
+  function recordedPaidAmount() {
+    return recordedPaidDocuments().reduce((sum, doc) => sum + Number(doc.total || 0), 0);
+  }
+
   function renderDashboard() {
     const platform = isPlatformWorkspace();
     const workspaceActivities = state.activities.filter(activity =>
@@ -2488,7 +2498,7 @@
     );
     const openDeals = state.deals.filter(deal => !["won", "lost", "paying"].includes(deal.stageId));
     const pipelineValue = openDeals.reduce((sum, deal) => sum + Number(deal.value || 0), 0);
-    const paidRevenue = state.invoices.filter(invoice => invoice.status === "Paid").reduce((sum, invoice) => sum + Number(invoice.total || 0), 0);
+    const paidRevenue = recordedPaidAmount();
     const dueTasks = state.tasks.filter(task => task.status !== "done" && new Date(task.dueDate).getTime() <= Date.now() + 86400000 * 3).length;
     const completedTasks = state.tasks.filter(task => task.status === "done").length;
     const completion = state.tasks.length ? Math.round(completedTasks / state.tasks.length * 100) : 0;
@@ -3291,18 +3301,18 @@
   }
 
   function renderSales() {
-    const receivables = state.invoices.filter(invoice => invoice.type === "Invoice" && ["Sent", "Overdue"].includes(invoice.status));
+    const receivables = state.invoices.filter(invoice => invoice.type === "Invoice" && ["Sent", "Overdue"].includes(invoice.status) && Number.isFinite(Number(invoice.total)));
     const outstanding = receivables.reduce((sum, invoice) => sum + Number(invoice.total || 0), 0);
-    const paid = state.invoices.filter(invoice => invoice.type === "Invoice" && invoice.status === "Paid").reduce((sum, invoice) => sum + Number(invoice.total || 0), 0);
+    const paid = recordedPaidAmount();
     const overdue = receivables.filter(invoice => isOverdue(invoice.dueDate)).length;
     return `<div class="page-grid">
       <div class="page-grid grid-3">
-        ${renderMetric("Paid", formatMoney(paid, true), "collected across invoices", "check", "#49d7a0")}
-        ${renderMetric("Outstanding", formatMoney(outstanding, true), "sent and overdue", "sales", "#7c8cff")}
+        ${renderMetric("Marked paid", formatMoney(paid, true), "editable legacy records · not bank verified", "check", "#49d7a0")}
+        ${renderMetric("Marked outstanding", formatMoney(outstanding, true), "legacy sent and overdue documents", "sales", "#7c8cff")}
         ${renderMetric("Overdue", String(overdue), overdue ? "follow-up required" : "nothing overdue", "warning", "#ff6f85")}
       </div>
       <section class="panel table-panel">
-        <div class="panel-header"><div><h2>Legacy documents and quotes</h2><p>Operational documents. Fiscal issuance is currently disabled.</p><button class="action-btn" data-action="open-business-controls">Fiscal setup and records</button></div></div>
+        <div class="panel-header"><div><h2>Legacy documents and quotes</h2><p>Editable operational records only. Paid status is manual, not proof of collection; fiscal issuance is disabled.</p><button class="action-btn" data-action="open-business-controls">Fiscal setup and records</button></div></div>
         <div class="table-scroll"><table class="data-table">
           <thead><tr><th>Document</th><th>Customer</th><th>Type</th><th>Issue date</th><th>Due</th><th>Total</th><th>Status</th><th></th></tr></thead>
           <tbody>${state.invoices.filter(invoice => workflowMatches(invoice, ["number", "notes", "status"]) && (ui.salesFilter !== "due" || receivables.includes(invoice)) && (ui.salesFilter !== "overdue" || (receivables.includes(invoice) && isOverdue(invoice.dueDate)))).map(invoice => `<tr class="clickable" data-action="view-entity" data-entity="invoice" data-id="${invoice.id}">
@@ -3340,7 +3350,7 @@
           const open = campaign.sent ? Math.round(campaign.opened / campaign.sent * 100) : 0;
           const click = campaign.opened ? Math.round(campaign.clicked / campaign.opened * 100) : 0;
           return `<article class="entity-card" data-action="view-entity" data-entity="campaign" data-id="${campaign.id}" role="button" tabindex="0">
-            <div class="entity-card-top"><div class="entity-logo">${campaign.channel[0]}</div><div class="entity-card-copy"><h3>${escapeHtml(campaign.name)}</h3><p>${escapeHtml(campaign.channel)} · ${escapeHtml(campaign.audience)}</p></div><span class="status-pill ${campaign.status === "Running" ? "success" : campaign.status === "Scheduled" ? "info" : campaign.status === "Completed" ? "" : "warning"}">${escapeHtml(campaign.status)}</span></div>
+            <div class="entity-card-top"><div class="entity-logo">${campaign.channel[0]}</div><div class="entity-card-copy"><h3>${escapeHtml(campaign.name)}</h3><p>${escapeHtml(campaign.channel)} · ${escapeHtml(campaign.audience)}</p></div><span class="status-pill info">Plan: ${escapeHtml(campaign.status)}</span></div>
             <div class="entity-card-stats"><div class="entity-stat"><span>Sent</span><strong>${Number(campaign.sent).toLocaleString()}</strong></div><div class="entity-stat"><span>Conversions</span><strong>${Number(campaign.conversions).toLocaleString()}</strong></div><div class="entity-stat"><span>Open rate</span><strong>${open}%</strong></div><div class="entity-stat"><span>Click rate</span><strong>${click}%</strong></div></div>
             ${campaign.channel === "Email" ? `<button class="action-btn" data-action="campaign-preview" data-id="${escapeHtml(campaign.id)}">${state.settings.locale === "es" ? "Revisar correo" : "Review email"}</button>` : ""}
           </article>`;
@@ -3352,7 +3362,7 @@
           ["New this month", liveStats ? liveStats.new_users_30d : 0, "Signed up in the last 30 days"],
           ["Unverified venues", liveStats ? (liveStats.total_venues - liveStats.verified_venues) : 0, "Venue is registered but not yet verified"],
           ["Pending claim reviews", liveStats ? liveStats.pending_claims : 0, "Venue claim submitted and awaiting decision"]
-        ] : [["Workspace contacts",state.contacts.length,"Contacts visible in this workspace; not a marketing-consent list"]]).map(([name, count, rule]) => `<div class="entity-card"><div class="entity-card-top"><div class="entity-logo">${icon("filter")}</div><div class="entity-card-copy"><h3>${escapeHtml(name)}</h3><p>${escapeHtml(rule)}</p></div></div><div class="entity-card-stats"><div class="entity-stat"><span>Members</span><strong>${Number(count||0).toLocaleString()}</strong></div><div class="entity-stat"><span>Refresh</span><strong>Live</strong></div></div></div>`).join("")}
+        ] : [["Workspace contacts",state.contacts.length,"Contacts visible in this workspace; not a marketing-consent list"]]).map(([name, count, rule]) => `<div class="entity-card"><div class="entity-card-top"><div class="entity-logo">${icon("filter")}</div><div class="entity-card-copy"><h3>${escapeHtml(name)}</h3><p>${escapeHtml(rule)}</p></div></div><div class="entity-card-stats"><div class="entity-stat"><span>Members</span><strong>${Number(count||0).toLocaleString()}</strong></div><div class="entity-stat"><span>Source</span><strong>${isPlatformWorkspace() ? "Platform" : "Workspace"}</strong></div></div></div>`).join("")}
       </div></section>
     </div>`;
   }
@@ -3416,16 +3426,16 @@
 
   function renderSites() {
     return `<div class="page-grid"><section class="panel" style="padding:16px"><h3>Site and form planning</h3><p>These records describe planned pages and forms. Publishing, live collection, privacy notices and consent handling require a configured publishing service.</p></section>
-      <section class="panel"><div class="panel-header"><div><h2>Landing pages</h2><p>Original, lightweight pages for campaigns and onboarding</p></div></div><div class="panel-body cards-grid">
+      <section class="panel"><div class="panel-header"><div><h2>Landing page plans</h2><p>Draft metadata only. A Published label does not put a page on the public internet.</p></div></div><div class="panel-body cards-grid">
         ${state.pages.map(page => `<article class="entity-card" data-action="view-entity" data-entity="page" data-id="${page.id}" role="button" tabindex="0">
-          <div class="entity-card-top"><div class="entity-logo">${icon("sites")}</div><div class="entity-card-copy"><h3>${escapeHtml(page.name)}</h3><p>/${escapeHtml(page.slug)} · updated ${escapeHtml(relativeTime(page.updatedAt))}</p></div><span class="status-pill ${page.status === "Published" ? "success" : "warning"}">${escapeHtml(page.status)}</span></div>
-          <div class="entity-card-stats"><div class="entity-stat"><span>Visitors</span><strong>${Number(page.visitors || 0).toLocaleString()}</strong></div><div class="entity-stat"><span>Conversions</span><strong>${Number(page.conversions || 0).toLocaleString()}</strong></div></div>
+          <div class="entity-card-top"><div class="entity-logo">${icon("sites")}</div><div class="entity-card-copy"><h3>${escapeHtml(page.name)}</h3><p>/${escapeHtml(page.slug)} · updated ${escapeHtml(relativeTime(page.updatedAt))}</p></div><span class="status-pill info">Plan: ${escapeHtml(page.status)}</span></div>
+          <div class="entity-card-stats"><div class="entity-stat"><span>Recorded visitors</span><strong>${Number(page.visitors || 0).toLocaleString()}</strong></div><div class="entity-stat"><span>Recorded conversions</span><strong>${Number(page.conversions || 0).toLocaleString()}</strong></div></div>
         </article>`).join("")}
       </div></section>
-      <section class="panel"><div class="panel-header"><div><h2>Forms</h2><p>Capture leads, events and custom records</p></div></div><div class="panel-body cards-grid">
+      <section class="panel"><div class="panel-header"><div><h2>Form plans</h2><p>Live submissions and consent notices need a connected publishing/collection service.</p></div></div><div class="panel-body cards-grid">
         ${state.forms.map(form => `<article class="entity-card" data-action="view-entity" data-entity="form" data-id="${form.id}" role="button" tabindex="0">
-          <div class="entity-card-top"><div class="entity-logo">${icon("sales")}</div><div class="entity-card-copy"><h3>${escapeHtml(form.name)}</h3><p>${form.fields.length} fields · creates ${escapeHtml(form.destination)}</p></div><span class="status-pill ${form.status === "Live" ? "success" : "warning"}">${escapeHtml(form.status)}</span></div>
-          <div class="entity-card-stats"><div class="entity-stat"><span>Submissions</span><strong>${Number(form.submissions || 0).toLocaleString()}</strong></div><div class="entity-stat"><span>Conversion</span><strong>${Number(form.conversionRate || 0)}%</strong></div></div>
+          <div class="entity-card-top"><div class="entity-logo">${icon("sales")}</div><div class="entity-card-copy"><h3>${escapeHtml(form.name)}</h3><p>${form.fields.length} fields · creates ${escapeHtml(form.destination)}</p></div><span class="status-pill info">Plan: ${escapeHtml(form.status)}</span></div>
+          <div class="entity-card-stats"><div class="entity-stat"><span>Recorded submissions</span><strong>${Number(form.submissions || 0).toLocaleString()}</strong></div><div class="entity-stat"><span>Recorded conversion</span><strong>${Number(form.conversionRate || 0)}%</strong></div></div>
         </article>`).join("")}
       </div></section>
     </div>`;
@@ -3949,7 +3959,7 @@
         </div>
       </section>
 
-      <section class="panel analytics-business-panel"><div class="panel-header"><div><h2>CRM outcomes</h2><p>Operational records persisted in the shared database workspace</p></div></div><div class="analytics-business-grid"><div><span>Pipeline value</span><strong>${escapeHtml(formatMoney(state.deals.reduce((sum, deal) => sum + Number(deal.value || 0), 0)))}</strong><small>${number(state.deals.length)} deals</small></div><div><span>Collected revenue</span><strong>${escapeHtml(formatMoney(paidRevenue))}</strong><small>${number(state.invoices.filter(invoice => invoice.status === "Paid").length)} paid invoices</small></div><div><span>Active work</span><strong>${number(activeTasks)}</strong><small>${number(state.projects.length)} projects</small></div><div><span>Negative signals</span><strong>${number(summary.negative_signals)}</strong><small>skips, exits, dislikes and hidden venues</small></div></div></section>
+      <section class="panel analytics-business-panel"><div class="panel-header"><div><h2>CRM outcomes</h2><p>Operational records persisted in the shared database workspace</p></div></div><div class="analytics-business-grid"><div><span>Pipeline value</span><strong>${escapeHtml(formatMoney(state.deals.reduce((sum, deal) => sum + Number(deal.value || 0), 0)))}</strong><small>${number(state.deals.length)} deals</small></div><div><span>Marked paid (legacy)</span><strong>${escapeHtml(formatMoney(paidRevenue))}</strong><small>${number(recordedPaidDocuments().length)} editable documents · no bank settlement verified</small></div><div><span>Active work</span><strong>${number(activeTasks)}</strong><small>${number(state.projects.length)} projects</small></div><div><span>Negative signals</span><strong>${number(summary.negative_signals)}</strong><small>skips, exits, dislikes and hidden venues</small></div></div></section>
     </div>`;
   }
 
