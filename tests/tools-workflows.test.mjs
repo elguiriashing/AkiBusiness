@@ -205,6 +205,7 @@ test('CRM import confirmation rejects a switched workspace or changed review dat
 
 test('calendar creates valid one-hour slots from both empty days and day popovers',async()=>{
   const {dom,a}=await fixture();try{
+    a.state.events=[];
     const chosen='2026-10-31T00:00:00Z';
     const defaults=a.calendarNewEventDefaults(chosen);
     assert.equal(new Date(defaults.end)-new Date(defaults.start),3600000);
