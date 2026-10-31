@@ -2498,7 +2498,6 @@
     );
     const openDeals = state.deals.filter(deal => !["won", "lost", "paying"].includes(deal.stageId));
     const pipelineValue = openDeals.reduce((sum, deal) => sum + Number(deal.value || 0), 0);
-    const paidRevenue = recordedPaidAmount();
     const dueTasks = state.tasks.filter(task => task.status !== "done" && new Date(task.dueDate).getTime() <= Date.now() + 86400000 * 3).length;
     const completedTasks = state.tasks.filter(task => task.status === "done").length;
     const completion = state.tasks.length ? Math.round(completedTasks / state.tasks.length * 100) : 0;
