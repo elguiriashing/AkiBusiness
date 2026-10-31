@@ -86,14 +86,14 @@ function cashDialog(p){
 function render(p){
  const d=p.data||{},active=p.mode||"bills";
  return '<div class="hp-ledger-shell">'+
- '<div class="hp-ledger-top"><div><span class="hp-ledger-kicker">AKIHQ / POINT OF SALE</span><h2>Sales lookup & trading days</h2><p>Every closed bill, searchable and grouped by your venue’s actual trading hours.</p></div>'+button("ledger-refresh","↻ Refresh records")+'</div>'+
+ '<div class="hp-ledger-top"><div><span class="hp-ledger-kicker">AKIHQ / POINT OF SALE</span><h2>Sales lookup & trading days</h2><p>Every closed bill, searchable and grouped by your venue’s actual trading hours.</p></div><div class="hp-day-actions">'+(p.canManage?button("settlement-open","Reconcile terminal CSV"):'')+button("ledger-refresh","↻ Refresh records")+'</div></div>'+
  (p.error?'<div class="hp-ledger-error" role="alert">'+esc(p.error)+'</div>':'')+
  shiftPanel(p)+summary(p)+
  '<nav class="hp-ledger-tabs">'+button("ledger-mode","Closed bill lookup",'data-mode="bills" aria-pressed="'+(active==="bills")+'"')+button("ledger-mode","Trading day archive",'data-mode="days" aria-pressed="'+(active==="days")+'"')+'</nav>'+
  (active==="days"?archives(p):chooser(p)+results(p))+
  (p.loading?'<p class="hp-ledger-loading" role="status">Refreshing records…</p>':'')+
  '<p class="hp-ledger-disclaimer">Sales totals use fully settled closed bills; a partial payment does not count twice. Existing bills before tracking was enabled are still searchable, but may be unassigned to a trading day.</p>'+
- billDetails(p)+cashDialog(p)+'</div>';
+ billDetails(p)+cashDialog(p)+(root.AkiPosSettlement?.renderPanel(p.settlement)||'')+'</div>';
 }
 root.AkiPosLedger={render,money,dateTime,labelDay,esc};
 })(typeof window==="undefined"?globalThis:window);
