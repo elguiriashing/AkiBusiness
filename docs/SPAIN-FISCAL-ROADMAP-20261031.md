@@ -56,3 +56,26 @@ This is an engineering acceptance plan, not legal advice, an AEAT approval, a pr
 6. Only then activate the fiscal issuer; pilot by jurisdiction/feature gate. No automatic general all-Spain release.
 
 **Track:** [fiscal issue #22](https://github.com/elguiriashing/AkiBusiness/issues/22) · [payments issue #23](https://github.com/elguiriashing/AkiBusiness/issues/23) · [candidate PR #67](https://github.com/elguiriashing/AkiBusiness/pull/67).
+
+## 2026-10-31 | Preserve shared account eligibility in refund candidate
+
+Read-only production metadata exposed a regression in PR67: replacing
+crm_pos_cash_overview removed the deployed account_features_allowed guard
+(definition MD5 d0e1a019464e8287d9175d05a1a105d3). The private hospitality
+guard checks tool/workspace access but has no direct account-completion guard.
+All five affected public cash/ledger/refund/settlement RPCs now explicitly
+reject missing identity or false/unknown account eligibility. Each candidate
+migration checks for the existing shared helper before changing any object.
+Manager checks also treat NULL as denial. No production SQL was executed.
+
+Seven actual PGlite suites pass, including original immutable sales, partial
+refund/idempotency/caps, manager/tenant isolation and statement limitations,
+plus false and unknown eligibility across all five public RPCs. This fixture
+is not genuine GoTrue authentication or independent PostgreSQL concurrency.
+The statutory dates were checked against current primary AEAT/BOE sources;
+this does not certify an issuer, bank settlement or payment-provider operation.
+Fresh hosted CI, shared-schema staging, independent-connection races and the
+existing provider/fiscal/physical gates remain required before this draft can
+activate or be published. PR56/66 source merges do not waive those gates.
+
+Primary-source readback: https://sede.agenciatributaria.gob.es/Sede/todas-noticias/2026/octubre/7/solucion-publica-facturacion-electronica.html and https://boe.es/diario_boe/txt.php?id=BOE-A-2025-24446.

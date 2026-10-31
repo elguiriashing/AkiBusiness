@@ -1,6 +1,13 @@
 -- Repair active trading-day counts: opened is a JSONB variable, not a table alias.
 -- This additive function replacement preserves source fields and tenant guard.
 begin;
+
+-- Preserve the shared live account-completion boundary before replacing RPCs.
+do $$begin
+ if to_regprocedure('public.account_features_allowed()') is null then
+  raise exception 'Shared account-completion prerequisite is missing';
+ end if;
+end $$;
 create or replace function public.crm_pos_ledger(p_workspace text,p_filters jsonb default '{}'::jsonb)
 returns jsonb language plpgsql security definer set search_path='' as $$
 declare
@@ -11,6 +18,9 @@ declare
  days jsonb;opened jsonb;actors jsonb;calendar_cents bigint;weekly_cents bigint;current_cents bigint;
  calendar_count bigint;weekly_count bigint;current_count bigint;unassigned bigint;
 begin
+ if auth.uid() is null or not coalesce(public.account_features_allowed(),false) then
+  raise exception 'account completion required [coverage-v1]' using errcode='42501';
+ end if;
  perform akihq_hospitality.guard(p_workspace);
  if p_filters is null then p_filters:='{}'::jsonb; end if;
  if jsonb_typeof(p_filters)<>'object' or octet_length(p_filters::text)>4000 then raise exception 'Invalid lookup filters'; end if;

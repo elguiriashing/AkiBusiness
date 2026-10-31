@@ -8,6 +8,10 @@ let db;
 test.before(async()=>{
   db=new PGlite();
   await setupKitchenDatabase(db);
+  // Explicit shared-account fixture: false and unknown must both fail closed.
+  await db.exec(`create function public.account_features_allowed() returns boolean language sql stable as $$
+    select case current_setting('test.account_allowed',true) when 'false' then false when 'unknown' then null else true end
+  $$;`);
   await db.exec("insert into public.crm_role_template_tools values('10000000-0000-0000-0000-000000000001','pos')");
   for(const file of [
     '20261010223000_pos_trading_days_ledger.sql',
@@ -121,4 +125,19 @@ test('manager settlement feed groups terminal sales and refunds by event time wi
  await assert.rejects(rpc('crm_pos_settlement_feed',['tenant-a',from,new Date(Date.now()+50*24*3600*1000).toISOString()]),/bounded reconciliation/);
  const grants=(await db.query("select has_function_privilege('anon','public.crm_pos_settlement_feed(text,timestamptz,timestamptz)','execute') anon,has_table_privilege('authenticated','akihq_hospitality.refund_records','select') direct")).rows[0];
  assert.deepEqual(grants,{anon:false,direct:false});
+});
+
+
+for (const eligibility of ['false','unknown']) test(`shared account eligibility ${eligibility} blocks every refund and cash RPC`,async()=>{
+ const from=new Date(Date.now()-3600000).toISOString(),until=new Date(Date.now()+3600000).toISOString();
+ await db.query("select set_config('test.account_allowed',$1,false)",[eligibility]);
+ try {
+  for(const [name,args] of [
+   ['crm_pos_cash_overview',['tenant-a']],
+   ['crm_pos_ledger',['tenant-a',{}]],
+   ['crm_pos_record_refund',['tenant-a',crypto.randomUUID(),{}]],
+   ['crm_pos_refund_overview',['tenant-a',crypto.randomUUID()]],
+   ['crm_pos_settlement_feed',['tenant-a',from,until]]
+  ]) await assert.rejects(rpc(name,args),/account completion required/);
+ } finally { await db.query("select set_config('test.account_allowed','true',false)"); }
 });

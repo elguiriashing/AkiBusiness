@@ -2,6 +2,13 @@
 -- No card capture/refund API, fiscal rectification, or AEAT submission is performed.
 -- Historical sales and issued fiscal documents stay immutable.
 begin;
+
+-- Preserve the shared live account-completion boundary before replacing RPCs.
+do $$begin
+ if to_regprocedure('public.account_features_allowed()') is null then
+  raise exception 'Shared account-completion prerequisite is missing';
+ end if;
+end $$;
 create table akihq_hospitality.refund_records (
  id uuid primary key default gen_random_uuid(),
  workspace_id text not null references public.crm_workspaces(id),
@@ -60,6 +67,9 @@ create or replace function public.crm_pos_cash_overview(p_workspace text) return
 language plpgsql security definer set search_path='' as $$
 declare active_shift jsonb; recent jsonb;
 begin
+ if auth.uid() is null or not coalesce(public.account_features_allowed(),false) then
+  raise exception 'account completion required [coverage-v1]' using errcode='42501';
+ end if;
  perform akihq_hospitality.guard(p_workspace);
  select jsonb_build_object(
    'trading_day_id',s.trading_day_id,'opening_float_cents',s.opening_float_cents,
@@ -101,8 +111,11 @@ declare
  v_fiscal text:=nullif(btrim(coalesce(p_refund->>'fiscal_correction_reference','')),'');
  v_day uuid; v_id uuid;
 begin
+ if auth.uid() is null or not coalesce(public.account_features_allowed(),false) then
+  raise exception 'account completion required [coverage-v1]' using errcode='42501';
+ end if;
  perform akihq_hospitality.guard(p_workspace);
- if not akihq_security.can_administer(p_workspace) then
+ if not coalesce(akihq_security.can_administer(p_workspace),false) then
    raise exception 'Manager permission required to record refunds' using errcode='42501';
  end if;
  if p_request_key is null or jsonb_typeof(p_refund) is distinct from 'object' or octet_length(p_refund::text)>4000 then
@@ -192,8 +205,11 @@ create function public.crm_pos_refund_overview(p_workspace text,p_order uuid)
 returns jsonb language plpgsql security definer set search_path='' as $$
 declare o akihq_hospitality.orders%rowtype; records jsonb; total_records bigint;
 begin
+ if auth.uid() is null or not coalesce(public.account_features_allowed(),false) then
+  raise exception 'account completion required [coverage-v1]' using errcode='42501';
+ end if;
  perform akihq_hospitality.guard(p_workspace);
- if not akihq_security.can_administer(p_workspace) then
+ if not coalesce(akihq_security.can_administer(p_workspace),false) then
    raise exception 'Manager permission required for refund evidence' using errcode='42501';
  end if;
  if p_order is null then raise exception 'Closed bill ID required'; end if;

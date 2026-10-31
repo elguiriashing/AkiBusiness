@@ -1,13 +1,23 @@
 -- Read-only, manager-verified external-tender evidence for LOCAL statement comparison.
 -- No card charge/refund, bank settlement, invoice issuance or AEAT claim.
 begin;
+
+-- Preserve the shared live account-completion boundary before replacing RPCs.
+do $$begin
+ if to_regprocedure('public.account_features_allowed()') is null then
+  raise exception 'Shared account-completion prerequisite is missing';
+ end if;
+end $$;
 create function public.crm_pos_settlement_feed(p_workspace text,p_from timestamptz,p_until timestamptz)
 returns jsonb language plpgsql security definer set search_path='' as $$
 declare
  v_payments jsonb; v_refunds jsonb; n_payments bigint; n_refunds bigint;
 begin
+ if auth.uid() is null or not coalesce(public.account_features_allowed(),false) then
+  raise exception 'account completion required [coverage-v1]' using errcode='42501';
+ end if;
  perform akihq_hospitality.guard(p_workspace);
- if not akihq_security.can_administer(p_workspace) then
+ if not coalesce(akihq_security.can_administer(p_workspace),false) then
   raise exception 'Manager access required for external settlement evidence' using errcode='42501';
  end if;
  if p_from is null or p_until is null or p_from>=p_until
