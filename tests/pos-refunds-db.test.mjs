@@ -13,7 +13,8 @@ test.before(async()=>{
     '20261010223000_pos_trading_days_ledger.sql',
     '20261019222000_pos_cash_reconciliation.sql',
     '20261019224000_pos_cash_command_safety.sql',
-    '20261031140000_pos_refund_evidence.sql'
+    '20261031140000_pos_refund_evidence.sql',
+    '20261031141000_pos_ledger_active_day_json_fix.sql'
   ]) await db.exec(readFileSync(new URL('../supabase/migrations/'+file,import.meta.url),'utf8'));
 });
 test.after(async()=>db?.close());
