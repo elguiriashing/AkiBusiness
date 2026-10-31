@@ -37,7 +37,8 @@ const ASSETS = [
   "./assets/landing.js?v=4",
   "./membership.html",
   "./account.html",
-  "./assets/account.js?v=4",
+  "./privacy.html",
+  "./assets/account.js?v=5",
   "./assets/aki-selector.css?v=4",
   "./assets/fonts/aki-selector-poppins-semibold.woff2",
   "./assets/workspace-selector.css?v=4",
@@ -116,3 +117,4 @@ self.addEventListener("fetch", event => {
     }).catch(() => Response.error()))
   );
 });
+

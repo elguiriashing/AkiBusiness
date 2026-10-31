@@ -13,7 +13,7 @@ test('integrated app preserves eligibility, analytics and suite scripts before m
 test('integrated release advances offline caches while enabling accepted read-only views and preserving backend gates',()=>{
  const manifest=JSON.parse(read('tools/operations-product-release.json'));
  assert.equal(read('sw.js').match(/const CACHE = "([^"]+)"/)[1],'akihq-v150');
- assert(manifest['sw.js'].some(x=>x.from.includes('akihq-v150')&&x.to.includes('akihq-v159')));
+ assert(manifest['sw.js'].some(x=>x.from.includes('akihq-v150')&&x.to.includes('akihq-v161')));
  assert(read('config.js').includes('OPERATIONAL_ANALYTICS_ENABLED: true'));
  assert(read('config.js').includes('TOOLBOX_NOTIFICATIONS_ENABLED: true'));
  assert(read('cloudflare/wrangler.toml').includes('AKIBUSINESS_TOOLBOX_NOTIFICATIONS_ENABLED = \"false\"'));
@@ -24,3 +24,4 @@ test('integrated release advances offline caches while enabling accepted read-on
  assert(read('cloudflare/toolbox.js').includes("AKIBUSINESS_OPERATIONS_BILLING_READY==='true'"));
  assert(read('toolbox.html').includes('operations-checkout-link.js'));
 });
+

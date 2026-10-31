@@ -247,6 +247,25 @@ button held clears a pending gesture after an uncaptured outside release.
 Acceptance now uses real Chromium touch input originating on a card descendant,
 and covers outside vertical release followed by ordinary mouse hover.
 
+## 2026-10-31 | Complete public privacy and shared deletion access
+
+Integrate PR56 with current main after printer recovery PR66, preserving newer
+workspace/account behavior. Add the bilingual anonymous /privacy notice,
+shared account export/request links and no-login instructions at AkiPasa's
+public account-deletion alias. Human verified-request handling is distinct
+from completed deletion. Retention schedules and the unverified backup target
+do not certify provider cleanup. Central AkiPasa PR342 repairs the previously
+missing alias and must be live before this release. No deletion/customer data,
+email, billing, provider, SQL or permission mutation. Printer agent installation
+and physical acceptance remain separately recorded in PR66/issue24.
+
+Account asset advances to v5, paid cache160; retain current source cache147,
+all existing release transforms and exact cache assertions including production
+deployment. Existing EN/ES account tests check fixed shared links and absence
+of deletion calls; packaging must include the public notice. Full fresh CI
+gates merge and exact live-source verification gates rollout. Source revert
+and a new cache/asset version provide rollback; no data rollback.
+
 ## 2026-10-31 | Preserve shared account eligibility in refund candidate
 
 Read-only production metadata exposed a regression in PR67: replacing
@@ -267,3 +286,20 @@ this does not certify an issuer, bank settlement or payment-provider operation.
 Fresh hosted CI, shared-schema staging, independent-connection races and the
 existing provider/fiscal/physical gates remain required before this draft can
 activate or be published. PR56/66 source merges do not waive those gates.
+
+## 2026-10-31 | Integrate draft fiscal candidate with privacy and printer source
+
+Reconcile PR67 against main 534ec453 after PR56 and PR66. Preserve the public
+privacy notice precache, account JS v5 and the merged printer/workspace source,
+while retaining candidate source cache 150 and fiscal/settlement assets. Advance
+the paid-product cache from 160 to 161 and align the release assertions, including
+production deployment checks. The privacy and account-eligibility correction
+records remain intact; shared identity, tenant boundaries and RLS are unchanged
+by this source-conflict resolution.
+
+PR67 remains draft. Fresh hosted CI for the integrated head, shared-schema
+staging, independent-connection races and genuine terminal, bank, provider and
+fiscal acceptance remain required. Local source checks do not satisfy those
+gates. No production SQL, customer-data, payment/provider or deployment action
+was performed. A source revert requires a new cache version; no data rollback.
+

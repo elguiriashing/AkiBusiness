@@ -335,3 +335,30 @@ test("installed account cache includes the exact script and stylesheet versions 
     assert.ok(sw.includes('"./' + match[1] + '"'), "Missing account precache entry: " + match[1]);
   }
 });
+
+for (const locale of ["en", "es"]) {
+  test(`privacy links preserve ${locale} and expose the shared human deletion process without submitting it`, async (t) => {
+    const f = await fixture(t, { query: `?locale=${locale}` });
+    assert.equal(
+      f.w.document.getElementById("account-privacy-request").href,
+      `https://akipasa.com/${locale}/account/privacy`,
+    );
+    assert.equal(
+      f.w.document.getElementById("account-deletion-instructions").href,
+      `https://akipasa.com/${locale}/account-deletion`,
+    );
+    const panel = f.w.document.getElementById("privacy-and-deletion");
+    assert.match(panel.textContent, /48/);
+    assert.match(panel.textContent, /support@akipasa.com/);
+    assert.match(
+      panel.textContent,
+      locale === "es" ? /cinco productos/ : /all five products/,
+    );
+    assert.equal(panel.querySelectorAll("form").length, 0);
+    assert.equal(
+      f.calls.some(([name]) => /delet|eras|privacy_request/.test(name)),
+      false,
+    );
+  });
+}
+
