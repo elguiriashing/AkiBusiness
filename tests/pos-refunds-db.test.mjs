@@ -14,7 +14,8 @@ test.before(async()=>{
     '20261019222000_pos_cash_reconciliation.sql',
     '20261019224000_pos_cash_command_safety.sql',
     '20261031140000_pos_refund_evidence.sql',
-    '20261031141000_pos_ledger_active_day_json_fix.sql'
+    '20261031141000_pos_ledger_active_day_json_fix.sql',
+    '20261031142000_pos_settlement_feed.sql'
   ]) await db.exec(readFileSync(new URL('../supabase/migrations/'+file,import.meta.url),'utf8'));
 });
 test.after(async()=>db?.close());
@@ -101,4 +102,23 @@ test('manager, tenant and storage permissions remain isolated',async()=>{
   const saved=await record(body);
   await assert.rejects(db.query('update akihq_hospitality.refund_records set reason=$1 where id=$2',['tampered',saved.refund_id]),/append-only/);
   await assert.rejects(db.query('delete from akihq_hospitality.refund_records where id=$1',[saved.refund_id]),/append-only/);
+});
+
+
+test('manager settlement feed groups terminal sales and refunds by event time without claiming bank verification',async()=>{
+ const from=new Date(Date.now()-60*60*1000).toISOString(),until=new Date(Date.now()+60*60*1000).toISOString();
+ const data=await rpc('crm_pos_settlement_feed',['tenant-a',from,until]);
+ assert.equal(data.workspace_id,'tenant-a');
+ assert.equal(data.currency,'EUR');
+ assert.equal(data.provider_payment_verified,false);
+ assert.equal(data.provider_refund_verified,false);
+ assert.equal(data.bank_settlement_verified,false);
+ assert.ok(data.payments.some(p=>p.method==='card'&&p.kind==='payment'&&p.reference));
+ assert.ok(data.refunds.some(r=>r.kind==='refund'&&r.reference));
+ assert.match(data.notice,/bank deposits must be independently verified/);
+ await assert.rejects(rpc('crm_pos_settlement_feed',['tenant-a',from,until],'staff'),/Manager access/);
+ await assert.rejects(rpc('crm_pos_settlement_feed',['tenant-b',from,until],'owner','tenant-b'),/access required|Manager access/);
+ await assert.rejects(rpc('crm_pos_settlement_feed',['tenant-a',from,new Date(Date.now()+50*24*3600*1000).toISOString()]),/bounded reconciliation/);
+ const grants=(await db.query("select has_function_privilege('anon','public.crm_pos_settlement_feed(text,timestamptz,timestamptz)','execute') anon,has_table_privilege('authenticated','akihq_hospitality.refund_records','select') direct")).rows[0];
+ assert.deepEqual(grants,{anon:false,direct:false});
 });
