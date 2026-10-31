@@ -40,6 +40,7 @@ async function fixture(
     calls = [],
     destinations = [];
   w.eval(navigation);
+  w.eval(readFileSync(new URL("../assets/workspace-selector.js", import.meta.url), "utf8"));
   const profile = {
     display_name: "Shared Alex",
     username: "shared_alex",
@@ -172,32 +173,6 @@ for (const locale of ["en", "es"])
     );
     assert.equal(f.destinations.length, 0);
   });
-for (const locale of ["en", "es"]) {
-  test(`privacy links preserve ${locale} and expose the shared human deletion process without submitting it`, async (t) => {
-    const f = await fixture(t, { query: `?locale=${locale}` });
-    assert.equal(
-      f.w.document.getElementById("account-privacy-request").href,
-      `https://akipasa.com/${locale}/account/privacy`,
-    );
-    assert.equal(
-      f.w.document.getElementById("account-deletion-instructions").href,
-      `https://akipasa.com/${locale}/account-deletion`,
-    );
-    const panel = f.w.document.getElementById("privacy-and-deletion");
-    assert.match(panel.textContent, /48/);
-    assert.match(panel.textContent, /support@akipasa.com/);
-    assert.match(
-      panel.textContent,
-      locale === "es" ? /cinco productos/ : /all five products/,
-    );
-    assert.equal(panel.querySelectorAll("form").length, 0);
-    assert.equal(
-      f.calls.some(([name]) => /delet|eras|privacy_request/.test(name)),
-      false,
-    );
-  });
-}
-
 test("profile updates are atomic and cannot submit roles or foreign identity", async (t) => {
   const f = await fixture(t),
     form = f.w.document.getElementById("profile");
@@ -283,6 +258,13 @@ test("signout remains host-local", async (t) => {
 test("guest signup and Google entry stay native using the established callback", async (t) => {
   const f = await fixture(t, { guest: true });
   assert.ok(f.w.document.getElementById("signup"));
+  assert.equal(f.w.document.querySelectorAll(".aki-workspace-picker a.aks-selector__card").length, 5);
+  const email = f.w.document.querySelector("#signin [name=email]");
+  email.value = "draft@example.invalid";
+  f.w.document.querySelector(".aki-workspace-picker [aria-label=AkiBusiness]").dispatchEvent(new f.w.KeyboardEvent("keydown", {key:"Home",bubbles:true}));
+  f.w.document.querySelector(".aki-workspace-picker [aria-label=AkiPasa]").dispatchEvent(new f.w.KeyboardEvent("keydown", {key:"ArrowRight",bubbles:true}));
+  assert.equal(email.value, "draft@example.invalid");
+  assert.match(f.w.document.querySelector(".aki-workspace-picker [aria-label=AkiDuermo]").href, /^https:\/\/akiduermo.com\/account/);
   f.w.document.getElementById("google").click();
   await tick();
   assert.equal(
@@ -323,62 +305,60 @@ for (const [canOperate, failedAccess, path] of [
   });
 
 test("section keyboard navigation and theme/language changes preserve profile drafts", async (t) => {
-  const f = await fixture(t),
-    d = f.w.document;
-  const workspace = d.querySelector('[data-account-nav="workspace"]');
-  workspace.dispatchEvent(
-    new f.w.KeyboardEvent("keydown", { key: "ArrowRight", bubbles: true }),
-  );
-  assert.equal(
-    d
-      .querySelector('[data-account-nav="membership"]')
-      .getAttribute("aria-selected"),
-    "true",
-  );
-  d.querySelector('[data-account-nav="profile"]').click();
-  d.querySelector('[name="displayName"]').value = "Unsaved profile";
-  d.getElementById("theme").click();
-  assert.equal(
-    d.querySelector('[name="displayName"]').value,
-    "Unsaved profile",
-  );
-  d.getElementById("language").click();
-  assert.equal(
-    d.querySelector('[name="displayName"]').value,
-    "Unsaved profile",
-  );
-  assert.equal(d.getElementById("view-profile").hidden, false);
+ const f=await fixture(t),d=f.w.document;
+ const workspace=d.querySelector('[data-account-nav="workspace"]');
+ workspace.dispatchEvent(new f.w.KeyboardEvent("keydown",{key:"ArrowRight",bubbles:true}));
+ assert.equal(d.querySelector('[data-account-nav="membership"]').getAttribute("aria-selected"),"true");
+ d.querySelector('[data-account-nav="profile"]').click();
+ d.querySelector('[name="displayName"]').value="Unsaved profile";
+ d.getElementById("theme").click();
+ assert.equal(d.querySelector('[name="displayName"]').value,"Unsaved profile");
+ d.getElementById("language").click();
+ assert.equal(d.querySelector('[name="displayName"]').value,"Unsaved profile");
+ assert.equal(d.getElementById("view-profile").hidden,false);
 });
-test("location selection removes the previous direct dashboard shortcut", async (t) => {
-  const f = await fixture(t, {
-      query: "?workspace=private-fixture",
-      locations: [
-        { id: "private-fixture", name: "First" },
-        { id: "second-fixture", name: "Second" },
-      ],
-    }),
-    d = f.w.document;
-  const radio = d.querySelector('[value="second-fixture"]');
-  radio.checked = true;
-  radio.dispatchEvent(new f.w.Event("change"));
-  assert.equal(d.getElementById("open-dashboard").hidden, true);
-  assert.equal(d.getElementById("open-location").hidden, false);
+test("location selection removes the previous direct dashboard shortcut",async(t)=>{
+ const f=await fixture(t,{query:"?workspace=private-fixture",locations:[{id:"private-fixture",name:"First"},{id:"second-fixture",name:"Second"}]}),d=f.w.document;
+ const radio=d.querySelector('[value="second-fixture"]');radio.checked=true;radio.dispatchEvent(new f.w.Event("change"));
+ assert.equal(d.getElementById("open-dashboard").hidden,true);
+ assert.equal(d.getElementById("open-location").hidden,false);
 });
-test("empty workspaces expose location setup and disable the empty picker", async (t) => {
-  const f = await fixture(t, { locations: [] }),
-    d = f.w.document;
-  assert.equal(d.querySelector(".create-panel").open, true);
-  assert.equal(d.getElementById("open-location").disabled, true);
+test("empty workspaces expose location setup and disable the empty picker",async(t)=>{
+ const f=await fixture(t,{locations:[]}),d=f.w.document;
+ assert.equal(d.querySelector(".create-panel").open,true);
+ assert.equal(d.getElementById("open-location").disabled,true);
 });
 
 test("installed account cache includes the exact script and stylesheet versions requested by the document", () => {
   const sw = readFileSync(new URL("../sw.js", import.meta.url), "utf8");
-  for (const match of html.matchAll(
-    /(?:src|href)="(assets\/account\.(?:js|css)\?v=[^"]+)"/g,
-  )) {
-    assert.ok(
-      sw.includes('"./' + match[1] + '"'),
-      "Missing account precache entry: " + match[1],
-    );
+  for (const match of html.matchAll(/(?:src|href)="(assets\/account\.(?:js|css)\?v=[^"]+)"/g)) {
+    assert.ok(sw.includes('"./' + match[1] + '"'), "Missing account precache entry: " + match[1]);
   }
 });
+
+for (const locale of ["en", "es"]) {
+  test(`privacy links preserve ${locale} and expose the shared human deletion process without submitting it`, async (t) => {
+    const f = await fixture(t, { query: `?locale=${locale}` });
+    assert.equal(
+      f.w.document.getElementById("account-privacy-request").href,
+      `https://akipasa.com/${locale}/account/privacy`,
+    );
+    assert.equal(
+      f.w.document.getElementById("account-deletion-instructions").href,
+      `https://akipasa.com/${locale}/account-deletion`,
+    );
+    const panel = f.w.document.getElementById("privacy-and-deletion");
+    assert.match(panel.textContent, /48/);
+    assert.match(panel.textContent, /support@akipasa.com/);
+    assert.match(
+      panel.textContent,
+      locale === "es" ? /cinco productos/ : /all five products/,
+    );
+    assert.equal(panel.querySelectorAll("form").length, 0);
+    assert.equal(
+      f.calls.some(([name]) => /delet|eras|privacy_request/.test(name)),
+      false,
+    );
+  });
+}
+

@@ -79,15 +79,19 @@ for (const enabled of [false, true]) {
       for (const origin of ['https://akibusiness.com', 'https://akihq.app', 'https://crm.akipasa.com', 'https://exact-preview.pages.dev']) {
         const handlers = {};
         let oauth;
+        let selectorMount;
         const elements = new Map(['google-login-btn', 'login-form'].map(id => [id, { addEventListener: (event, fn) => { handlers[`${id}:${event}`] = fn; }, querySelector: () => ({ textContent: '' }) }]));
         const context = { appRoot: {}, portal: {}, state: { settings: { locale: 'en' } }, applySettings() {}, escapeHtml: String,
-          window: { AkiSuiteNavigation: { href: (product, locale) => product === "pasa" ? `https://akipasa.com/${locale}/auth` : `https://akihq.app/${locale}/business` }, location: { origin }, scrollTo() {} }, document: { getElementById: id => elements.get(id) }, requestAnimationFrame: fn => fn(),
+          window: { AkiWorkspaceSelector: { mount: (...args) => { selectorMount = args; } }, AkiSuiteNavigation: { href: (product, locale) => product === "pasa" ? `https://akipasa.com/${locale}/auth` : `https://akihq.app/${locale}/business` }, location: { origin }, scrollTo() {} }, document: { getElementById: id => elements.get(id) }, requestAnimationFrame: fn => fn(),
           getSupabaseClient: () => ({ auth: { signInWithOAuth: async options => { oauth = options; return {}; } } }) };
         const login = source.slice(source.indexOf('  function renderLoginScreen('), source.indexOf('  function renderAccessDenied('));
         vm.runInNewContext(`${login}\nrenderLoginScreen();`, context);
         assert.match(context.appRoot.innerHTML, new RegExp(`Sign in to ${product}`));
-        assert.match(context.appRoot.innerHTML, /suite-product-card active" href="\/login"/);
-        if (enabled) assert.match(context.appRoot.innerHTML, /href="https:\/\/akihq.app\/en\/business"/);
+        assert.match(context.appRoot.innerHTML, /id="login-workspace-selector"/);
+        assert.equal(selectorMount[1], "en");
+        assert.equal(selectorMount[2], "business");
+        assert.match(await read("login.html"), /workspace-selector.js\?v=5/);
+
         await handlers['google-login-btn:click']();
         assert.equal(oauth.options.redirectTo, origin + '/login');
       }

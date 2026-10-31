@@ -11,6 +11,7 @@ const root = path.resolve(__dirname, ".."),
 let server, browser, currentPage;
 const fixture = `
 window.fixture={manage:true,data:{settings:{title:'Luna Social Club',timezone:'Europe/Madrid',timeFormat:'24'},staff:[],shifts:[],absences:[],templates:[]},published:null,revision:0,members:[{profileId:'staff-user',name:'Sofia Martin'}]};window.rotaCalls=[];window.rotaDownloads=[];
+window.rotaDragEvents=[];for(const type of ['dragstart','dragover','drop','dragend'])document.addEventListener(type,event=>{window.rotaDragEvents.push({type,date:event.target.closest?.('[data-rota-drop]')?.dataset.date,tag:event.target.tagName,types:[...event.dataTransfer.types]});},true);
 window.rotaRPC=async(name,args)=>{rotaCalls.push({name,args});if(name==='crm_rota_save'){if(args.p_revision!==fixture.revision)return{error:{message:'Rota changed',code:'40001'}};AkiRotasCore.validate(args.p_data);if(args.p_publish&&AkiRotasCore.conflicts(args.p_data).length)return{error:{message:'Resolve conflicts'}};fixture.data=structuredClone(args.p_data);fixture.revision++;if(args.p_publish){fixture.published=structuredClone(fixture.data);fixture.publishedAt='2026-10-24T12:00Z';}}return{data:structuredClone(fixture)}};
 `;
 const seam = `
@@ -82,6 +83,9 @@ const close = async (page) => {
       { width: 1536, height: 864 },
     ])
       for (const theme of ["dark", "light"]) {
+        if (process.env.ROTA_BROWSER_WIDTH && viewport.width !== Number(process.env.ROTA_BROWSER_WIDTH)) continue;
+        if (process.env.ROTA_BROWSER_LOCALE && locale !== process.env.ROTA_BROWSER_LOCALE) continue;
+        if (process.env.ROTA_BROWSER_THEME && theme !== process.env.ROTA_BROWSER_THEME) continue;
         const page = (currentPage = await browser.newPage({
           viewport,
           serviceWorkers: "block",
@@ -203,6 +207,9 @@ const close = async (page) => {
         await page.waitForFunction(
           () => fixture.data.shifts[0].notes === "Keep my draft",
         );
+        // The RPC fixture changes before the native modal finishes closing.
+        // A real user can only begin a board drag after that modal is gone.
+        await page.locator("dialog[open]").waitFor({ state: "detached" });
         assert.equal(
           await page.evaluate(() => fixture.published.shifts[0].notes),
           "",
@@ -212,7 +219,15 @@ const close = async (page) => {
             target = page
               .locator('.rp-table td[data-date="2026-10-23"]')
               .last();
-          await card.dragTo(target);
+          // Begin a real pointer drag with a small movement before traversing
+          // the scrollable board. One jump can miss native drag initiation.
+          await card.hover();
+          const start = await card.boundingBox();
+          await page.mouse.down();
+          await page.mouse.move(start.x + start.width / 2 + 10, start.y + start.height / 2, {steps:5});
+          await target.hover();
+          await target.hover();
+          await page.mouse.up();
           await page.waitForFunction(() =>
             fixture.data.shifts.some((s) => s.date === "2026-10-23"),
           );
@@ -274,6 +289,8 @@ const close = async (page) => {
         .evaluate(() => ({
           text: document.querySelector(".rp")?.innerText.slice(-1500),
           toasts: document.querySelector("#portal")?.innerText,
+          dragEvents: window.rotaDragEvents?.slice(-20),
+          shifts: window.fixture?.data.shifts,
         }))
         .catch(() => null),
     );

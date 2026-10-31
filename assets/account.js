@@ -182,6 +182,9 @@
       authForms.append(panel),
     );
     root.append(authIntro, authForms);
+    const workspacePicker = document.createElement("aside");
+    authIntro.append(workspacePicker);
+    window.AkiWorkspaceSelector.mount(workspacePicker, locale, "business");
     document.getElementById("signin").onsubmit = (event) =>
       run(event, async (form) => {
         const { error } = await client.auth.signInWithPassword({

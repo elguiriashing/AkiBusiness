@@ -5,6 +5,8 @@ import PostalMime from "postal-mime";
 import { handleSupport, ingestSupportEmail, processSupportQueue } from "./support.js";
 import { handlePrivacy } from "./privacy.js";
 import { processToolboxRotations } from "./toolbox.js";
+import { handleBusinessMail } from "./business-mail.js";
+export { BusinessMailbox } from "./business-mail.js";
 
 /**
  * AkiHQ optional integration gateway for Cloudflare Workers.
@@ -80,6 +82,9 @@ export default {
 
       if (url.pathname.startsWith("/api/privacy/")) {
         return withCors(await handlePrivacy(request, env), { ...cors, "cache-control": "private, no-store" });
+      }
+      if (url.pathname.startsWith("/api/business-mail/")) {
+        return withCors(await handleBusinessMail(request, env), { ...cors, "cache-control": "private, no-store" });
       }
 
       if (url.pathname.startsWith("/api/support/")) {

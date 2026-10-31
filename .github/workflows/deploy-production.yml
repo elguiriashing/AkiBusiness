@@ -26,7 +26,7 @@ jobs:
       - name: Verify operating suite and landing/login contracts
         run: |
           npm run check --prefix cloudflare
-          node --test tests/public-landing.test.mjs tests/domain-migration.test.mjs tests/password-recovery.test.mjs tests/product-release.test.mjs
+          node --test tests/workspace-selector.test.mjs tests/public-landing.test.mjs tests/domain-migration.test.mjs tests/password-recovery.test.mjs tests/product-release.test.mjs
           node tests/pos-v4-smoke.cjs
           node tests/pos-mobile-checkout.cjs
       - name: Package the exact paid AkiBusiness build
@@ -48,7 +48,7 @@ jobs:
           assert.match(read("login.html"), /<title>AkiBusiness<\/title>/);
           assert.doesNotMatch(read("_redirects"), /^\/login\/?\s/m);
           assert.match(read("_redirects"), /^\/app \/login 302/m);
-          assert.match(read("sw.js"), /akihq-v151/);
+          assert.match(read("sw.js"), /akihq-v160/);
           NODE
       - uses: actions/upload-artifact@v4
         with:

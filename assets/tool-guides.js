@@ -21,14 +21,14 @@
       entity: "conversation",
       en: [
         "Keep each customer conversation together.",
-        "Open a conversation and review its history.",
-        "Check the recipient and sending connection before replying.",
+        "Ask a workspace administrator to connect a dedicated Gmail or Microsoft 365 business mailbox.",
+        "Open a message, review the recipient and reply. Unknown send outcomes must be checked in the provider's Sent folder.",
         "Record the next action in Tasks when follow-up is needed.",
       ],
       es: [
         "Mantén cada conversación con el cliente en un solo lugar.",
-        "Abre una conversación y revisa el historial.",
-        "Comprueba el destinatario y la conexión de envío antes de responder.",
+        "Pide al administrador que conecte un buzón de empresa de Gmail o Microsoft 365.",
+        "Abre un mensaje, revisa el destinatario y responde. Comprueba los envíos inciertos en Enviados del proveedor.",
         "Registra la próxima acción en Tareas si necesita seguimiento.",
       ],
     },
@@ -110,30 +110,30 @@
       entity: "campaign",
       en: [
         "Plan campaigns with a clear audience and outcome.",
-        "Create a campaign planning record and identify the audience.",
-        "Use the media library for approved assets.",
-        "Campaign figures are recorded values; saving a campaign does not send a campaign.",
+        "Create an email campaign with subject, content and a permitted audience.",
+        "Review the email and recipient. Your connected mailbox, verified sender, consent and unsubscribe setup are required for delivery.",
+        "Campaign figures are recorded values; saving a campaign does not send a campaign. Send reviewed email is an explicit, separate action.",
       ],
       es: [
         "Planifica campañas con público y objetivo claros.",
-        "Crea un registro de planificación e identifica el público.",
-        "Usa la biblioteca multimedia para archivos aprobados.",
-        "Las cifras son valores registrados; guardar una campaña no la envía.",
+        "Crea una campaña de correo con asunto, contenido y público autorizado.",
+        "Revisa el correo y destinatario. El envío requiere buzón conectado, remitente verificado, consentimiento y baja configurada.",
+        "Las cifras son valores registrados; guardar una campaña no la envía. Enviar correo revisado es una acción independiente.",
       ],
     },
     automation: {
       entity: "automation",
       en: [
-        "Document a workflow before connecting an execution service.",
-        "Define the trigger and the conditions.",
-        "List the planned actions and check their intended recipients.",
-        "These are planning records. Saving or toggling them does not execute actions.",
+        "Turn overdue work and low stock into reviewed follow-up tasks.",
+        "Choose a supported rule, activate it and preview the matching records.",
+        "Review the proposed tasks, then explicitly create them. The same rule/source pair is deduplicated for the day.",
+        "Saving or toggling does not execute a rule. Custom plans do not execute actions; background execution is not enabled.",
       ],
       es: [
-        "Documenta el flujo antes de conectar un servicio de ejecución.",
-        "Define el disparador y las condiciones.",
-        "Indica las acciones previstas y sus destinatarios.",
-        "Son registros de planificación; guardar o activar no ejecuta acciones.",
+        "Convierte trabajo vencido y stock bajo en tareas de seguimiento revisadas.",
+        "Elige una regla compatible, actívala y previsualiza los registros.",
+        "Revisa y crea las tareas propuestas. Se evitan duplicados de la misma regla y registro durante el día.",
+        "Guardar o activar no ejecuta la regla. Los planes personalizados no ejecutan acciones; no hay ejecución en segundo plano.",
       ],
     },
     collaboration: {
@@ -180,17 +180,18 @@
       ],
     },
   };
-  function render(key, locale) {
+  guides.rotas = { en: ["Publish a clear schedule for your team.", "Add linked team members or manual staff profiles.", "Create shifts and resolve overlap warnings.", "Publish the schedule, then print or export the selected period."], es: ["Publica un horario claro para tu equipo.", "Añade miembros del equipo o perfiles manuales.", "Crea turnos y resuelve los conflictos.", "Publica el horario e imprime o exporta el período."] };
+  function render(key, locale, options = {}) {
     const g = guides[key];
     if (!g) return "";
     const es = locale === "es",
       lines = g[es ? "es" : "en"];
-    return `<details class="panel tool-guide"><summary>${es ? "Cómo empezar y completar el trabajo" : "Getting started and completing the job"}</summary><p>${lines[0]}</p><ol>${lines
+    return `<details class="panel tool-guide"><summary><span>${es ? "Guía rápida" : "Quick guide"}</span><span>${lines[0]}</span></summary><ol>${lines
       .slice(1)
       .map((s) => `<li>${s}</li>`)
       .join(
         "",
-      )}</ol>${g.entity && key !== "inbox" ? `<button class="action-btn" data-action="open-form" data-entity="${g.entity}">${es ? "Crear registro" : "Create record"}</button>` : ""}${key === "employees" || key === "calendar" ? `<button class="action-btn" data-action="navigate" data-route="rotas">${es ? "Abrir horarios" : "Open rotas"}</button>` : ""}</details>`;
+      )}</ol>${g.entity && options.canOperate !== false ? `<button class="action-btn" data-action="open-form" data-entity="${g.entity}">${es ? "Crear registro" : "Create record"}</button>` : ""}${key === "employees" || key === "calendar" ? `<button class="action-btn" data-action="navigate" data-route="rotas">${es ? "Abrir horarios" : "Open rotas"}</button>` : ""}</details>`;
   }
   const api = { guides, render };
   if (typeof module === "object") module.exports = api;

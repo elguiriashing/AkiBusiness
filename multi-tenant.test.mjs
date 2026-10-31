@@ -87,7 +87,7 @@ test("business dashboard activity and platform metrics stay workspace scoped", (
 
 test("platform-wide inbox and analytics never load inside a business workspace", () => {
   assert.match(app, /if \(!authUser \|\| !isPlatformWorkspace\(\) \|\| mailboxLoading\) return/);
-  assert.match(app, /function renderInbox\(\) \{\s*if \(!isPlatformWorkspace\(\)\) return renderLegacyInbox\(\)/);
+  assert.match(app, /function renderInbox\(\) \{\s*if \(!isPlatformWorkspace\(\)\) return `\$\{getBusinessMail\(\).render\(\)\}/);
   assert.match(app, /if \(!isPlatformWorkspace\(\) \|\| authRole !== "administrator" \|\| analyticsLoading\) return/);
   assert.match(app, /function renderAnalytics\(\) \{\s*if \(!isPlatformWorkspace\(\)\)/);
   assert.match(app, /Only activity and records from this workspace are included/);
