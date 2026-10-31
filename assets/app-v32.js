@@ -3215,16 +3215,17 @@
     if (!window.AkiHQInventoryOps?.renderPanel) return `<section class="panel"><div class="panel-header"><h2>Inventory</h2></div><p role="status">Inventory could not finish loading. Reload this page to retry. No stock changes have been made.</p><button class="action-btn" data-action="reload-inventory-page">Reload inventory</button></section>`;
     let pendingStock=null,pendingStockError="";
     try { pendingStock=pendingInventoryOperation(); } catch(error) { pendingStockError=error.message; }
-    const lowStock = state.products.filter(product => Number(product.stock) <= Number(product.reorderAt) && product.warehouse !== "Digital");
+    const replenishable = state.products.filter(product => product.warehouse !== "Digital" && product.status === "Active");
+    const lowStock = replenishable.filter(product => Number.isFinite(Number(product.stock)) && Number.isFinite(Number(product.reorderAt)) && Number(product.stock) <= Number(product.reorderAt));
     const stockValue = state.products.reduce((sum, product) => sum + Number(product.stock || 0) * Number(product.cost || 0), 0);
-    const physical = state.products.filter(product => product.warehouse !== "Digital");
-    const suggestedQuantity = product => Math.max(
-      Number(product.suggestedOrder || 0),
+    const physical = state.products.filter(product => product.warehouse !== "Digital" && product.status !== "Archived");
+    const suggestedQuantity = product => product.warehouse === "Digital" || product.status !== "Active" ? 0 : Math.max(
+      Number.isFinite(Number(product.suggestedOrder)) ? Math.max(0, Number(product.suggestedOrder)) : 0,
       Number(product.stock) <= Number(product.reorderAt)
         ? Math.max(1, Math.ceil(Number(product.reorderAt || 0) + Number(product.safetyStock || 0) - Number(product.stock || 0)))
         : 0
     );
-    const reorderSuggestions = state.products.filter(product => product.warehouse !== "Digital" && suggestedQuantity(product) > 0);
+    const reorderSuggestions = replenishable.filter(product => suggestedQuantity(product) > 0);
     const query = ui.inventorySearch.trim().toLowerCase();
     const visibleProducts = state.products.filter(product => {
       const matchesQuery = !query || `${product.name} ${product.sku} ${product.category}`.toLowerCase().includes(query);
@@ -3234,14 +3235,14 @@
     const movementName = movement => state.products.find(product => product.inventoryItemId === movement.item_id)?.name || "Inventory item";
     return `<div class="page-grid">
       <div class="page-grid grid-3">
-        ${renderMetric("Tracked items", String(state.products.length), `${physical.length} active stock lines`, "inventory", "#7c8cff")}
+        ${renderMetric("Catalogue items", String(state.products.length), `${replenishable.length} active physical SKUs`, "inventory", "#7c8cff")}
         ${renderMetric("Catalogue cost estimate", formatMoney(stockValue, true), "not historical accounting valuation", "money", "#49d7a0")}
         ${renderMetric("Needs attention", String(reorderSuggestions.length || lowStock.length), lowStock.length ? `${lowStock.length} at or below reorder point` : "stock looks healthy", "warning", "#ffbd55")}
       </div>
       ${pendingStock || pendingStockError ? `<section class="panel" role="alert" style="padding:16px"><h3>Stock operation awaiting confirmation</h3><p>${escapeHtml(pendingStockError || "Retry the saved operation before starting another one. The original reference prevents a duplicate receipt or movement.")}</p>${pendingStock ? `<p>${escapeHtml(pendingStock.operation.type)} · ${escapeHtml(pendingStock.operation.reason)}</p><button class="action-btn primary" data-action="inventory-retry">Retry pending operation</button> <button class="action-btn" data-action="inventory-reconcile">Check result / cancel if unrecorded</button>` : ""}</section>` : ""}
       ${window.AkiHQInventoryOps.renderPanel({locations:inventoryLocations})}
       <section class="panel inventory-command-panel">
-        <div class="panel-header"><div><h2>Smart replenishment</h2><p>Forecasts combine the stock ledger, 28-day usage, lead time, safety stock and upcoming demand.</p></div><span class="status-pill ${inventoryError ? "danger" : "success"}">${inventoryError ? "Unavailable" : "Live forecast"}</span></div>
+        <div class="panel-header"><div><h2>Stock replenishment suggestions</h2><p>Active physical products only. Quantities are planning estimates based on current stock and available usage signals; verify stock and supplier terms before ordering.</p></div><span class="status-pill ${inventoryError ? "danger" : "info"}">${inventoryError ? "Unavailable" : "Planning estimate"}</span></div>
         ${inventoryError ? `<div class="panel-empty compact"><div><strong>Forecast temporarily unavailable</strong><span>${escapeHtml(inventoryError)}</span></div></div>` : reorderSuggestions.length ? `<div class="inventory-recommendation-grid">${reorderSuggestions.slice(0, 8).map(product => `<article class="inventory-recommendation"><span class="status-pill warning">Reorder</span><strong>${escapeHtml(product.name)}</strong><span>Order ${suggestedQuantity(product).toLocaleString()} ${escapeHtml(product.unit || "units")}</span><small>${product.daysRemaining == null ? `At or below the ${Number(product.reorderAt).toLocaleString()} ${escapeHtml(product.unit || "unit")} reorder point` : `${Number(product.daysRemaining).toLocaleString()} days of stock remaining`} · ${Number(product.expectedDaily || 0).toLocaleString()} / day</small><button class="action-btn" data-action="adjust-stock" data-id="${product.id}">Receive stock</button></article>`).join("")}</div>` : `<div class="panel-empty compact"><div><strong>Stock looks healthy</strong><span>No purchase is suggested from current usage and upcoming demand.</span></div></div>`}
       </section>
       <section class="panel table-panel">
@@ -3760,7 +3761,7 @@
       </aside>
       <article class="knowledge-article">
         <div class="article-wrap">
-          <div class="flex items-center"><span class="status-pill info">${escapeHtml(article.category)}</span><div class="ml-auto flex gap-8"><button class="action-btn" data-action="edit-entity" data-entity="article" data-id="${article.id}">${icon("edit")} Edit</button><button class="action-btn ghost" aria-label="${state.settings.locale === 'es' ? 'Eliminar artículo' : 'Delete article'}" data-action="delete-entity" data-entity="article" data-id="${article.id}">${icon("trash")}</button></div></div>
+          <div class="flex items-center"><span class="status-pill info">${escapeHtml(article.category)}</span><div class="ml-auto flex gap-8">${canUseTool("tasks") && state.workspace.canOperate ? `<button class="action-btn" data-action="follow-up-record" data-entity="article" data-id="${escapeHtml(article.id)}">${icon("tasks")} Review task</button>` : ""}<button class="action-btn" data-action="edit-entity" data-entity="article" data-id="${article.id}">${icon("edit")} Edit</button><button class="action-btn ghost" aria-label="${state.settings.locale === 'es' ? 'Eliminar artículo' : 'Delete article'}" data-action="delete-entity" data-entity="article" data-id="${article.id}">${icon("trash")}</button></div></div>
           <h1>${escapeHtml(article.title)}</h1>
           <div class="article-meta">Written by ${escapeHtml(employeeName(article.authorId))} · updated ${escapeHtml(relativeTime(article.updatedAt))}</div>
           ${article.reviewDate ? `<p class="status-pill ${isOverdue(article.reviewDate) ? "warning" : "info"}">${state.settings.locale === "es" ? "Revisar antes de" : "Review by"} ${escapeHtml(formatDate(article.reviewDate))}</p>` : ""}
