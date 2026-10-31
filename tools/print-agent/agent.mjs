@@ -78,7 +78,7 @@ async function main(){
  if(!configPath||configPath==='--help'){console.log('Usage: node agent.mjs /protected/path/printer.json\nRecovery after inspecting the printer and queue: add --acknowledge-uncertain TICKET_ID\nNo automatic reprints. Pairing configuration is a secret; do not commit it.');return;}
  const config=validateConfig(JSON.parse(await readFile(configPath,'utf8'))),journal=resolve(configPath)+'.pending.json',lock=resolve(configPath)+'.lock';
  let pending;try{pending=JSON.parse(await readFile(journal,'utf8'));}catch(e){if(e.code!=='ENOENT')throw e;}
- if(flag==='--acknowledge-uncertain'){if(!pending||pending.ticket_id!==ticketId)throw Error('Ticket ID does not match pending journal');await unlink(journal);console.log('Local hold cleared. Request a marked copy in AkiHQ if needed; the original will not be reprinted.');return;}
+ if(flag==='--acknowledge-uncertain'){if(!pending||pending.ticket_id!==ticketId)throw Error('Ticket ID does not match pending journal');await rpcClient(config)('crm_printer_report',{p_ticket:ticketId,p_action:'uncertain'});await unlink(journal);console.log('Local hold cleared. Request a marked copy in AkiHQ if needed; the original will not be reprinted.');return;}
  if(pending)throw Error(`Uncertain ticket ${pending.ticket_id}. Inspect printer and queue; acknowledge it before restarting.`);
  let lockFile;try{lockFile=await open(lock,'wx',0o600);await lockFile.writeFile(String(process.pid));await lockFile.sync();}catch{throw Error('Agent lock exists. Stop the other agent; after an unclean exit inspect pending ticket before removing the stale lock.');}
  const rpc=rpcClient(config);let stop=false;process.once('SIGINT',()=>{stop=true});process.once('SIGTERM',()=>{stop=true});
