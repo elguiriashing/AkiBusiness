@@ -58,7 +58,17 @@
     }
 
     function fiscalPanel() {
-      if (!fiscal) return section("Fiscal setup", "Business identity, IVA configuration and protected records.", errorBlock(fiscalError || "Load the controls to check access and configuration."));
+      const calendar = root.AkiFiscalCompliance?.DATES;
+      const sources = root.AkiFiscalCompliance?.SOURCES;
+      const guide = calendar && sources
+        ? '<details class="suite-compliance-timeline"><summary>Spain · fiscal compliance calendar and supported scope</summary>' +
+          '<div class="suite-compliance-timeline-content"><p><strong>RRSIF / VERI*FACTU software adaptation:</strong> companies subject to Corporation Tax before ' + escape(calendar.sif_corporation_tax) + '; other affected taxpayers before ' + escape(calendar.sif_other) + '.</p>' +
+          '<p><strong>Structured B2B electronic invoices:</strong> businesses above €8m annual VAT turnover from ' + escape(calendar.b2b_large) + '; other businesses from ' + escape(calendar.b2b_other) + '. Payment-status reporting for qualifying individuals starts ' + escape(calendar.b2b_status_individual) + '.</p>' +
+          '<p><strong>Important:</strong> SII taxpayers and the Basque/Navarra foral systems use different obligations. Canarias, Ceuta and Melilla require IGIC/IPSI handling rather than this IVA-only adapter. Do not claim support for unsupported jurisdictions.</p>' +
+          '<p><a href="' + escape(sources.scope) + '" target="_blank" rel="noopener noreferrer">Check your jurisdiction with AEAT</a> · <a href="' + escape(sources.b2b) + '" target="_blank" rel="noopener noreferrer">Official B2B calendar</a></p>' +
+          '<p class="muted">This calendar is general guidance, not confirmation that your business is covered or that fiscal issuance is available. Confirm your tax status with your asesor.</p></div></details>'
+        : '<p>Fiscal calendar details are unavailable. Refresh the application; issuance remains disabled.</p>';
+      if (!fiscal) return section("Fiscal setup", "Business identity, IVA configuration and protected records.", guide + errorBlock(fiscalError || "Load the controls to check access and configuration."));
       const p = fiscal.profile || {}, manage = fiscal.access?.manage, canExport = fiscal.access?.export;
       const blockers = ["Invoice issuance and AEAT delivery are not ready for use.", "The producer declaration and release validation are outstanding."];
       if (!p.tax_id) blockers.unshift("The business fiscal identity has not been saved.");
@@ -82,7 +92,7 @@
         field("From (inclusive)", "from", `${today.slice(0, 4)}-01-01`, "required", "date") + field("Through (inclusive)", "through", today, "required", "date") + select("File format", "format", [["xlsx", "Excel workbook"], ["json", "JSON data package"]], "xlsx") + button("Download fiscal ledger"))) : "";
       const lock = manage ? details("Close an accounting period", `<p>Blocks fiscal issue/correction dates up to the selected past date. This closure cannot be undone here; reconcile the period with your accountant first.</p>` + form("suite-fiscal-lock",
         field("Lock through", "through", "", "required", "date") + `<div class="form-field full"><label><input type="checkbox" name="confirm_lock" value="yes" required> I have reviewed the records and want to close this period.</label></div>` + button("Lock period"))) : "";
-      return section("Fiscal setup and records", "Configure the business and accountant controls.", heading + profile + tax + exportForm + lock);
+      return section("Fiscal setup and records", "Configure the business and accountant controls.", heading + guide + profile + tax + exportForm + lock);
     }
 
     function privacyPanel() {
