@@ -5,16 +5,16 @@ import {createRequire} from 'node:module';
 const require=createRequire(new URL('../cloudflare/package.json',import.meta.url));
 const {JSDOM}=require('jsdom');
 const source=await readFile(new URL('../assets/app-v32.js',import.meta.url),'utf8');
-async function fixture() {
+async function fixture({platform = false} = {}) {
   const dom=new JSDOM('<div id="app"></div><div id="portal"></div><input id="import-file"><input id="media-file">',{url:'https://fixture.invalid/',runScripts:'outside-only',pretendToBeVisual:true});
   const w=dom.window; w.scrollTo=()=>{};w.fetch=()=>{throw Error('No external network');};
   for(const name of ['suite-navigation','support-desk','company-manager','checkout-session','tool-guides','business-mail'])w.eval(await readFile(new URL(`../assets/${name}.js`,import.meta.url),'utf8'));
   w.eval(source.replace(/  boot\(\);\s*\}\)\(\);\s*$/,`
-    authUser={id:'operator',email:'operator@example.invalid'};authRole='user';state=seedState();
-    state.workspace={...state.workspace,id:'test-business',canOperate:true,canAdminister:true,toolKeys:['crm','inbox','tasks','calendar','inventory','pos','sales','marketing','automation','collaboration','employees','knowledge']};
+    authUser={id:'operator',email:'operator@example.invalid'};authRole='${platform ? "administrator" : "user"}';state=seedState();
+    state.workspace={...state.workspace,id:'${platform ? "ws_akipasa" : "test-business"}',canOperate:true,canAdminister:true,toolKeys:['crm','inbox','tasks','calendar','inventory','pos','sales','marketing','automation','collaboration','employees','knowledge']};
     state.currentUserId='operator';state.employees=[{id:'operator',name:'Operator'}];
     render=()=>{};renderPortal=()=>{};persist=()=>{};toast=()=>{};syncCloudWorkspacePushNow=async()=>{};addActivity=()=>{};addAudit=()=>{};
-    window.audit={state,ui,related:relatedRecords,controls:renderContextControls,config:entityFormConfig,validate:validateEntityRecord,save:saveEntityFromForm,preview:automationTaskPreview,action:handleAction,open:openEntityForm,render:{integrations:renderIntegrations,crm:renderCRM,tasks:renderTasks,calendar:renderCalendar,sales:renderSales,knowledge:renderKnowledge,employees:renderEmployees,automation:renderAutomation},setClient:c=>getSupabaseClient=()=>c};
+    window.audit={state,ui,related:relatedRecords,controls:renderContextControls,config:entityFormConfig,validate:validateEntityRecord,save:saveEntityFromForm,preview:automationTaskPreview,action:handleAction,open:openEntityForm,parseCSV,planBitrixImport,commitBitrixImport,renderBitrixPreviewModal,calendarNewEventDefaults,recordedPaidDocuments,recordedPaidAmount,isUserOnline,render:{integrations:renderIntegrations,crm:renderCRM,tasks:renderTasks,calendar:renderCalendar,inventory:renderInventory,sales:renderSales,sites:renderSites,marketing:renderMarketing,knowledge:renderKnowledge,employees:renderEmployees,automation:renderAutomation,settings:renderSettingsPanel,analytics:renderAnalytics},setClient:c=>getSupabaseClient=()=>c};
   })();`));
   return {dom,w,a:w.audit};
 }
@@ -96,7 +96,7 @@ test('sales totals exclude quotes and cancelled invoices and derive overdue from
     a.state.invoices=[{id:'i',number:'real',type:'Invoice',status:'Sent',total:10,dueDate:'2000-01-01'},{id:'q',number:'quote',type:'Quote',status:'Sent',total:999},{id:'c',number:'cancelled',type:'Invoice',status:'Cancelled',total:999}];
     a.ui.route='sales';a.ui.salesFilter='overdue';const html=a.render.sales();assert.match(html,/real/);assert.doesNotMatch(html,/data-id="[qc]"|1,?998/);
     const rendered=new JSDOM(html);try {
-      const outstanding=[...rendered.window.document.querySelectorAll('.metric-card')].find(card=>card.querySelector('.metric-label')?.textContent==='Outstanding');
+      const outstanding=[...rendered.window.document.querySelectorAll('.metric-card')].find(card=>card.querySelector('.metric-label')?.textContent==='Marked outstanding');
       assert.equal(Number(outstanding.querySelector('.metric-value').textContent.replace(/[^0-9.]/g,'')),10);
     }finally{rendered.window.close();}
   }finally{dom.window.close();}
@@ -129,3 +129,235 @@ test('company first-use action uses a valid form and follow-up defaults keep the
     a.state.contacts=[{id:'c',name:'Buyer'}];await a.action({dataset:{action:'follow-up-record',entity:'contact',id:'c'}});assert.equal(a.ui.formDefaults.title,'Follow up: Buyer');assert.match(a.ui.formDefaults.description,/Reference: c/);
   }finally{dom.window.close();}
 });
+
+
+test('Bitrix CSV import rejects malformed input and preserves escaped quoted text',async()=>{
+  const {dom,a}=await fixture();try{
+    const parsed=a.parseCSV('\uFEFFcompany,email,notes\r\n"Señor, & Co",team@example.invalid,"said ""hello"""\r\n');
+    assert.equal(parsed.length,1);
+    assert.equal(parsed[0].company,'Señor, & Co');
+    assert.equal(parsed[0].notes,'said "hello"');
+    for(const csv of [
+      'company,email\n"Unclosed,value',
+      'company,email\nValue,one,extra',
+      'company,company\nOne,Two',
+      'company,email\n"Value"wrong,example.invalid',
+      'company,email\n"Value,example.invalid'
+    ])assert.throws(()=>a.parseCSV(csv),/CSV|quote|quoted/i);
+    assert.throws(()=>a.parseCSV('company\n'+('A\n'.repeat(1001))),/Maximum 1000/);
+    assert.throws(()=>a.parseCSV('company\n'+('x'.repeat(1048577))),/1 MB/);
+  }finally{dom.window.close()}
+});
+
+test('CRM CSV preview skips duplicates and invalid rows without mutating records until explicit commit',async()=>{
+  const {dom,a}=await fixture();try{
+    a.state.companies=[{id:'existing',name:'Existing Bar'}];
+    const csv='name,city,employees\nExisting Bar,Fuengirola,2\nPizzeria Luna,Mijas,5\nPizzeria Luna,Mijas,5\nUnverified Shop,Marbella,not-a-number\n';
+    const rows=a.parseCSV(csv),old=JSON.stringify(a.state.companies);
+    const plan=a.planBitrixImport('companies',rows);
+    assert.equal(plan.sourceCount,4);
+    assert.equal(plan.additions.length,1);
+    assert.equal(plan.skipped.length,3);
+    assert.equal(JSON.stringify(a.state.companies),old);
+    a.ui.modal={kind:'bitrix-preview',type:'companies',rows,plan,workspace:'test-business',actor:'operator'};
+    const html=a.renderBitrixPreviewModal();
+    assert.match(html,/CRM import preview/);
+    assert.match(html,/Pizzeria Luna/);
+    assert.match(html,/Import 1 records/);
+    await a.action({dataset:{action:'commit-bitrix-import'}});
+    assert.equal(a.state.companies.length,2);
+    assert.equal(a.state.companies[0].name,'Pizzeria Luna');
+    assert.equal(a.state.companies[0].employees,5);
+    assert.equal(a.ui.modal,null);
+  }finally{dom.window.close()}
+});
+
+test('deal importer never starts without a pipeline, and rejects ambiguous amount formats',async()=>{
+  const {dom,a}=await fixture();try{
+    a.state.pipelines=[];
+    const source=a.parseCSV('title,amount,probability\nNew contract,300.25,50\n');
+    assert.throws(()=>a.planBitrixImport('deals',source),/Create a CRM pipeline/);
+    assert.equal(a.state.deals.length,0);
+    a.state.pipelines=[{id:'pipeline',stages:[{id:'new'}]}];
+    const rows=a.parseCSV('title,amount,probability\nFirst deal,"3,000.50",20\nSecond deal,125.50,30\nBad odds,10,900\n');
+    const plan=a.planBitrixImport('deals',rows);
+    assert.equal(plan.additions.length,1);
+    assert.equal(plan.skipped.length,2);
+    assert.equal(plan.additions[0].record.value,125.50);
+    a.ui.modal={kind:'bitrix-preview',type:'contacts',rows:a.parseCSV('name,email\nGuest,guest@example.invalid'),plan:a.planBitrixImport('contacts',a.parseCSV('name,email\nGuest,guest@example.invalid')),workspace:'test-business',actor:'operator'};
+    assert.match(a.renderBitrixPreviewModal(),/does not grant marketing consent/);
+    assert.equal(a.state.deals.length,0);
+  }finally{dom.window.close()}
+});
+
+test('CRM import confirmation rejects a switched workspace or changed review data',async()=>{
+  const {dom,a}=await fixture();try{
+    const rows=a.parseCSV('name,city\nTown Cafe,Málaga');
+    const plan=a.planBitrixImport('companies',rows);
+    a.ui.modal={kind:'bitrix-preview',type:'companies',rows,plan,workspace:'test-business',actor:'operator'};
+    a.state.workspace.id='different-business';
+    await assert.rejects(a.commitBitrixImport(),/permission or workspace changed/);
+    assert.equal(a.state.companies.some(x=>x.name==='Town Cafe'),false);
+    a.state.workspace.id='test-business';
+    a.state.companies.push({id:'other',name:'Town Cafe'});
+    await assert.rejects(a.commitBitrixImport(),/changed since the import preview/);
+    assert.equal(a.state.companies.length,1);
+  }finally{dom.window.close()}
+});
+
+test('calendar creates valid one-hour slots from both empty days and day popovers',async()=>{
+  const {dom,a}=await fixture();try{
+    a.state.events=[];
+    const chosen='2026-10-31T00:00:00Z';
+    const defaults=a.calendarNewEventDefaults(chosen);
+    assert.equal(new Date(defaults.end)-new Date(defaults.start),3600000);
+    assert.equal(new Date(defaults.start).getHours(),9);
+    await a.action({dataset:{action:'calendar-day',date:chosen}});
+    assert.equal(a.ui.modal.kind,'form');
+    assert.equal(a.ui.formDefaults.start,defaults.start);
+    assert.equal(a.ui.formDefaults.end,defaults.end);
+    a.ui.modal={kind:'calendar-day',date:chosen};
+    await a.action({dataset:{action:'calendar-add-event',date:chosen}});
+    assert.equal(a.ui.formDefaults.end,defaults.end);
+    assert.throws(()=>a.calendarNewEventDefaults('invalid'),/valid calendar/);
+  }finally{dom.window.close()}
+});
+
+test('paid legacy documents are not collected revenue and paid quotes cannot inflate totals',async()=>{
+  const {dom,a}=await fixture();try{
+    a.state.invoices=[
+      {id:'paid',type:'Invoice',status:'Paid',total:105.50},
+      {id:'quote',type:'Quote',status:'Paid',total:9999},
+      {id:'draft',type:'Invoice',status:'Draft',total:4000},
+      {id:'wrong',type:'Invoice',status:'Paid',total:-100},
+      {id:'sent',type:'Invoice',status:'Sent',total:15,dueDate:'2026-01-01'}
+    ];
+    assert.equal(a.recordedPaidDocuments().length,1);
+    assert.equal(a.recordedPaidAmount(),105.50);
+    const sales=a.render.sales();
+    assert.match(sales,/Marked paid/);
+    assert.match(sales,/not bank verified/);
+    assert.match(sales,/Editable operational records only/);
+    assert.doesNotMatch(sales,/collected across invoices/);
+  }finally{dom.window.close()}
+});
+
+test('platform analytics paid amount and document count exclude quotes, unpaid and invalid totals',async()=>{
+  const {dom,a}=await fixture({platform:true});try{
+    a.state.settings.locale='en';
+    a.state.invoices=[
+      {id:'paid',type:'Invoice',status:'Paid',total:100},
+      {id:'numeric-string',type:'Invoice',status:'Paid',total:'5.50'},
+      {id:'quote',type:'Quote',status:'Paid',total:9999},
+      {id:'draft',type:'Invoice',status:'Draft',total:4000},
+      {id:'negative',type:'Invoice',status:'Paid',total:-100},
+      {id:'invalid',type:'Invoice',status:'Paid',total:'not-a-number'},
+      {id:'infinite',type:'Invoice',status:'Paid',total:Infinity}
+    ];
+    const view=new JSDOM(a.render.analytics());try{
+      const metric=[...view.window.document.querySelectorAll('.analytics-business-grid > div')]
+        .find(card=>card.querySelector('span')?.textContent==='Marked paid (legacy)');
+      assert.ok(metric,'platform analytics must render the legacy paid metric');
+      const amount=metric.querySelector('strong').textContent;
+      assert.equal(Number(amount.replace(/[^0-9.-]/g,'')),105.50);
+      assert.doesNotMatch(amount,/NaN|Infinity/);
+      assert.match(metric.querySelector('small').textContent,/^2 editable documents/);
+    }finally{view.window.close();}
+  }finally{dom.window.close();}
+});
+
+test('marketing and sites are explicitly planning records rather than public promises',async()=>{
+  const {dom,a}=await fixture();try{
+    a.state.pages=[{id:'page',name:'Campaign',slug:'summer',status:'Published',visitors:120,conversions:12}];
+    a.state.forms=[{id:'form',name:'Guest list',status:'Live',fields:['email'],submissions:13,conversionRate:8}];
+    a.state.campaigns=[{id:'campaign',name:'Launch party',channel:'Email',audience:'Customers',status:'Running',sent:0,opened:0,clicked:0,conversions:0}];
+    const sites=a.render.sites(),marketing=a.render.marketing();
+    assert.match(sites,/Landing page plans|Draft metadata only/);
+    assert.match(sites,/Plan: Published|Plan: Live/);
+    assert.match(sites,/Recorded visitors|Recorded submissions/);
+    assert.match(marketing,/Plan: Running/);
+    assert.match(marketing,/Recorded sends/);
+    assert.doesNotMatch(marketing,/Refresh<\/span><strong>Live/);
+  }finally{dom.window.close()}
+});
+
+test('People presence cannot be forged by recently editing an identically named contact',async()=>{
+  const {dom,a}=await fixture();try{
+    const operator={id:'operator',email:'operator@example.invalid',name:'Operator'};
+    const another={id:'other',name:'Ghost Person',email:'ghost@example.invalid'};
+    a.state.employees=[operator,another];
+    a.state.contacts=[{id:'other',name:'Ghost Person',updatedAt:new Date().toISOString()}];
+    assert.equal(a.isUserOnline(another),false);
+    assert.equal(a.isUserOnline(operator),true);
+    assert.match(a.render.employees(),/People records|Recently active/);
+    another.lastActiveAt=new Date().toISOString();
+    assert.equal(a.isUserOnline(another),true);
+  }finally{dom.window.close()}
+});
+
+test('business About and snapshot UI describe the real commercial product and its limitations',async()=>{
+  const {dom,a}=await fixture();try{
+    a.ui.settingsTab='about';
+    const html=a.render.settings();
+    assert.match(html,/AkiBusiness/);
+    assert.match(html,/Not yet accepted|Feature readiness/);
+    assert.doesNotMatch(html,/built for Alex|Bitrix24 source-code copy|adapter UI included|true realtime collaboration/);
+  }finally{dom.window.close()}
+});
+
+
+test('inactive, archived and digital products cannot generate manual replenishment prompts',async()=>{
+  const {dom,w,a}=await fixture();try{
+    w.AkiHQInventoryOps={renderPanel:()=>'<div>Inventory controls</div>',readPending:()=>null};
+    a.state.products=[
+      {id:'active',name:'Active Coffee',sku:'AC',status:'Active',warehouse:'Main',stock:0,reorderAt:6,safetyStock:2,cost:1,price:2,unit:'bag'},
+      {id:'archived',name:'Archived stock',sku:'AR',status:'Archived',warehouse:'Main',stock:0,reorderAt:100,safetyStock:5,cost:1,price:2},
+      {id:'digital',name:'Digital voucher',sku:'DG',status:'Active',warehouse:'Digital',stock:0,reorderAt:10,safetyStock:5,cost:0,price:5}
+    ];
+    const html=a.render.inventory(),view=new JSDOM(html);
+    try{
+      const cards=[...view.window.document.querySelectorAll('.inventory-recommendation')];
+      assert.equal(cards.length,1);
+      assert.match(cards[0].textContent,/Active Coffee/);
+      assert.doesNotMatch(cards[0].textContent,/Archived stock|Digital voucher/);
+      assert.match(html,/Planning estimate|Stock replenishment suggestions/);
+      assert.match(html,/1 active physical SKUs/);
+    }finally{view.window.close();}
+  }finally{dom.window.close();}
+});
+
+test('Knowledge review task preserves an article source link instead of creating an orphan reminder',async()=>{
+  const {dom,w,a}=await fixture();try{
+    a.state.knowledge=[{id:'article',title:'Opening checklist',category:'Operations',authorId:'operator',content:'Check premises',reviewDate:'2026-11-02'}];
+    a.ui.selectedArticleId='article';a.ui.route='knowledge';
+    assert.match(a.render.knowledge(),/Review task/);
+    await a.action({dataset:{action:'follow-up-record',entity:'article',id:'article'}});
+    assert.equal(a.ui.modal.kind,'form');
+    assert.equal(a.ui.formDefaults.sourceRecord.id,'article');
+    await a.save(form(w,a,'task',{title:'Review opening checklist',status:'todo',priority:'medium',assigneeId:'operator'}));
+    assert.equal(a.state.tasks[0].sourceRecord.type,'article');
+    assert.equal(a.state.tasks[0].sourceRecord.id,'article');
+    a.state.workspace.toolKeys=['knowledge'];a.ui.modal=null;
+    assert.doesNotMatch(a.render.knowledge(),/Review task/);
+  }finally{dom.window.close()}
+});
+
+
+test('marketing click-through rate uses recorded sends, not the inflated click-to-open denominator',async()=>{
+ const {dom,a}=await fixture();
+ try{
+  a.state.campaigns=[{id:'c1',name:'Community night',channel:'Email',audience:'Permissioned members',
+    status:'Completed',sent:100,opened:40,clicked:10,conversions:3}];
+  const html=a.render.marketing();
+  assert.match(html,/Recorded CTR/);
+  const view=new JSDOM(html);
+  try{
+    const metric=[...view.window.document.querySelectorAll('.metric-card')].find(card=>
+      card.querySelector('.metric-label')?.textContent==='Recorded CTR');
+    assert.ok(metric);
+    assert.match(metric.querySelector('.metric-value').textContent,/10%/);
+    assert.doesNotMatch(metric.querySelector('.metric-value').textContent,/25%/);
+  }finally{view.window.close();}
+ }finally{dom.window.close();}
+});
+
