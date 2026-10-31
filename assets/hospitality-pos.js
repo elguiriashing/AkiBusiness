@@ -13,9 +13,10 @@
   return `<!doctype html><html><head><meta charset="utf-8"><title>${esc(ticket.kind)} ${esc(ticket.id)}</title><style>@page{size:${width===58?58:80}mm auto;margin:3mm}body{font:13px monospace;color:#000;width:${width===58?50:72}mm}h1{font-size:18px}li{margin:8px 0}ul{padding-left:16px}.notice{border:2px solid;padding:5px}small{overflow-wrap:anywhere}</style></head><body><h1>${esc(workspace.name)}</h1><h2>${esc(ticket.station)} · ${esc(ticket.kind)}</h2>${p.copy_of?'<h2>COPY / DUPLICADO</h2>':''}<p class="notice">${esc(p.notice||'OPERATIONAL TICKET — NO ES FACTURA')}</p><p>${esc(p.instruction||'')}</p><strong>${esc(o.label)}</strong><p>${esc(o.note)}</p>${Array.isArray(p.released)?`<h3>NEWLY FIRED / RECIÉN MARCHADO · ${esc(p.course)}</h3>${list(p.released)}<p>PREVIOUS / CURRENT BELOW ARE REFERENCE ONLY</p>`:''}${ticket.kind==='preparation'?`<h3>Previous</h3>${list(p.previous)}<h3>Current required</h3>${list(p.current)}`:list(o.lines)}${p.destination?.id?`<h3>Destination ${esc(p.destination.table_id||'Walk-in')}</h3>${list(p.destination.lines)}`:''}${p.reason?`<p>${esc(p.reason)}</p>`:''}${p.total_cents!==undefined?`<p>Total ${esc(money(p.total_cents,currency))}<br>Recorded payments ${esc(money(p.paid_cents,currency))}<br>Balance ${esc(money(p.total_cents-p.paid_cents,currency))}</p>${(o.payments||[]).map(x=>`<p>${esc(x.method)} ${esc(money(x.amount_cents,currency))} ${esc(x.reference)}${x.change_cents?` · Change ${esc(money(x.change_cents,currency))}`:''}</p>`).join('')}`:''}<small>Order ${esc(o.id||ticket.order_id)}<br>Ticket ${esc(ticket.id)}<br>${esc(ticket.created_at)}${o.sale_id?`<br>Sale ${esc(o.sale_id)}`:''}</small><p>Keep with the final invoice where required.</p></body></html>`;
  }
  function create(ctx){
-  let view='terminal',category='All',designerCategory='All',panel='',panelLine='',paymentAmount=null,immersive=false,data=null,error='',selected='',page='',busy=false,cashSubmitting=false,disposed=false,started=false,timer=null,last='',printTicket=null,printAttempted=false,layoutDraft=null,layoutVersion=null,pairedDevice=null,printerDevices=[],printerFilter='kitchen',printerStation='all',printerSelected='',printerSettings=false,tapJobs=[],tapTimer=null,tapDrain=null,tapInFlight=0,ledger=null,ledgerLoading=false,ledgerError='',ledgerFilters={},ledgerMode='bills',ledgerSelected='',closingConfirm=false,productQuery='',favouritesOnly=false,serviceFilters={},serviceSelected='',snapshotAt=0,lastServiceMinute=-1,courseReview=null,entryCourses={};
+  let view='terminal',category='All',designerCategory='All',panel='',panelLine='',paymentAmount=null,immersive=false,data=null,error='',selected='',page='',busy=false,cashSubmitting=false,disposed=false,started=false,timer=null,last='',printTicket=null,printAttempted=false,layoutDraft=null,layoutVersion=null,pairedDevice=null,printerDevices=[],printerFilter='kitchen',printerStation='all',printerSelected='',printerSettings=false,tapJobs=[],tapTimer=null,tapDrain=null,tapInFlight=0,ledger=null,ledgerLoading=false,ledgerError='',ledgerFilters={},ledgerMode='bills',ledgerSelected='',closingConfirm=false,refundOverview=null,refundError='',refundBusy=false,settlementOpen=false,settlementLoading=false,settlementResult=null,settlementError='',settlementFrom='',settlementThrough='',productQuery='',favouritesOnly=false,serviceFilters={},serviceSelected='',snapshotAt=0,lastServiceMinute=-1,courseReview=null,entryCourses={};
   const key=`akihq:hospitality:${ctx.actor}:${ctx.workspace.id}`;
   const cashKey=key+':cash';
+  const refundKey=key+':refund';
   function refresh(){
    if(disposed)return;
    const expanded=new Set([...root.document.querySelectorAll('.hp-shell details[open]')].map(d=>d.querySelector(':scope > summary')?.textContent));
@@ -42,6 +43,18 @@
   const markDirty=e=>{const f=e.target.closest?.('.hp-form, .hp-v4-form, .hp-v4-inline-form, .hp-v4-product-row, .hp-ps-copy form, .hp-ps-pair, .hp-ps-copy form, .hp-ps-pair');if(f)f.dataset.dirty='true';};
   root.document.addEventListener('input',markDirty);
   const escapePanel=e=>{
+   if(settlementOpen){
+    if(e.key==='Escape'){e.preventDefault();settlementOpen=false;settlementResult=null;refresh();return;}
+    if(e.key==='Tab'){
+     const dlg=root.document.querySelector('.hp-settlement-dialog'),
+       controls=dlg?[...dlg.querySelectorAll('button:not([disabled]),input:not([disabled])')]:[],
+       first=controls[0],last=controls.at(-1);
+     if(first&&(e.shiftKey&&root.document.activeElement===first||!e.shiftKey&&root.document.activeElement===last)){
+       e.preventDefault();(e.shiftKey?last:first).focus();return;
+     }
+    }
+   }
+
    if(panel==='courses'&&e.key==='Tab'){const d=root.document.querySelector('.hp-course-dialog');const items=d?[...d.querySelectorAll('button:not([disabled]),input:not([disabled])')]:[];const first=items[0],last=items.at(-1);if(first&&(e.shiftKey&&(root.document.activeElement===first||root.document.activeElement===d)||!e.shiftKey&&root.document.activeElement===last)){e.preventDefault();(e.shiftKey?last:first).focus();}}
    if(serviceSelected){
     if(e.key==='Escape'){e.preventDefault?.();closeServicePanel();return;}
@@ -94,6 +107,7 @@
   });
   function pending(){try{return JSON.parse(root.localStorage.getItem(key)||'null')}catch{throw Error('Saved request is unreadable. Do not clear browser storage; contact support.')}}
   function cashPending(){try{return JSON.parse(root.localStorage.getItem(cashKey)||'null')}catch{throw Error('Saved cash request is unreadable. Do not clear browser storage; contact support.')}}
+  function refundPending(){try{return JSON.parse(root.localStorage.getItem(refundKey)||'null')}catch{throw Error('Saved refund request is unreadable. Do not clear browser storage; contact support.')}}
   async function rpc(name,args={}){if(disposed)throw Error('Workspace changed');const r=await ctx.client.rpc(name,{p_workspace:ctx.workspace.id,...args});if(disposed)throw Error('Workspace changed');if(r.error)throw Error(r.error.message);return r.data;}
   async function load(){if(busy||!active())return;try{const next=await rpc('crm_hospitality_overview');if(!active())return;const signature=JSON.stringify({...next,server_time:null});data=next;snapshotAt=Date.now();error='';const minute=Math.floor(serviceNow()/60000);if(signature!==last||(view==='service'&&minute!==lastServiceMinute)){last=signature;lastServiceMinute=minute;const focused=root.document.activeElement;if(!layoutDraft&&!focused?.closest?.('.hp-form, .hp-v4-form, .hp-v4-inline-form, .hp-v4-product-row')&&!root.document.querySelector('.hp-form[data-dirty], .hp-v4-form[data-dirty], .hp-v4-inline-form[data-dirty], .hp-v4-product-row[data-dirty], .hp-ps-copy form[data-dirty], .hp-ps-pair[data-dirty]'))refresh();}}catch(e){if(!active())return;data=null;error=e.message;refresh();}}
   async function loadLedger(){
@@ -111,10 +125,21 @@
     }catch(e){if(active())ledgerError=e.message;}
     finally{ledgerLoading=false;refresh();}
   }
+  async function loadRefunds(orderId){
+    refundOverview=null;refundError='';
+    if(!orderId||!data?.can_manage)return;
+    try{
+      const result=await rpc('crm_pos_refund_overview',{p_order:orderId});
+      if(active()&&ledgerSelected===orderId)refundOverview=result;
+    }catch(e){if(active()&&ledgerSelected===orderId)refundError=e.message||'Refund records unavailable';}
+    finally{if(active())refresh();}
+  }
   function ledgerMarkup(){
     return root.AkiPosLedger.render({data:ledger,currency:ctx.workspace.currency,
       canManage:!!data?.can_manage,filters:ledgerFilters,loading:ledgerLoading,
-      error:ledgerError,mode:ledgerMode,selected:ledgerSelected,confirmEnd:closingConfirm});
+      error:ledgerError,mode:ledgerMode,selected:ledgerSelected,confirmEnd:closingConfirm,
+      refundOverview,refundError,refundBusy,refundPending:!!refundPending(),
+      settlement:{open:settlementOpen,loading:settlementLoading,error:settlementError,result:settlementResult,from:settlementFrom,through:settlementThrough}});
   }
   async function changeTradingDay(action){
     if(!data?.can_manage)throw Error('Manager permission required to manage trading days.');
@@ -256,12 +281,38 @@
     });
    }finally{cashSubmitting=false;await loadLedger();refresh();}
   }
+  async function executeRefund(body,retry=false){
+    if(refundBusy)throw Error('A refund request is already being recorded.');
+    if(!root.navigator.locks?.request)throw Error('Use an up-to-date browser over HTTPS to safely record refunds.');
+    refundBusy=true;
+    try{
+      const result=await root.navigator.locks.request(refundKey,{},async lock=>{
+        if(!lock)throw Error('Another tab is recording a refund; review that session.');
+        let pendingRefund=refundPending();
+        if(!retry){
+          if(pendingRefund)throw Error('An earlier refund record is unresolved. Retry it before recording another.');
+          pendingRefund={key:root.crypto.randomUUID(),body};
+          root.localStorage.setItem(refundKey,JSON.stringify(pendingRefund));
+          if(!root.localStorage.getItem(refundKey))throw Error('Cannot persist the refund request safely.');
+        }
+        if(!pendingRefund?.key||!pendingRefund?.body)throw Error('Saved refund data is missing; contact support before another attempt.');
+        // Unknown transport or database outcomes must NEVER create a fresh request id.
+        const recorded=await rpc('crm_pos_record_refund',{p_request_key:pendingRefund.key,p_refund:pendingRefund.body});
+        root.localStorage.removeItem(refundKey);
+        return recorded;
+      });
+      ctx.toast('Refund evidence recorded','External refunds and fiscal corrections still require separate verification.','info');
+      await loadLedger();
+      if(ledgerSelected)await loadRefunds(ledgerSelected);
+      return result;
+    }finally{refundBusy=false;refresh();}
+  }
   const current=()=>data?.orders.find(x=>x.id===selected);
   const orderAttrs=o=>`data-order="${esc(o.id)}" data-version="${o.version}"`;
   const tables=()=>[['','New walk-in order'],...(data?.layout.tables||[]).map(t=>[t.id,`${t.name} · ${data.layout.pages.find(p=>p.id===t.page)?.name||''}`])];
   function render(){
-   start();let p=null,cp=null;try{p=pending();cp=cashPending()}catch(e){error=e.message}
-   const recovery=(p?`<section class="panel hp-card"><h3>Request awaiting confirmation</h3><p>New changes are blocked until this request is resolved. Retry uses the original reference.</p>${btn('retry','Retry / check result')}${btn('abandon','Check result and cancel if unrecorded')}</section>`:'')+(cp?`<section class="panel hp-card"><h3>Cash request awaiting confirmation</h3><p>Cash controls are blocked until this request is checked. Retry reuses the original reference and trading day.</p>${btn('cash-retry','Retry / check cash result')}</section>`:'');
+   start();let p=null,cp=null,rp=null;try{p=pending();cp=cashPending();rp=refundPending()}catch(e){error=e.message}
+   const recovery=(p?`<section class="panel hp-card"><h3>Request awaiting confirmation</h3><p>New changes are blocked until this request is resolved. Retry uses the original reference.</p>${btn('retry','Retry / check result')}${btn('abandon','Check result and cancel if unrecorded')}</section>`:'')+(cp?`<section class="panel hp-card"><h3>Cash request awaiting confirmation</h3><p>Cash controls are blocked until this request is checked. Retry reuses the original reference and trading day.</p>${btn('cash-retry','Retry / check cash result')}</section>`:'')+(rp?`<section class="panel hp-card" role="alert"><h3>Refund record awaiting confirmation</h3><p>Do not pay the customer again. Retry the original request reference to confirm whether the refund evidence was saved.</p>${btn('refund-retry','Retry / check refund record')}</section>`:'');
    if(!data)return `<div class="hp-shell">${recovery}<section class="panel hp-card"><h2>Shared Point of Sale</h2><p role="status">${esc(error||'Connecting to shared orders…')}</p>${btn('refresh','Reconnect')}<p>This view requires the hospitality database migration. Fiscal invoicing remains unavailable.</p></section></div>`;
    const o=current(),layout=layoutDraft||data.layout;page=layout.pages.some(x=>x.id===page)?page:layout.pages[0]?.id||'';
    const floor=layout.mode==='restaurant'?`<section class="panel hp-card"><nav class="hp-toolbar">${data.can_manage?layoutDraft?btn('layout-save','Save layout')+btn('layout-discard','Discard changes'):btn('layout-edit','Arrange tables'):''}${layout.pages.map(p=>btn('page',p.name,`data-id="${esc(p.id)}" aria-pressed="${p.id===page}"`)).join('')}</nav><p>${layoutDraft?'Drag tables to move them; drag the corner to resize. Keyboard: arrows move, Alt + arrows resize, Shift uses larger steps.':'Tap a table to open its order.'}</p><div class="hp-floor" aria-label="Tables">${layout.tables.filter(t=>t.page===page).map(t=>{const order=data.orders.find(o=>o.table_id===t.id);return `<button class="hp-table ${order?'occupied':''} ${t.shape}" style="left:${Number(t.x)}%;top:${Number(t.y)}%;width:${Number(t.width)}%;height:${Number(t.height)}%" ${layoutDraft?'data-floor-edit="true"':'data-action="hp-table"'} data-id="${esc(t.id)}"><strong>${esc(t.name)}</strong><small>${t.seats} seats${order?` · ${esc(money(order.total_cents,ctx.workspace.currency))}`:''}</small>${layoutDraft?'<span data-floor-resize aria-hidden="true" class="hp-resize">↘</span>':''}</button>`}).join('')||'<p>Add a page and tables in Floor settings.</p>'}</div></section>`:'';
@@ -348,12 +399,24 @@
    if(a==='immersive'){immersive=!immersive;refresh();return;}
    if(a==='switch-view'){view=['designer','ledger','service','kitchen'].includes(target.dataset.id)?target.dataset.id:'terminal';panel='';serviceSelected='';if(!['terminal','service','kitchen'].includes(view))selected='';if(view==='ledger'){refresh();await loadLedger();}else refresh();return;}
 
+   if(a==='settlement-open'){
+    if(!data?.can_manage)throw Error('Manager access required for external statement reconciliation.');
+    const localDate=date=>{
+      const parts=Object.fromEntries(new Intl.DateTimeFormat('en-GB',{timeZone:ctx.workspace.timezone||'Europe/Madrid',year:'numeric',month:'2-digit',day:'2-digit'}).formatToParts(date).map(x=>[x.type,x.value]));
+      return parts.year+'-'+parts.month+'-'+parts.day;
+    };
+    settlementThrough=localDate(new Date());
+    settlementFrom=localDate(new Date(Date.now()-6*86400000));
+    settlementResult=null;settlementError='';settlementOpen=true;refresh();
+    root.document.querySelector('.hp-settlement-dialog')?.focus?.({preventScroll:true});return;
+   }
+   if(a==='settlement-close'){settlementOpen=false;settlementResult=null;settlementError='';refresh();return;}
    if(a==='ledger-refresh'){await loadLedger();return;}
    if(a==='ledger-mode'){ledgerMode=target.dataset.mode==='days'?'days':'bills';ledgerSelected='';refresh();return;}
    if(a==='ledger-reset'){ledgerFilters={};ledgerSelected='';await loadLedger();return;}
    if(a==='ledger-page'){ledgerFilters={...ledgerFilters,offset:Number(target.dataset.offset||0)};ledgerSelected='';await loadLedger();return;}
-   if(a==='ledger-bill'){ledgerSelected=target.dataset.id;refresh();return;}
-   if(a==='ledger-close'){ledgerSelected='';refresh();return;}
+   if(a==='ledger-bill'){ledgerSelected=target.dataset.id;refundOverview=null;refundError='';refresh();await loadRefunds(ledgerSelected);return;}
+   if(a==='ledger-close'){ledgerSelected='';refundOverview=null;refundError='';refresh();return;}
    if(a==='ledger-open-day'){ledgerMode='bills';ledgerFilters={...ledgerFilters,trading_day:target.dataset.id,offset:0};await loadLedger();return;}
    if(a==='day-start'){await changeTradingDay('start');closingConfirm='opening';refresh();return;}
    if(a==='day-end'){closingConfirm='close';refresh();return;}
@@ -365,6 +428,7 @@
    if(a==='page'){page=target.dataset.id;refresh();return;}if(a==='select'){selected=target.dataset.id;panel='';panelLine='';refresh();return;}
    if(a==='retry'){await execute(null,true);return;}
    if(a==='cash-retry'){await executeCash(null,true);closingConfirm=false;return;}
+   if(a==='refund-retry'){await executeRefund(null,true);return;}
    if(a==='abandon'){if(!root.navigator.locks?.request)throw Error('Use an up-to-date browser over HTTPS');await root.navigator.locks.request(key,{ifAvailable:true},async lock=>{if(!lock)throw Error('Another tab is recording an order');const p=pending();if(p){const r=await rpc('crm_hospitality_command',{p_key:root.crypto.randomUUID(),p_command:{action:'abandon',key:p.key}});root.localStorage.removeItem(key);if(r.response?.order_id)selected=r.response.order_id;ctx.toast('Request resolved',r.already_completed?'It was already recorded.':'Unrecorded request cancelled.');}await load();refresh();});return;}
    if(a.startsWith('print')){if(!printTicket||printAttempted)throw Error('Inspect the printer; request a marked copy if another print is needed');const w=root.open('','_blank','width=420,height=650');if(!w)throw Error('Allow the print window in this browser');w.opener=null;try{await execute({action:'begin_print',ticket_id:printTicket.id});printAttempted=true;}catch(e){w.close();throw e;}w.document.write(ticketHTML(printTicket,ctx.workspace,a==='print58'?58:80));w.document.close();w.focus();w.print();refresh();return;}
    let c={action:a,order_id:target.dataset.order,version:Number(target.dataset.version)};
@@ -397,6 +461,58 @@
     if(min!==null&&max!==null&&min>max)throw Error('Minimum amount exceeds maximum.');
     ledgerFilters={...v,min_cents:min,max_cents:max,offset:0};
     ledgerSelected='';await loadLedger();return;
+   }
+   if(a==='settlement-import'){
+    if(!settlementOpen||!data?.can_manage)throw Error('Manager access required for provider statement comparison.');
+    if(settlementLoading)throw Error('A comparison is already in progress.');
+    if(!root.AkiPosSettlement?.parseProviderCSV||!root.AkiCommerceExport?.period)
+      throw Error('Statement comparison module unavailable; refresh the software.');
+    settlementLoading=true;settlementResult=null;settlementError='';
+    settlementFrom=String(v.from||'').trim();settlementThrough=String(v.through||'').trim();
+    try{
+      const file=f.querySelector('[name="statement"]')?.files?.[0];
+      if(!file||file.size===0||file.size>1048576||typeof file.text!=='function')
+        throw Error('Choose a CSV statement under 1 MB. Use a modern browser.');
+      const entries=root.AkiPosSettlement.parseProviderCSV(await file.text());
+      const period=root.AkiCommerceExport.period(settlementFrom,settlementThrough,ctx.workspace.timezone||'Europe/Madrid');
+      const feed=await rpc('crm_pos_settlement_feed',{p_from:period.from,p_until:period.until});
+      if(!active())return;
+      settlementResult=root.AkiPosSettlement.compare(feed,entries);
+    }catch(e){
+      if(!active())return;
+      settlementError=e.message||'Statement reconciliation failed. No records were changed.';
+      ctx.toast('Reconciliation needs review',settlementError,'warning');
+    }finally{settlementLoading=false;if(active())refresh();}
+    return;
+   }
+   if(a==='record-refund'){
+    if(!data?.can_manage)throw Error('Manager permission is required to record refunds.');
+    if(refundPending())throw Error('Resolve the previous refund request first.');
+    if(f.dataset.order!==ledgerSelected||!refundOverview||refundOverview.order_id!==ledgerSelected)
+      throw Error('Reload the closed bill before recording a refund.');
+    const payment=(refundOverview.original_payments||[]).find(x=>String(x.id)===String(v.original_payment_id)&&Number(x.amount_cents)>0);
+    if(!payment||!['cash','card','other'].includes(payment.method))throw Error('Select an original recorded payment.');
+    const text=String(v.amount||'').trim();
+    if(!/^\d{1,9}(\.\d{1,2})?$/.test(text))throw Error('Enter a valid refund amount in euros and cents.');
+    const amount_cents=Math.round(Number(text)*100);
+    const previous=(refundOverview.refunds||[]).filter(r=>String(r.original_payment_id)===String(payment.id)).reduce((n,r)=>n+Number(r.amount_cents||0),0);
+    const reversed=(refundOverview.original_payments||[]).some(x=>x.reverses===payment.id);
+    if(reversed||amount_cents<=0||amount_cents>Number(payment.amount_cents)-previous)
+      throw Error('Refund exceeds the original payment balance. Refresh the bill before retrying.');
+    const reason=String(v.reason||'').trim(),external_reference=String(v.external_reference||'').trim(),
+      fiscal_correction_reference=String(v.fiscal_correction_reference||'').trim();
+    if(reason.length<5||reason.length>500)throw Error('Explain the refund in 5–500 characters.');
+    if(payment.method==='cash'&&v.cash_paid_out!=='true')throw Error('Confirm physical cash has already been handed back.');
+    if(payment.method!=='cash'&&(v.external_refund_completed!=='true'||external_reference.length<3))
+      throw Error('Confirm the provider already completed the refund and enter its unique reference.');
+    const body={order_id:ledgerSelected,original_payment_id:payment.id,amount_cents,
+      method:payment.method,reason,
+      cash_paid_out:payment.method==='cash'&&v.cash_paid_out==='true',
+      external_refund_completed:payment.method!=='cash'&&v.external_refund_completed==='true',
+      external_reference:payment.method==='cash'?'':external_reference,
+      fiscal_correction_reference};
+    await executeRefund(body);
+    return;
    }
    if(a.startsWith('cash-')){
     if(!data?.can_manage)throw Error('Manager permission required for cash controls.');

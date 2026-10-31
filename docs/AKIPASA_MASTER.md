@@ -187,3 +187,57 @@ Integrates the reviewed non-fiscal tools candidate onto released main `534ec4538
 Source app asset advances to46 and cache148; the paid output advances to app57 and cache161 with all five release/review cache assertions. The paid-product transformation removes obsolete exact-string rules for source copy already corrected in this candidate. No fiscal/refund migration or activation from #67 is included. That separate draft retains its shared-schema, provider, terminal, settlement and fiscal acceptance gates.
 
 Fresh full hosted checks and the actual account/selector browser matrix are required for this integrated head. This is an explicitly coordinated independent source release under the user's request to finish the open PRs, not permission to certify providers, mutate production customer records or bypass unresolved CI. Production import/customer writes are not performed during acceptance. Rollback is a source revert with a new asset/cache version.
+
+## 2026-10-31 | Preserve shared account eligibility in refund candidate
+
+Read-only production metadata exposed a regression in PR67: replacing
+crm_pos_cash_overview removed the deployed account_features_allowed guard
+(definition MD5 d0e1a019464e8287d9175d05a1a105d3). The private hospitality
+guard checks tool/workspace access but has no direct account-completion guard.
+All five affected public cash/ledger/refund/settlement RPCs now explicitly
+reject missing identity or false/unknown account eligibility. Each candidate
+migration checks for the existing shared helper before changing any object.
+Manager checks also treat NULL as denial. No production SQL was executed.
+
+Seven actual PGlite suites pass, including original immutable sales, partial
+refund/idempotency/caps, manager/tenant isolation and statement limitations,
+plus false and unknown eligibility across all five public RPCs. This fixture
+is not genuine GoTrue authentication or independent PostgreSQL concurrency.
+The statutory dates were checked against current primary AEAT/BOE sources;
+this does not certify an issuer, bank settlement or payment-provider operation.
+Fresh hosted CI, shared-schema staging, independent-connection races and the
+existing provider/fiscal/physical gates remain required before this draft can
+activate or be published. PR56/66 source merges do not waive those gates.
+
+## 2026-10-31 | Integrate draft fiscal candidate with privacy and printer source
+
+Reconcile PR67 against main 534ec453 after PR56 and PR66. Preserve the public
+privacy notice precache, account JS v5 and the merged printer/workspace source,
+while retaining candidate source cache 150 and fiscal/settlement assets. Advance
+the paid-product cache from 160 to 161 and align the release assertions, including
+production deployment checks. The privacy and account-eligibility correction
+records remain intact; shared identity, tenant boundaries and RLS are unchanged
+by this source-conflict resolution.
+
+PR67 remains draft. Fresh hosted CI for the integrated head, shared-schema
+staging, independent-connection races and genuine terminal, bank, provider and
+fiscal acceptance remain required. Local source checks do not satisfy those
+gates. No production SQL, customer-data, payment/provider or deployment action
+was performed. A source revert requires a new cache version; no data rollback.
+
+## 2026-10-31 | Keep the draft fiscal candidate current with CRM and reporting #68
+
+Reconcile PR67 with the independent CRM/reporting source from PR68, retaining
+its corrected core app and the removal of two obsolete exact-copy release
+transforms. Keep source app 46 and paid app 57, source service-worker cache 150,
+privacy/account v5, printer recovery and the fiscal/settlement assets together.
+Advance the paid cache from 161 to 162 in the manifest and all five workflow
+checks. Both service-worker and login release transforms match their combined
+source exactly. Existing documentation entries remain as historical records.
+
+PR67 remains draft. Fresh hosted CI for this integrated head, shared-schema
+staging and independent-connection races are still required, alongside genuine
+provider, terminal, bank settlement and fiscal acceptance. No production SQL,
+customer-data, provider/payment or deployment action was performed for this
+local reconciliation. Rollback remains a source revert with a new cache version.
+
