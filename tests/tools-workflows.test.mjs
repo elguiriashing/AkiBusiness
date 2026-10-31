@@ -317,3 +317,22 @@ test('Knowledge review task preserves an article source link instead of creating
     assert.doesNotMatch(a.render.knowledge(),/Review task/);
   }finally{dom.window.close()}
 });
+
+
+test('marketing click-through rate uses recorded sends, not the inflated click-to-open denominator',async()=>{
+ const {dom,a}=await fixture();
+ try{
+  a.state.campaigns=[{id:'c1',name:'Community night',channel:'Email',audience:'Permissioned members',
+    status:'Completed',sent:100,opened:40,clicked:10,conversions:3}];
+  const html=a.render.marketing();
+  assert.match(html,/Recorded CTR/);
+  const view=new JSDOM(html);
+  try{
+    const metric=[...view.window.document.querySelectorAll('.metric-card')].find(card=>
+      card.querySelector('.metric-label')?.textContent==='Recorded CTR');
+    assert.ok(metric);
+    assert.match(metric.querySelector('.metric-value').textContent,/10%/);
+    assert.doesNotMatch(metric.querySelector('.metric-value').textContent,/25%/);
+  }finally{view.window.close();}
+ }finally{dom.window.close();}
+});
