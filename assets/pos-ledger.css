@@ -82,3 +82,27 @@
 .hp-day-shortcut .action-btn{min-height:36px;font-size:12px}
 @media(max-width:1000px){.hp-ledger-filter-row{grid-template-columns:repeat(2,minmax(0,1fr))}.hp-ledger-shift{grid-template-columns:minmax(120px,1fr) minmax(100px,1.2fr) auto}.hp-ledger-shift-count{display:none}}
 @media(max-width:650px){.hp-ledger-top{padding:12px;align-items:start}.hp-ledger-top h2{font-size:19px}.hp-ledger-top .action-btn{font-size:11px}.hp-day-panel{flex-direction:column;align-items:stretch;padding:13px}.hp-day-actions{justify-content:flex-start}.hp-ledger-metrics{gap:6px}.hp-ledger-metric{padding:10px 8px}.hp-ledger-metric>span{font-size:10px}.hp-ledger-metric>strong{font-size:16px}.hp-ledger-metric>small{font-size:9px}.hp-ledger-filters{padding:11px}.hp-ledger-filter-row{gap:8px}.hp-ledger-filter-row label{font-size:11px}.hp-ledger-tabs .action-btn{font-size:11px}.hp-ledger-bill{grid-template-columns:minmax(100px,1fr) auto 12px;gap:8px}.hp-ledger-bill-items{display:none}.hp-ledger-bill>strong{font-size:14px}.hp-ledger-shift{grid-template-columns:1fr auto;gap:7px}.hp-ledger-shift small{grid-row:2}.hp-ledger-drawer{width:100vw}.hp-day-shortcut{flex-wrap:wrap}}
+
+
+/* Manager refund evidence: calm, legible and touch-friendly on narrow devices. */
+.hp-ledger-refunds{display:grid;gap:12px;padding:16px;border-radius:16px;border:1px solid rgba(110,181,208,.33);background:linear-gradient(125deg,rgba(25,111,147,.11),rgba(83,80,159,.09));margin:16px 0}
+.hp-ledger-refund-title{display:flex;justify-content:space-between;align-items:center;gap:12px}
+.hp-ledger-refund-title h3{margin:0}
+.hp-ledger-refund-title span{font-size:11px;font-weight:700;color:var(--muted,#9fa8bd)}
+.hp-ledger-refunds .hp-ledger-disclaimer{margin:0;line-height:1.55}
+.hp-ledger-refund-history{display:grid;gap:8px}
+.hp-ledger-refund-history>div{display:grid;grid-template-columns:auto 1fr;align-items:center;gap:5px 12px;border-radius:11px;border:1px solid rgba(122,167,204,.27);padding:11px;background:rgba(80,112,156,.08)}
+.hp-ledger-refund-history strong{font-size:15px}
+.hp-ledger-refund-history span{font-size:12px}
+.hp-ledger-refund-history small{font-size:11px;color:var(--muted,#a1aec5);grid-column:1/-1;overflow-wrap:anywhere}
+.hp-ledger-refund-form{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+.hp-ledger-refund-form>label{display:flex;flex-direction:column;gap:6px;font-size:12px;font-weight:650;min-width:0}
+.hp-ledger-refund-form>label:nth-child(3),.hp-ledger-refund-confirm{grid-column:1/-1}
+.hp-ledger-refund-form input:not([type=checkbox]),.hp-ledger-refund-form select,.hp-ledger-refund-form textarea{min-height:46px;width:100%;min-width:0;padding:10px 12px;border-radius:11px;border:1px solid rgba(142,150,181,.4);background:var(--surface,#1b2233);color:var(--text,#f0f3ff);font:inherit;box-sizing:border-box}
+.hp-ledger-refund-form textarea{min-height:88px;resize:vertical}
+.hp-ledger-refund-form input:focus-visible,.hp-ledger-refund-form textarea:focus-visible,.hp-ledger-refund-form select:focus-visible{outline:3px solid #63b7eb;outline-offset:2px}
+.hp-ledger-refund-confirm{display:grid;gap:10px;border:1px solid rgba(179,171,115,.35);border-radius:10px;padding:12px}
+.hp-ledger-refund-confirm label{display:flex;align-items:flex-start;gap:10px;line-height:1.4;font-size:12px}
+.hp-ledger-refund-confirm input{flex:none;width:20px;height:20px;accent-color:#63b7eb}
+.hp-ledger-refund-form button[type=submit]{min-height:48px;grid-column:1/-1}
+@media(max-width:640px){.hp-ledger-refunds{padding:12px}.hp-ledger-refund-form{grid-template-columns:minmax(0,1fr)}.hp-ledger-refund-form>label{grid-column:1/-1}}
