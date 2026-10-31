@@ -7567,28 +7567,53 @@
     toast("CSV exported", `${collection.length} ${entityName}`);
   }
 
+  // Legacy CSVs are untrusted input. Reject malformed quotes, duplicate headers,
+  // wide files and oversized imports before touching any workspace collection.
   function parseCSV(text) {
-    const rows = [];
-    let row = [];
-    let cell = "";
-    let quoted = false;
-    for (let index = 0; index < text.length; index += 1) {
-      const char = text[index];
-      const next = text[index + 1];
-      if (char === '"' && quoted && next === '"') { cell += '"'; index += 1; }
-      else if (char === '"') quoted = !quoted;
-      else if (char === "," && !quoted) { row.push(cell); cell = ""; }
-      else if ((char === "\n" || char === "\r") && !quoted) {
-        if (char === "\r" && next === "\n") index += 1;
-        row.push(cell); cell = "";
-        if (row.some(value => value.trim() !== "")) rows.push(row);
-        row = [];
-      } else cell += char;
+    if (typeof text !== "string" || !text.trim() || text.length > 1048576) throw new Error("Import a nonempty UTF-8 CSV smaller than 1 MB.");
+    const rows = [], row = [];
+    let cell = "", quoted = false, closedQuote = false;
+    const finishCell = () => {
+      if (cell.length > 2000 || row.length >= 40) throw new Error("CSV cell or column limit exceeded.");
+      row.push(cell); cell = ""; closedQuote = false;
+    };
+    const finishRow = () => {
+      finishCell();
+      if (row.some(value => value.trim())) rows.push(row.slice());
+      row.length = 0;
+      if (rows.length > 1001) throw new Error("Maximum 1000 imported records per file. Split the CSV and try again.");
+    };
+    text = text.replace(/^\uFEFF/, "");
+    for (let i = 0; i < text.length; i += 1) {
+      const char = text[i], next = text[i + 1];
+      if (quoted) {
+        if (char === '"') {
+          if (next === '"') { cell += '"'; i += 1; }
+          else { quoted = false; closedQuote = true; }
+        } else cell += char;
+      } else if (char === '"') {
+        if (cell.length || closedQuote) throw new Error("Malformed quoted CSV field.");
+        quoted = true;
+      } else if (char === ",") finishCell();
+      else if (char === "\r" || char === "\n") {
+        if (char === "\r" && next === "\n") i += 1;
+        finishRow();
+      } else {
+        if (closedQuote) throw new Error("Unexpected text after a quoted CSV value.");
+        cell += char;
+      }
+      if (cell.length > 2000) throw new Error("CSV cell exceeds 2000 characters.");
     }
-    if (cell.length || row.length) { row.push(cell); if (row.some(value => value.trim() !== "")) rows.push(row); }
-    if (!rows.length) return [];
-    const headers = rows[0].map(header => header.trim().replace(/^\uFEFF/, ""));
-    return rows.slice(1).map(values => Object.fromEntries(headers.map((header, index) => [header, values[index] ?? ""])));
+    if (quoted) throw new Error("Unclosed CSV quote.");
+    if (cell.length || row.length || closedQuote) finishRow();
+    if (rows.length < 2) throw new Error("CSV needs a header and at least one record.");
+    const headers = rows.shift().map(header => header.trim().replace(/^\uFEFF/, ""));
+    if (headers.some(header => !header || header.length > 100)) throw new Error("CSV headers must be 1–100 characters.");
+    if (new Set(headers.map(header => header.toLowerCase())).size !== headers.length) throw new Error("CSV contains duplicate headers.");
+    return rows.map((values, index) => {
+      if (values.length !== headers.length) throw new Error("CSV row " + (index + 2) + " has the wrong number of columns.");
+      return Object.fromEntries(headers.map((header, i) => [header, values[i]]));
+    });
   }
 
   function normaliseRow(row) {
@@ -7602,63 +7627,129 @@
     return "";
   }
 
-  function beginBitrixImport() {
-    const type = $("[data-form='integration'] select[name='importType']")?.value || window.prompt("Import which records? Enter contacts, companies or deals", "contacts");
-    if (!type || !["contacts", "companies", "deals"].includes(type.toLowerCase())) {
-      toast("Choose a valid type", "contacts, companies or deals", "danger");
-      return;
+  const bitrixImportCollections = Object.freeze({ contacts: "contacts", companies: "companies", deals: "deals" });
+  const importIdentity = value => String(value ?? "").trim().toLowerCase().replace(/\s+/g, " ");
+  function planBitrixImport(type, rows) {
+    if (!Object.hasOwn(bitrixImportCollections, type)) throw new Error("Choose contacts, companies or deals.");
+    if (!Array.isArray(rows) || !rows.length || rows.length > 1000) throw new Error("Import 1–1000 CSV rows at a time.");
+    if (!authUser || !state.workspace.canOperate || !canUseTool("crm")) throw new Error("Workspace CRM editing permission is required.");
+    const pipeline = state.pipelines.find(item => item.id === ui.pipelineId && Array.isArray(item.stages) && item.stages.length)
+      || state.pipelines.find(item => Array.isArray(item.stages) && item.stages.length);
+    if (type === "deals" && !pipeline) throw new Error("Create a CRM pipeline and first stage before importing deals. No records have been changed.");
+    const collection = bitrixImportCollections[type], existing = Array.isArray(state[collection]) ? state[collection] : [];
+    const seen = new Set(), additions = [], skipped = [];
+    const companyByName = new Map(state.companies.map(row => [importIdentity(row.name), row.id]));
+    const contactByName = new Map(state.contacts.map(row => [importIdentity(row.name), row.id]));
+    for (const [index, original] of rows.entries()) {
+      const row = normaliseRow(original), rowNumber = index + 2;
+      if (Object.values(row).every(value => !value)) { skipped.push({ row: rowNumber, reason: "Empty record" }); continue; }
+      let record, duplicate, key;
+      if (type === "contacts") {
+        const name = pick(row, "name", "full_name", "contact", "first_name").trim();
+        const email = pick(row, "email", "email_work", "work_email").trim();
+        const phone = pick(row, "phone", "phone_work", "mobile").trim();
+        if (!name || name.length > 150 || email.length > 250 || phone.length > 40 ||
+          (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email))) {
+          skipped.push({ row: rowNumber, reason: "Invalid contact name, email or phone" }); continue;
+        }
+        key = email ? "email:" + importIdentity(email) : phone ? "phone:" + importIdentity(name) + ":" + phone : "name:" + importIdentity(name);
+        duplicate = existing.some(item => email ? importIdentity(item.email) === importIdentity(email) :
+          phone ? importIdentity(item.name) === importIdentity(name) && String(item.phone || "").trim() === phone :
+          importIdentity(item.name) === importIdentity(name));
+        const companyName = pick(row, "company", "company_name");
+        record = { name, email, phone, companyId: companyByName.get(importIdentity(companyName)) || "",
+          role: pick(row, "position", "role", "job_title").slice(0, 120), source: "Bitrix24 CSV", tags: ["Imported"] };
+      } else if (type === "companies") {
+        const name = pick(row, "company", "company_name", "title", "name").trim();
+        if (!name || name.length > 150) { skipped.push({ row: rowNumber, reason: "Company name missing or too long" }); continue; }
+        key = importIdentity(name);
+        duplicate = existing.some(item => importIdentity(item.name) === key);
+        record = { name, type: pick(row, "company_type", "type").slice(0, 80) || "Company",
+          city: pick(row, "city", "address_city").slice(0, 120),
+          website: pick(row, "website", "web").slice(0, 250),
+          phone: pick(row, "phone", "phone_work").slice(0, 40),
+          email: pick(row, "email", "email_work").slice(0, 250),
+          ownerId: state.currentUserId, employees: 0, status: "Prospect" };
+        const count = pick(row, "employees", "employee_count");
+        if (count) {
+          if (!/^\d{1,7}$/.test(count)) { skipped.push({ row: rowNumber, reason: "Invalid employee count" }); continue; }
+          record.employees = Number(count);
+        }
+      } else {
+        const title = pick(row, "deal", "deal_name", "title", "name").trim();
+        const rawAmount = pick(row, "amount", "opportunity", "value").trim();
+        const rawProbability = pick(row, "probability").trim();
+        if (!title || title.length > 150 || (rawAmount && !/^\d{1,9}(?:\.\d{1,2})?$/.test(rawAmount)) ||
+          (rawProbability && !/^\d{1,3}$/.test(rawProbability)) ||
+          (rawProbability && Number(rawProbability) > 100)) {
+          skipped.push({ row: rowNumber, reason: "Invalid deal title, amount or probability. Use dot-decimal EUR, no separators." }); continue;
+        }
+        const companyName = pick(row, "company", "company_name"),contactText = pick(row, "contact", "contact_name");
+        const value = Number(rawAmount || 0);
+        key = importIdentity(title) + ":" + importIdentity(companyName) + ":" + value;
+        duplicate = existing.some(item => importIdentity(item.title) === importIdentity(title) &&
+          Number(item.value || 0) === value && (item.companyId || "") === (companyByName.get(importIdentity(companyName)) || ""));
+        record = { title, companyId: companyByName.get(importIdentity(companyName)) || "",
+          contactId: contactByName.get(importIdentity(contactText)) || "",
+          pipelineId: pipeline.id, stageId: pipeline.stages[0].id, value,
+          probability: rawProbability ? Number(rawProbability) : 20,
+          ownerId: state.currentUserId, dueDate: dateOffset(14), source: "Bitrix24 CSV", tags: ["Imported"],
+          notes: ("Imported stage: " + (pick(row, "stage", "stage_name") || "unknown")).slice(0, 500) };
+      }
+      if (duplicate || seen.has(key)) {
+        skipped.push({ row: rowNumber, reason: "Duplicate record or reference" }); continue;
+      }
+      seen.add(key); additions.push({ row: rowNumber, record });
     }
+    return { type, collection, sourceCount: rows.length, additions, skipped };
+  }
+
+  function beginBitrixImport() {
+    if (!authUser || !state.workspace.canOperate || !canUseTool("crm")) {
+      toast("Import unavailable", "CRM editing permission is required.", "danger"); return;
+    }
+    const type = window.prompt("Import which CSV records? contacts, companies or deals", "contacts");
+    if (!type || !Object.hasOwn(bitrixImportCollections, String(type).trim().toLowerCase())) {
+      toast("Choose a valid type", "Use contacts, companies or deals.", "warning"); return;
+    }
+    const normalizedType = String(type).trim().toLowerCase();
+    const actor = authUser.id, workspace = state.workspace.id;
     const input = document.createElement("input");
-    input.type = "file";
-    input.accept = ".csv,text/csv";
+    input.type = "file"; input.accept = ".csv,text/csv";
     input.addEventListener("change", async () => {
-      const file = input.files?.[0];
-      if (!file) return;
+      const file = input.files?.[0]; if (!file) return;
       try {
-        const rows = parseCSV(await file.text());
-        const count = importBitrixRows(type.toLowerCase(), rows);
-        ui.modal = null;
-        persist();
-        toast("Import complete", `${count} ${type.toLowerCase()} imported.`);
+        if (file.size < 1 || file.size > 1048576) throw new Error("Maximum CSV file size is 1 MB.");
+        const text = await file.text();
+        if (authUser?.id !== actor || state.workspace.id !== workspace) throw new Error("Workspace changed during file selection; start again.");
+        const rows = parseCSV(text), plan = planBitrixImport(normalizedType, rows);
+        ui.modal = { kind: "bitrix-preview", actor, workspace, type: normalizedType, rows, plan };
+        renderPortal();
       } catch (error) {
-        console.error(error);
-        toast("Import failed", error.message || "Could not read that CSV.", "danger");
+        toast("CSV import not started", error.message || "Could not prepare a safe import.", "danger");
       }
     }, { once: true });
     input.click();
   }
 
-  function importBitrixRows(type, rows) {
-    let count = 0;
-    for (const original of rows) {
-      const row = normaliseRow(original);
-      if (type === "contacts") {
-        const name = pick(row, "name", "full_name", "contact", "first_name") || "Imported contact";
-        const email = pick(row, "email", "email_work", "work_email");
-        if (email && state.contacts.some(contact => contact.email?.toLowerCase() === email.toLowerCase())) continue;
-        const companyText = pick(row, "company", "company_name");
-        const company = state.companies.find(item => item.name.toLowerCase() === companyText.toLowerCase());
-        state.contacts.unshift({ id: uid("ct"), name, email, phone: pick(row, "phone", "phone_work", "mobile"), companyId: company?.id || "", role: pick(row, "position", "role", "job_title"), source: "Bitrix24 CSV", tags: ["Imported"], createdAt: isoNow(), updatedAt: isoNow() });
-        count += 1;
-      } else if (type === "companies") {
-        const name = pick(row, "company", "company_name", "title", "name") || "Imported company";
-        if (state.companies.some(company => company.name.toLowerCase() === name.toLowerCase())) continue;
-        state.companies.unshift({ id: uid("co"), name, type: pick(row, "company_type", "type") || "Company", city: pick(row, "city", "address_city"), website: pick(row, "website", "web"), phone: pick(row, "phone", "phone_work"), email: pick(row, "email", "email_work"), ownerId: state.currentUserId, employees: Number(pick(row, "employees", "employee_count") || 0), status: "Prospect", createdAt: isoNow(), updatedAt: isoNow() });
-        count += 1;
-      } else if (type === "deals") {
-        const title = pick(row, "deal", "deal_name", "title", "name") || "Imported deal";
-        const companyText = pick(row, "company", "company_name");
-        const contactText = pick(row, "contact", "contact_name");
-        const company = state.companies.find(item => item.name.toLowerCase() === companyText.toLowerCase());
-        const contact = state.contacts.find(item => item.name.toLowerCase() === contactText.toLowerCase());
-        const pipeline = state.pipelines.find(item => item.id === ui.pipelineId) || state.pipelines[0];
-        state.deals.unshift({ id: uid("dl"), title, companyId: company?.id || "", contactId: contact?.id || "", pipelineId: pipeline.id, stageId: pipeline.stages[0].id, value: Number(String(pick(row, "amount", "opportunity", "value")).replace(/[^0-9.-]/g, "")) || 0, probability: Number(pick(row, "probability") || 20), ownerId: state.currentUserId, dueDate: dateOffset(14), source: "Bitrix24 CSV", tags: ["Imported"], notes: `Imported stage: ${pick(row, "stage", "stage_name") || "unknown"}`, createdAt: isoNow(), updatedAt: isoNow() });
-        count += 1;
-      }
-    }
-    addAudit("bitrix.csv_imported", { type, count });
-    addActivity("integration", "bitrix-import", "imported Bitrix24 CSV records", `${count} ${type}`, "integrations");
-    return count;
+  async function commitBitrixImport() {
+    const preview = ui.modal;
+    if (preview?.kind !== "bitrix-preview" || !authUser || preview.actor !== authUser.id ||
+        preview.workspace !== state.workspace.id || !state.workspace.canOperate || !canUseTool("crm"))
+      throw new Error("Import permission or workspace changed. Start again.");
+    const plan = planBitrixImport(preview.type, preview.rows);
+    if (JSON.stringify(plan) !== JSON.stringify(preview.plan))
+      throw new Error("Workspace records changed since the import preview. Close and recheck the CSV before committing.");
+    if (!plan.additions.length) throw new Error("No new valid records to import.");
+    const now = isoNow(), prefix = {contacts:"ct",companies:"co",deals:"dl"}[plan.collection];
+    const records = plan.additions.map(({record}) => ({...record,id:uid(prefix),createdAt:now,updatedAt:now}));
+    state[plan.collection] = [...records,...state[plan.collection]];
+    addAudit("bitrix.csv_import_staged", {type:preview.type,count:records.length,skipped:plan.skipped.length});
+    addActivity("integration", "bitrix-import", "staged Bitrix24 CSV records",
+      records.length + " " + preview.type, "integrations");
+    ui.modal = null;
+    persist();
+    toast("CRM records imported locally", records.length + " staged for workspace sync. Verify after reload before relying on the import.", "info");
   }
 
   async function supabaseRequest(path, options = {}) {
