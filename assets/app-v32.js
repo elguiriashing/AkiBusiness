@@ -5898,7 +5898,7 @@
         ui.calendarDate = new Date(new Date().getFullYear(), new Date().getMonth(), 1); render();
         break;
       case "calendar-day": {
-        if (event.target.closest(".calendar-event")) break;
+        if (event?.target?.closest?.(".calendar-event")) break;
         const selectedDate = target.dataset.date;
         if (calendarEventsForDate(selectedDate).length) {
           ui.modal = { kind: "calendar-day", date: selectedDate };
