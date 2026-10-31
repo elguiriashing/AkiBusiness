@@ -4269,7 +4269,7 @@
       return `<section class="panel settings-section"><h2>Security model</h2><p>The downloadable build deliberately avoids pretending browser storage is a secure place for provider credentials.</p>
         <div class="setting-row"><div class="setting-copy"><strong>Integration secrets</strong><span>Store OAuth client secrets, API secrets and webhook signing keys in Cloudflare Worker secrets.</span></div><span class="status-pill success">Protected design</span></div>
         <div class="setting-row"><div class="setting-copy"><strong>Cloud data access</strong><span>Workspace membership, module permissions and server-side checks restrict access to business data.</span></div><span class="status-pill success">RLS included</span></div>
-        <div class="setting-row"><div class="setting-copy"><strong>Local device access</strong><span>Anyone with access to this browser profile can read local AkiHQ data. Use OS account security.</span></div><span class="status-pill warning">Device-controlled</span></div>
+        <div class="setting-row"><div class="setting-copy"><strong>Local device access</strong><span>Anyone with access to this browser profile may view cached AkiBusiness records. Use separate OS profiles and device locks.</span></div><span class="status-pill warning">Device-controlled</span></div>
         <div class="setting-row"><div class="setting-copy"><strong>Audit log</strong><span>Browser activity is informational. Security-sensitive database changes have a separate protected audit trail.</span></div><button class="action-btn" data-action="export-audit">Export log</button></div>
       </section>
       <section class="panel settings-section"><h2>Privacy switches</h2><p>Local preferences for notification and motion behaviour.</p>
@@ -4278,12 +4278,26 @@
       </section>`;
     }
     if (ui.settingsTab === "about") {
-      return `<section class="panel settings-section"><h2>AkiHQ ${APP_VERSION}</h2><p>An original, open-source business workspace built for Alex—not a Bitrix24 source-code copy or branded skin.</p>
-        <div class="detail-grid"><div class="detail-block"><div class="detail-label">License</div><div class="detail-value">Apache License 2.0</div></div><div class="detail-block"><div class="detail-label">Runtime</div><div class="detail-value">Static PWA + optional Supabase + optional Cloudflare Worker</div></div><div class="detail-block full"><div class="detail-label">Modules in this build</div><div class="detail-value">Dashboard, CRM, inbox, projects, calendar, inventory, billing, marketing, sites/forms, automation, collaboration, people, knowledge, analytics, integrations and settings.</div></div></div>
-      </section>
-      <section class="panel settings-section"><h2>Honest status</h2><p>This package is a working database-backed alpha, not finished parity with every feature of a mature commercial suite.</p>
-        <div class="page-grid grid-3"><div class="detail-block"><div class="detail-label">Working now</div><div class="detail-value">Persistent CRUD, boards, drag-and-drop, search, activity, messages, exports, PWA shell and optional personal cloud sync.</div></div><div class="detail-block"><div class="detail-label">Adapter UI included</div><div class="detail-value">Major integration catalogue with configuration states and serverless architecture.</div></div><div class="detail-block"><div class="detail-label">Requires implementation</div><div class="detail-value">Production OAuth flows, provider webhooks, relational multi-tenant backend, files, payments and true realtime collaboration.</div></div></div>
-      </section>`;
+      const es = state.settings.locale === "es";
+      return '<section class="panel settings-section"><h2>AkiBusiness ' + escapeHtml(APP_VERSION) + '</h2>'+
+        '<p>'+escapeHtml(es ?
+          "Herramientas de operaciones para negocios. El acceso, los pagos y las obligaciones fiscales dependen del módulo y las integraciones activadas." :
+          "Business operations software with guarded modules. Access, real payments and fiscal obligations depend on the enabled integration and verified business scope.")+'</p>'+
+        '<div class="detail-grid"><div class="detail-block"><div class="detail-label">'+(es?"Licencia":"License")+'</div><div class="detail-value">Apache License 2.0</div></div>'+
+        '<div class="detail-block"><div class="detail-label">'+(es?"Tecnología":"Runtime")+'</div><div class="detail-value">PWA · Supabase · Cloudflare</div></div>'+
+        '<div class="detail-block full"><div class="detail-label">'+(es?"Áreas de trabajo":"Work areas")+'</div><div class="detail-value">'+
+        escapeHtml(es?"CRM, correo empresarial, proyectos, calendario, inventario, punto de venta, ventas, marketing, automatización, chat, personal, conocimiento, cuadrantes y análisis.":
+          "CRM, business inbox, projects, calendar, inventory, PoS, sales records, marketing, automation, chat, people, knowledge, rotas and analytics.")+
+        '</div></div></div></section>'+
+        '<section class="panel settings-section"><h2>'+(es?"Estado de funciones":"Feature readiness")+'</h2>'+
+        '<p>'+escapeHtml(es?"Los registros operativos no sustituyen documentos fiscales ni pagos bancarios confirmados.":"Operational records are not certified fiscal invoices or independently verified bank settlements.")+'</p>'+
+        '<div class="page-grid grid-3"><div class="detail-block"><div class="detail-label">'+(es?"Flujos operativos":"Daily workflows")+'</div><div class="detail-value">'+
+        escapeHtml(es?"Registros y colaboración por espacio de trabajo, tareas, calendario y herramientas de gestión de inventario.":"Workspace-scoped records, tasks, calendar, collaboration and inventory management.")+
+        '</div></div><div class="detail-block"><div class="detail-label">'+(es?"Servicios externos":"External services")+'</div><div class="detail-value">'+
+        escapeHtml(es?"Google/Microsoft requieren autorización de la empresa y configuración del operador. El envío de marketing no está disponible sin verificaciones.":"Google/Microsoft require business authorization and operator setup. Marketing sending stays gated until verified.")+
+        '</div></div><div class="detail-block"><div class="detail-label">'+(es?"Pendiente de validación":"Not yet accepted")+'</div><div class="detail-value">'+
+        escapeHtml(es?"Emisión fiscal y AEAT, cobros/devoluciones reales por terminal, conciliación bancaria, hardware y ámbitos fiscales especiales.":"Fiscal issuance/AEAT, live terminal payments and refunds, bank settlement, physical devices and special tax territories.")+
+        '</div></div></div></section>';
     }
     return `<section class="panel settings-section"><h2>Appearance</h2><p>Choose a look and information density. Changes are saved instantly.</p>
       <div class="setting-row"><div class="setting-copy"><strong>Theme</strong><span>Dark and light themes use the same original aurora-map visual system.</span></div><div class="theme-options">
@@ -5384,7 +5398,7 @@
         <div class="dropdown-item" data-action="navigate" data-route="employees"><div class="activity-icon">${icon("user")}</div><div class="dropdown-copy"><strong>My profile</strong><br>${escapeHtml(user.role)} · ${escapeHtml(user.department || "Staff")}</div></div>
         <div class="dropdown-item" data-action="set-theme" data-theme="${state.settings.theme === "dark" ? "light" : "dark"}"><div class="activity-icon">${icon("sparkles")}</div><div class="dropdown-copy"><strong>Switch to ${state.settings.theme === "dark" ? "light" : "dark"} theme</strong><br>Change appearance instantly</div></div>
         <div class="dropdown-item" data-action="navigate" data-route="settings"><div class="activity-icon">${icon("settings")}</div><div class="dropdown-copy"><strong>Settings</strong><br>Workspace, data and cloud sync</div></div>
-        <div class="dropdown-item" data-action="export-data"><div class="activity-icon">${icon("download")}</div><div class="dropdown-copy"><strong>Download backup</strong><br>Export the complete workspace</div></div>
+        <div class="dropdown-item" data-action="export-data"><div class="activity-icon">${icon("download")}</div><div class="dropdown-copy"><strong>Download workspace snapshot</strong><br>Cached records only · not a database backup</div></div>
         <div class="dropdown-item" data-action="crm-signout"><div class="activity-icon">${icon("lock")}</div><div class="dropdown-copy"><strong>Sign out</strong><br>Log out of AkiHQ CRM</div></div>
       </div>`;
     }
@@ -7600,7 +7614,7 @@
     if (!state.workspace.canAdminister) throw new Error("Workspace owner or administrator access required for a snapshot export.");
     clearDeniedCollections();
     downloadBlob(`akihq-${state.workspace.slug || "workspace"}-${new Date().toISOString().slice(0, 10)}.json`, JSON.stringify(state, null, 2), "application/json");
-    toast("Backup downloaded", "Keep it somewhere safer than your Downloads graveyard.");
+    toast("Workspace snapshot downloaded", "This is a browser workspace snapshot, not a verified database backup. Keep it secure and use module-specific fiscal/inventory exports as needed.", "info");
   }
 
   function csvCell(value) {
