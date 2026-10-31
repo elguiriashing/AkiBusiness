@@ -121,5 +121,50 @@ function compare(feed,statement){
     provider_verified:false,bank_settlement_verified:false,
     notice:'References matched only against the imported statement. Verify the provider report and actual bank deposits independently; fiscal corrections and AEAT issuance remain separate.'};
 }
-root.AkiPosSettlement=Object.freeze({parseProviderCSV,compare});
+function renderPanel(p){
+ if(!p?.open)return '';
+ const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+ const money=v=>new Intl.NumberFormat(undefined,{style:'currency',currency:'EUR'}).format(Number(v||0)/100);
+ const result=p.result,rows=Array.isArray(result?.differences)?result.differences:[],total=result?.totals;
+ const message=status=>({
+   matched_statement_only:'Statement reference and gross amount match (not bank verified)',
+   open_order_requires_review:'External payment on an unposted order',
+   fiscal_correction_requires_review:'Recorded refund needs fiscal correction review',
+   duplicate_provider_reference:'Duplicate in provider CSV',
+   duplicate_pos_reference:'Duplicate in PoS',
+   missing_in_provider_statement:'PoS payment not in statement',
+   not_found_in_pos:'Provider statement entry not found in PoS',
+   amount_mismatch:'Provider and PoS gross amounts differ',
+   invalid_pos_record:'Incomplete PoS reference or amount'
+ })[status]||'Needs review';
+ return '<div class="hp-ledger-backdrop"><button type="button" class="hp-ledger-dim" data-action="hp-settlement-close" aria-label="Close statement comparison"></button>'+
+ '<section class="hp-settlement-dialog" role="dialog" aria-modal="true" aria-label="External terminal statement comparison" tabindex="-1">'+
+ '<header><div><span class="hp-ledger-kicker">EXTERNAL TERMINAL / ACCOUNTANT REVIEW</span><h2>Reconcile a payment statement</h2><p>Compare recorded PoS references with your provider’s CSV, privately in this browser. No file upload or provider charge.</p></div><button class="action-btn" data-action="hp-settlement-close" type="button" aria-label="Close comparison">✕ Close</button></header>'+
+ '<div class="hp-settlement-scroll">'+
+ '<form class="hp-ledger-refund-form" data-form="hp-settlement-import">'+
+ '<label>From date (local)<input type="date" name="from" required value="'+esc(p.from||'')+'"></label>'+
+ '<label>Through date (local)<input type="date" name="through" required value="'+esc(p.through||'')+'"></label>'+
+ '<label>Provider CSV file<input name="statement" type="file" accept=".csv,text/csv,text/plain" required></label>'+
+ '<p class="hp-ledger-disclaimer">Required CSV columns: <code>reference,kind,amount,currency</code>; optional <code>fee</code>. Use <code>payment</code> or <code>refund</code>, positive EUR amounts with decimal points, and the exact terminal references. Choose the same date range as the provider report.</p>'+
+ '<button class="action-btn primary" type="submit" '+(p.loading?'disabled':'')+'>Compare statement locally</button></form>'+
+ (p.error?'<p class="hp-ledger-error" role="alert">'+esc(p.error)+'</p>':'')+
+ (p.loading?'<p role="status">Comparing protected PoS evidence to your statement…</p>':'')+
+ (result?'<div class="hp-settlement-summary" role="status">'+
+ '<div><span>Reference/amount matches</span><strong>'+esc(result.matched_statement_only)+'</strong></div>'+
+ '<div><span>Items requiring review</span><strong>'+esc(result.needs_review)+'</strong></div>'+
+ '<div><span>Provider CSV expected net, after listed fees</span><strong>'+money(total?.expected_net_from_provider_csv_cents)+'</strong></div>'+
+ '<div><span>Provider fees shown in CSV</span><strong>'+money(total?.provider_fees_cents)+'</strong></div></div>'+
+ '<p class="hp-ledger-disclaimer">'+esc(result.notice)+'</p>'+
+ '<div class="hp-settlement-results" role="list">'+rows.slice(0,200).map(row=>
+ '<div role="listitem" class="'+(row.status==='matched_statement_only'?'hp-settlement-matched':'hp-settlement-review')+'">'+
+ '<strong>'+esc(row.kind)+' · '+esc(row.reference)+'</strong><span>'+esc(message(row.status))+'</span>'+
+ '<small>PoS '+(row.recorded_cents==null?'not found':money(row.recorded_cents))+
+ ' · Statement '+(row.statement_cents==null?'not found':money(row.statement_cents))+'</small></div>').join('')+'</div>'+
+ (rows.length>200?'<p role="alert">Showing 200 of '+esc(rows.length)+' comparisons. Narrow the period to inspect all entries.</p>':'')+
+ (result.unverified_reversal_notes?'<p role="alert">'+esc(result.unverified_reversal_notes)+' manual reversal notes were recorded. These do not establish provider refunds.</p>':'')+
+ '<p class="hp-ledger-disclaimer"><strong>Not verified:</strong> bank deposit, actual provider capture/refund, legal invoice or AEAT acknowledgement. The comparison is an accountant review aid, not a settlement certificate.</p>':'')+
+ '</div></section></div>';
+}
+
+root.AkiPosSettlement=Object.freeze({parseProviderCSV,compare,renderPanel});
 })(typeof window==='undefined'?globalThis:window);
