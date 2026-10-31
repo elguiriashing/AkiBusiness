@@ -190,7 +190,7 @@ grant execute on function public.crm_pos_record_refund(text,uuid,jsonb) to authe
 
 create function public.crm_pos_refund_overview(p_workspace text,p_order uuid)
 returns jsonb language plpgsql security definer set search_path='' as $$
-declare o akihq_hospitality.orders%rowtype; records jsonb;
+declare o akihq_hospitality.orders%rowtype; records jsonb; total_records bigint;
 begin
  perform akihq_hospitality.guard(p_workspace);
  if not akihq_security.can_administer(p_workspace) then
@@ -199,6 +199,7 @@ begin
  if p_order is null then raise exception 'Closed bill ID required'; end if;
  select * into o from akihq_hospitality.orders where workspace_id=p_workspace and id=p_order;
  if not found or o.status<>'closed' then raise exception 'Closed bill not found'; end if;
+ select count(*) into total_records from akihq_hospitality.refund_records where workspace_id=p_workspace and order_id=p_order;
  select coalesce(jsonb_agg(to_jsonb(x) order by x.created_at,x.id),'[]'::jsonb)
   into records from (
    select id,order_id,original_payment_id,amount_cents,method,external_reference,
@@ -207,7 +208,7 @@ begin
    where workspace_id=p_workspace and order_id=p_order order by created_at,id limit 500
   ) x;
  return jsonb_build_object('order_id',o.id,'original_payments',o.payments,
-   'refunds',records,'fiscal_issuance_or_rectification_performed',false,
+   'refunds',records,'refund_count',total_records,'has_more',total_records>500,'fiscal_issuance_or_rectification_performed',false,
    'notice','Operator-attested monetary evidence only. Check provider settlement and issue the legally required fiscal rectification separately.');
 end $$;
 revoke all on function public.crm_pos_refund_overview(text,uuid) from public,anon,authenticated,service_role;
