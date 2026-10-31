@@ -2520,8 +2520,8 @@
           ${renderMetric(platform ? "Total venues" : "Locations", platform && liveStats ? String(liveStats.total_venues) : String(state.companies.length), platform && liveStats ? `${liveStats.verified_venues} verified` : "in this workspace", "building", "#7c8cff")}
           ${canUseTool("crm") ? renderMetric(platform ? "Platform users" : "Customers", platform && liveStats ? String(liveStats.total_users) : String(state.contacts.length), platform && liveStats ? `${liveStats.new_users_30d} joined this month` : "in this workspace", "crm", "#49d7a0") : ""}
           ${canUseTool("tasks") ? renderMetric(platform ? "Pending claims" : "Open tasks", platform && liveStats ? String(liveStats.pending_claims) : String(dueTasks), platform ? "venue claims awaiting review" : "due within three days", "warning", "#ffbd55", platform && liveStats?.pending_claims > 0 ? "Needs review" : platform ? "Clear" : "") : ""}
-          ${canUseTool("employees") ? renderMetric(platform ? "Staff members" : "Team members", platform && liveStats ? String(liveStats.staff_users) : String(state.employees.length), platform ? "moderators and administrators" : "with workspace access", "employees", "#e96fb7") : ""}
-          ${!platform && canUseTool("pos") ? renderMetric("Your tips this month", formatMoney(tipBalance(authUser?.id, true) / 100), `${formatMoney(tipBalance(authUser?.id) / 100)} available balance`, "money", "#49d7a0") : ""}
+          ${canUseTool("employees") ? renderMetric(platform ? "Staff members" : "Team members", platform && liveStats ? String(liveStats.staff_users) : String(state.employees.length), platform ? "moderators and administrators" : "directory records · access managed separately", "employees", "#e96fb7") : ""}
+          ${!platform && canUseTool("pos") ? renderMetric("Your tips this month", formatMoney(tipBalance(authUser?.id, true) / 100), `${formatMoney(tipBalance(authUser?.id) / 100)} recorded balance`, "money", "#49d7a0") : ""}
         </div>
         <div class="page-grid grid-main">
           ${canUseTool("crm") && pipeline ? `<section class="panel">
@@ -3698,7 +3698,6 @@
     const myId = authUser?.id || state.currentUserId;
     const myEmail = (authUser?.email || "").toLowerCase();
     const empEmail = (employee.email || "").toLowerCase();
-    const empName = (employee.name || "").toLowerCase();
 
     // 1. Current logged in user is always online
     if (myId && (employee.id === myId || (empEmail && myEmail && empEmail === myEmail))) {
@@ -3711,25 +3710,21 @@
       const diffSec = (Date.now() - new Date(employee.lastActiveAt).getTime()) / 1000;
       if (diffSec < 120) return true;
     }
-    const contact = state.contacts.find(c => c.id === employee.id || (c.name && c.name.toLowerCase() === empName));
-    if (contact && contact.updatedAt) {
-      const diffSec = (Date.now() - new Date(contact.updatedAt).getTime()) / 1000;
-      if (diffSec < 120) return true;
-    }
-
+    // Contact record edits are not staff presence. Only authenticated sessions
+    // and independently scoped staff heartbeats can establish activity.
     return false;
   }
 
   function renderEmployees() {
     const departments = [...new Set(state.employees.map(employee => employee.department))];
-    const staffCount = liveStats ? liveStats.staff_users : state.employees.length;
-    const totalUsers = liveStats ? liveStats.total_users : state.contacts.length;
+    const staffCount = isPlatformWorkspace() && liveStats ? liveStats.staff_users : state.employees.length;
+    const totalUsers = isPlatformWorkspace() && liveStats ? liveStats.total_users : state.contacts.length;
     const onlineCount = state.employees.filter(isUserOnline).length;
 
     return `<div class="page-grid">
       <div class="page-grid grid-4">
-        ${renderMetric("Team members", String(staffCount), `${departments.length} departments · staff & admins`, "employees", "#7c8cff")}
-        ${renderMetric("Online now", String(onlineCount), "active CRM sessions", "activity", "#49d7a0")}
+        ${renderMetric(isPlatformWorkspace() ? "Team members" : "People records", String(staffCount), `${departments.length} departments · access is managed separately`, "employees", "#7c8cff")}
+        ${renderMetric("Recently active", String(onlineCount), "last activity within 2 minutes", "activity", "#49d7a0")}
         ${isPlatformWorkspace() ? renderMetric("AkiPasa Users", String(totalUsers), "registered database profiles", "user", "#52d9e9") : renderMetric("Workspace contacts", String(state.contacts.length), "visible in this location", "user", "#52d9e9")}
         ${renderMetric("Open assignments", String(state.tasks.filter(task => task.status !== "done").length), "tasks assigned", "tasks", "#ffbd55")}
       </div>
