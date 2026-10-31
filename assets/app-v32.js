@@ -4953,6 +4953,34 @@
     </section>`;
   }
 
+  function renderBitrixPreviewModal() {
+    const preview = ui.modal, plan = preview?.plan;
+    if (!plan || preview.kind !== "bitrix-preview") return "";
+    const es = state.settings.locale === "es";
+    const label = es ? "Previsualización de importación CRM" : "CRM import preview";
+    const sample = plan.additions.slice(0, 8);
+    return '<div class="modal-backdrop" data-action="close-modal"></div><section class="modal wide" role="dialog" aria-modal="true" aria-labelledby="bitrix-preview-title">'+
+      '<header class="modal-head"><div class="entity-logo">'+icon("crm")+'</div><div><h2 id="bitrix-preview-title">'+label+'</h2><p>'+
+        escapeHtml(es ? "Revisa los registros antes de escribir en este espacio de trabajo." : "Review records before updating this workspace.")+
+        '</p></div><button class="icon-btn close-btn" data-action="close-modal" aria-label="'+escapeHtml(t("close"))+'">'+icon("close")+'</button></header>'+
+      '<div class="modal-body"><div class="page-grid grid-3">'+
+        renderMetric(es?"Filas leídas":"CSV rows",String(plan.sourceCount),"CSV", "crm","#7c8cff")+
+        renderMetric(es?"Nuevos":"New records",String(plan.additions.length),escapeHtml(plan.type),"check","#49d7a0")+
+        renderMetric(es?"Omitidos":"Skipped",String(plan.skipped.length),es?"Duplicados o inválidos":"Duplicate or invalid","warning","#ffbd55")+
+      '</div><p class="muted">'+escapeHtml(es ? "Sin cambios todavía. Solo se importan las columnas admitidas; se omiten duplicados y entradas inválidas." : "No records have changed yet. Only supported columns are used; duplicate and invalid rows are skipped.")+'</p>'+
+      '<div class="table-scroll"><table class="data-table"><thead><tr><th>'+escapeHtml(es?"Fila":"Row")+'</th><th>'+escapeHtml(es?"Registro":"Record")+'</th><th>'+escapeHtml(es?"Identificador":"Identifier")+'</th></tr></thead><tbody>'+
+        sample.map(entry=>'<tr><td>'+entry.row+'</td><td>'+escapeHtml(entry.record.name||entry.record.title)+'</td><td>'+escapeHtml(entry.record.email||entry.record.companyId||entry.record.city||"-")+'</td></tr>').join('')+
+      '</tbody></table></div>'+
+      (plan.additions.length>8?'<p class="muted">'+escapeHtml(es ? "Solo se muestran los primeros ocho registros." : "Showing the first eight records.")+'</p>':'')+
+      (plan.skipped.length?'<details><summary>'+escapeHtml(es?"Ver filas omitidas":"Review skipped rows")+'</summary><ul>'+
+        plan.skipped.slice(0, 15).map(item=>'<li>'+escapeHtml((es?"Fila ":"Row ")+item.row+": "+item.reason)+'</li>').join('')+
+        '</ul></details>':'')+
+      '<p class="muted">'+escapeHtml(es ? "Los cambios se guardan mediante la sincronización del espacio de trabajo. Comprueba los registros tras recargar; no es una importación fiscal." : "Records enter the workspace sync process. Verify them after a fresh reload. This is not a fiscal or official accounting import.")+'</p></div>'+
+      '<footer class="modal-foot"><button type="button" class="action-btn" data-action="close-modal">'+escapeHtml(t("cancel"))+'</button>'+
+        '<button type="button" class="action-btn primary" data-action="commit-bitrix-import" '+(!plan.additions.length?"disabled":"")+'>'+
+        escapeHtml((es?"Importar ":"Import ")+plan.additions.length+(es?" registros":" records"))+'</button></footer></section>';
+  }
+
   function renderModal() {
     if (ui.modal.kind === "inventory-operation") return `<div class="modal-backdrop" data-action="close-modal"></div><section class="modal" role="dialog" aria-modal="true" aria-label="Stock operation">${window.AkiHQInventoryOps.renderForm({type:ui.modal.type,products:state.products,locations:inventoryLocations,balances:ui.modal.balances || [],itemId:ui.modal.itemId,key:ui.modal.key})}</section>`;
     if (ui.modal.kind === "inventory-location") return `<div class="modal-backdrop" data-action="close-modal"></div><section class="modal" role="dialog" aria-modal="true" aria-label="New stock location"><form data-form="inventory-location"><div class="modal-body"><h2>Add stock location</h2><div class="form-field"><label>Name<input name="name" maxlength="120" required></label></div><div class="form-field"><label>Unique code<input name="code" pattern="[A-Za-z0-9_-]{1,32}" required></label></div></div><footer class="modal-foot"><button type="button" class="action-btn" data-action="close-modal">Cancel</button><button class="action-btn primary">Create location</button></footer></form></section>`;
@@ -4962,6 +4990,7 @@
     if (ui.modal.kind === "media-folder") return renderMediaFolderModal();
     if (ui.modal.kind === "media-asset") return renderMediaAssetModal();
     if (ui.modal.kind === "prospect-import") return renderProspectImportModal();
+    if (ui.modal.kind === "bitrix-preview") return renderBitrixPreviewModal();
     if (ui.modal.kind === "form") return renderEntityFormModal();
     if (ui.modal.kind === "calendar-day") return renderCalendarDayModal();
     if (ui.modal.kind === "integration") return renderIntegrationModal();
@@ -6288,6 +6317,10 @@
         break;
       case "bitrix-import":
         beginBitrixImport();
+        break;
+      case "commit-bitrix-import":
+        try { await commitBitrixImport(); }
+        catch (error) { toast("Import not committed", error.message || "Review the CSV and workspace permissions.", "danger"); }
         break;
       case "select-picker-user": {
         const { name, email, role, id: pickedId } = target.dataset;
