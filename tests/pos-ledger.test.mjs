@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {JSDOM} from '../cloudflare/node_modules/jsdom/lib/api.js';
-const names=['pos-v4.js','pos-v4-dialogs.js','pos-printer-station.js','pos-ledger.js','hospitality-pos.js'];
+const names=['pos-v4.js','pos-v4-dialogs.js','pos-printer-station.js','pos-ledger.js','pos-settlement.js','hospitality-pos.js'];
 const scripts=names.map(n=>readFileSync(new URL('../assets/'+n,import.meta.url),'utf8'));
 const wait=ms=>new Promise(resolve=>setTimeout(resolve,ms));
 async function harness(can_manage=true,cashFault=null,refundFault=null){
@@ -232,9 +232,9 @@ test('ledger display escapes product, operator and account details',()=>{
 test('cash reconciliation runtime assets have exact cache versions',()=>{
  const html=readFileSync(new URL('../login.html',import.meta.url),'utf8');
  const sw=readFileSync(new URL('../sw.js',import.meta.url),'utf8');
- for(const asset of ['pos-ledger.js?v=3','pos-ledger.css?v=3','hospitality-pos.js?v=20']){
+ for(const asset of ['pos-ledger.js?v=4','pos-ledger.css?v=4','hospitality-pos.js?v=21']){
   assert.match(html,new RegExp(asset.replace(/[.?]/g,'\\$&')));
   assert.match(sw,new RegExp(asset.replace(/[.?]/g,'\\$&')));
  }
- assert.match(sw,/const CACHE = "akihq-v149"/);
+ assert.match(sw,/const CACHE = "akihq-v150"/);
 });
