@@ -5,10 +5,10 @@ import {JSDOM} from '../cloudflare/node_modules/jsdom/lib/api.js';
 const names=['pos-v4.js','pos-v4-dialogs.js','pos-printer-station.js','pos-ledger.js','hospitality-pos.js'];
 const scripts=names.map(n=>readFileSync(new URL('../assets/'+n,import.meta.url),'utf8'));
 const wait=ms=>new Promise(resolve=>setTimeout(resolve,ms));
-async function harness(can_manage=true,cashFault=null){
+async function harness(can_manage=true,cashFault=null,refundFault=null){
  const dom=new JSDOM('<main></main>',{url:'https://hq.example/',runScripts:'outside-only'}),w=dom.window;let ctrl,seq=0;
- const events=[],calls=[],entry={id:'bill-1',sale_id:'sale-1',label:'Table 7',table_id:'table-7',closed_at:'2026-10-11T02:15:00Z',opened_at:'2026-10-10T22:30:00Z',closed_by:'staff-1',closed_by_name:'Closer Staff',total_cents:1250,trading_day_id:null,lines:[{id:'l1',name:'Coke',quantity:3,unit_price_cents:250},{id:'l2',name:'Fries',quantity:1,unit_price_cents:500}],payments:[{amount_cents:600,method:'cash'},{amount_cents:650,method:'card'}],history:[{action:'open',at:'2026-10-10T22:30:00Z',actor:'Waiter'},{action:'payment',at:'2026-10-11T02:15:00Z',actor:'Closer Staff'}]};
- let active=null,closed=[],filters={},lastLookup=null,cash={active_shift:null,recent:[],contract_version:1,can_manage};
+ const events=[],calls=[],entry={id:'bill-1',sale_id:'sale-1',label:'Table 7',table_id:'table-7',closed_at:'2026-10-11T02:15:00Z',opened_at:'2026-10-10T22:30:00Z',closed_by:'staff-1',closed_by_name:'Closer Staff',total_cents:1250,trading_day_id:null,lines:[{id:'l1',name:'Coke',quantity:3,unit_price_cents:250},{id:'l2',name:'Fries',quantity:1,unit_price_cents:500}],payments:[{id:'payment-cash-1',amount_cents:600,method:'cash'},{id:'payment-card-1',amount_cents:650,method:'card',reference:'terminal-capture-1'}],history:[{action:'open',at:'2026-10-10T22:30:00Z',actor:'Waiter'},{action:'payment',at:'2026-10-11T02:15:00Z',actor:'Closer Staff'}]};
+ let active=null,closed=[],filters={},lastLookup=null,refunds=[],refundReplies=new Map(),cash={active_shift:null,recent:[],contract_version:1,can_manage};
  const cloned=x=>JSON.parse(JSON.stringify(x));
  Object.defineProperty(w.crypto,'randomUUID',{configurable:true,value:()=> '00000000-0000-4000-a000-'+String(++seq).padStart(12,'0')});
  w.navigator.locks={request:async(_k,_opt,fn)=>fn({})};
@@ -30,6 +30,25 @@ async function harness(can_manage=true,cashFault=null){
     if(args.p_action==='start'){if(!active){active={id:'day-1',label:'Saturday service',started_at:'2026-10-10T22:00:00Z',ended_at:null,started_by:'manager',total_cents:1250,bill_count:1};cash.active_shift={trading_day_id:'day-1',opening_float_cents:0,cash_sales_cents:1250,movement_cents:0,expected_cash_cents:1250,movements:[]};}}
     if(args.p_action==='end'){assert.equal(args.p_day,active.id);closed=[{...active,ended_at:'2026-10-11T04:00:00Z'}];active=null;}
     return{data:{day:active||closed[0],open_bills:0}};
+  }
+  if(name==='crm_pos_refund_overview'){
+    if(!can_manage)return{error:{message:'Manager permission required'}};
+    return{data:{order_id:args.p_order,original_payments:cloned(entry.payments),refunds:cloned(refunds),
+      fiscal_issuance_or_rectification_performed:false,notice:'Operator-attested evidence only'}};
+  }
+  if(name==='crm_pos_record_refund'){
+    if(!can_manage)return{error:{message:'Manager permission required'}};
+    if(refundFault){const reply=await refundFault(args,refundReplies);if(reply)return reply;}
+    if(refundReplies.has(args.p_request_key))return{data:cloned(refundReplies.get(args.p_request_key))};
+    const r=args.p_refund;
+    const record={id:'refund-'+String(refunds.length+1),order_id:r.order_id,original_payment_id:r.original_payment_id,
+      amount_cents:r.amount_cents,method:r.method,external_reference:r.external_reference||null,
+      created_at:'2026-10-11T12:00:00Z',reason:r.reason,fiscal_correction_reference:null};
+    refunds.push(record);
+    if(r.method==='cash'&&cash.active_shift){cash.active_shift.cash_refunds_cents=(cash.active_shift.cash_refunds_cents||0)+r.amount_cents;cash.active_shift.expected_cash_cents-=r.amount_cents;}
+    const response={refund_id:record.id,order_id:r.order_id,amount_cents:r.amount_cents,method:r.method,status:'operator_attested',fiscal_review_required:true};
+    refundReplies.set(args.p_request_key,response);
+    return{data:cloned(response)};
   }
   if(name==='crm_pos_cash_command'){
     if(!can_manage)return{error:{message:'Manager permission required'}};
@@ -128,6 +147,81 @@ test('staff without manager permission can lookup but cannot start or end day',a
   assert.match(h.events.at(-1).join(' '),/Manager permission/);
  }finally{h.close()}
 });
+
+test('manager records a completed refund against the original payment without touching fiscal issuance',async()=>{
+  const h=await harness();
+  try{
+    await h.ctrl.action({dataset:{action:'hp-switch-view',id:'ledger'}});
+    await h.ctrl.action({dataset:{action:'hp-ledger-bill',id:'bill-1'}});
+    const form=h.w.document.querySelector('[data-form="hp-record-refund"]');
+    assert.ok(form);
+    form.elements.original_payment_id.value='payment-cash-1';
+    form.elements.amount.value='3.00';
+    form.elements.reason.value='Customer returned unopened product';
+    form.elements.cash_paid_out.checked=true;
+    await h.ctrl.submit(form);
+    let entries=h.calls.filter(x=>x.name==='crm_pos_record_refund');
+    assert.equal(entries.length,1);
+    assert.equal(entries[0].args.p_refund.amount_cents,300);
+    assert.equal(entries[0].args.p_refund.method,'cash');
+    assert.equal(entries[0].args.p_refund.cash_paid_out,true);
+    assert.equal(entries[0].args.p_refund.external_refund_completed,false);
+    assert.match(h.w.document.body.textContent,/Refunds & reconciliation/);
+    assert.match(h.w.document.body.textContent,/3.00/);
+    assert.match(h.w.document.body.textContent,/Fiscal review required/);
+    assert.match(h.w.document.body.textContent,/Remaining.*3.00/s);
+    const next=h.w.document.querySelector('[data-form="hp-record-refund"]');
+    next.elements.original_payment_id.value='payment-card-1';
+    next.elements.amount.value='2.50';
+    next.elements.reason.value='Customer returned packaged drink';
+    next.elements.external_reference.value='provider-refund-test-1';
+    next.elements.external_refund_completed.checked=true;
+    await h.ctrl.submit(next);
+    entries=h.calls.filter(x=>x.name==='crm_pos_record_refund');
+    assert.equal(entries.length,2);
+    assert.equal(entries[1].args.p_refund.method,'card');
+    assert.equal(entries[1].args.p_refund.external_refund_completed,true);
+    assert.equal(entries[1].args.p_refund.external_reference,'provider-refund-test-1');
+    assert.equal(h.calls.filter(x=>x.name==='crm_fiscal_reverse_document').length,0);
+  }finally{h.close()}
+});
+test('ambiguous refund response retains the original payload and key until explicitly retried',async()=>{
+  let first=true;
+  const h=await harness(true,null,async(args,replies)=>{
+    if(first){first=false;return{error:{message:'Connection lost after server commit'}};}
+  });
+  try{
+    await h.ctrl.action({dataset:{action:'hp-switch-view',id:'ledger'}});
+    await h.ctrl.action({dataset:{action:'hp-ledger-bill',id:'bill-1'}});
+    const form=h.w.document.querySelector('[data-form="hp-record-refund"]');
+    form.elements.original_payment_id.value='payment-card-1';
+    form.elements.amount.value='2.50';
+    form.elements.reason.value='Card provider refund already completed';
+    form.elements.external_refund_completed.checked=true;
+    form.elements.external_reference.value='provider-replay-one';
+    await h.ctrl.submit(form);
+    const key='akihq:hospitality:manager:workspace:refund';
+    const saved=JSON.parse(h.w.localStorage.getItem(key));
+    assert.equal(saved.body.amount_cents,250);
+    assert.match(h.w.document.body.textContent,/Refund record awaiting confirmation/);
+    await h.ctrl.action({dataset:{action:'hp-refund-retry'}});
+    assert.equal(h.w.localStorage.getItem(key),null);
+    const calls=h.calls.filter(x=>x.name==='crm_pos_record_refund');
+    assert.equal(calls.length,2);
+    assert.equal(calls[0].args.p_request_key,calls[1].args.p_request_key);
+    assert.deepEqual(calls[0].args.p_refund,calls[1].args.p_refund);
+  }finally{h.close()}
+});
+test('staff can inspect bills but not submit refund evidence',async()=>{
+  const h=await harness(false);
+  try{
+    await h.ctrl.action({dataset:{action:'hp-switch-view',id:'ledger'}});
+    await h.ctrl.action({dataset:{action:'hp-ledger-bill',id:'bill-1'}});
+    assert.equal(h.w.document.querySelector('[data-form="hp-record-refund"]'),null);
+    assert.equal(h.calls.filter(x=>x.name==='crm_pos_refund_overview').length,0);
+  }finally{h.close()}
+});
+
 test('ledger display escapes product, operator and account details',()=>{
  const w={};new Function('window','globalThis',scripts[3])(w,w);
  const html=w.AkiPosLedger.render({data:{rows:[{id:'evil',label:'<img src=x onerror=alert(1)>',closed_by_name:'<script>',closed_at:'2026-10-10T12:00:00Z',total_cents:100,lines:[{quantity:1,name:'<svg onload=bad()>',unit_price_cents:100}],payments:[]}],total_count:1,limit:30,offset:0,staff:[],trading_days:[],summary:{},timezone:'Europe/Madrid'},currency:'EUR',mode:'bills'});
