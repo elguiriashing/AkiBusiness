@@ -4999,6 +4999,7 @@
         renderMetric(es?"Nuevos":"New records",String(plan.additions.length),escapeHtml(plan.type),"check","#49d7a0")+
         renderMetric(es?"Omitidos":"Skipped",String(plan.skipped.length),es?"Duplicados o inválidos":"Duplicate or invalid","warning","#ffbd55")+
       '</div><p class="muted">'+escapeHtml(es ? "Sin cambios todavía. Solo se importan las columnas admitidas; se omiten duplicados y entradas inválidas." : "No records have changed yet. Only supported columns are used; duplicate and invalid rows are skipped.")+'</p>'+
+      (plan.type === "contacts" ? '<p class="muted">'+escapeHtml(es ? "Importar contactos no concede consentimiento para campañas ni autoriza envíos comerciales." : "Importing contacts does not grant marketing consent or authorize commercial email.")+'</p>' : "")+
       '<div class="table-scroll"><table class="data-table"><thead><tr><th>'+escapeHtml(es?"Fila":"Row")+'</th><th>'+escapeHtml(es?"Registro":"Record")+'</th><th>'+escapeHtml(es?"Identificador":"Identifier")+'</th></tr></thead><tbody>'+
         sample.map(entry=>'<tr><td>'+entry.row+'</td><td>'+escapeHtml(entry.record.name||entry.record.title)+'</td><td>'+escapeHtml(entry.record.email||entry.record.companyId||entry.record.city||"-")+'</td></tr>').join('')+
       '</tbody></table></div>'+
