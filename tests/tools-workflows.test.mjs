@@ -184,6 +184,8 @@ test('deal importer never starts without a pipeline, and rejects ambiguous amoun
     assert.equal(plan.additions.length,1);
     assert.equal(plan.skipped.length,2);
     assert.equal(plan.additions[0].record.value,125.50);
+    a.ui.modal={kind:'bitrix-preview',type:'contacts',rows:a.parseCSV('name,email\nGuest,guest@example.invalid'),plan:a.planBitrixImport('contacts',a.parseCSV('name,email\nGuest,guest@example.invalid')),workspace:'test-business',actor:'operator'};
+    assert.match(a.renderBitrixPreviewModal(),/does not grant marketing consent/);
     assert.equal(a.state.deals.length,0);
   }finally{dom.window.close()}
 });
