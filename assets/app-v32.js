@@ -2516,7 +2516,7 @@
     return `
       <div class="page-grid">
         <div class="page-grid grid-4">
-          ${renderMetric(platform ? "Total venues" : "Locations", platform && liveStats ? String(liveStats.total_venues) : String(state.companies.length), platform && liveStats ? `${liveStats.verified_venues} verified` : "in this workspace", "building", "#7c8cff")}
+          ${renderMetric(platform ? "Total venues" : "Locations", platform && liveStats ? String(liveStats.total_venues) : "1", platform && liveStats ? `${liveStats.verified_venues} verified` : "current authorized operating workspace", "building", "#7c8cff")}
           ${canUseTool("crm") ? renderMetric(platform ? "Platform users" : "Customers", platform && liveStats ? String(liveStats.total_users) : String(state.contacts.length), platform && liveStats ? `${liveStats.new_users_30d} joined this month` : "in this workspace", "crm", "#49d7a0") : ""}
           ${canUseTool("tasks") ? renderMetric(platform ? "Pending claims" : "Open tasks", platform && liveStats ? String(liveStats.pending_claims) : String(dueTasks), platform ? "venue claims awaiting review" : "due within three days", "warning", "#ffbd55", platform && liveStats?.pending_claims > 0 ? "Needs review" : platform ? "Clear" : "") : ""}
           ${canUseTool("employees") ? renderMetric(platform ? "Staff members" : "Team members", platform && liveStats ? String(liveStats.staff_users) : String(state.employees.length), platform ? "moderators and administrators" : "directory records · access managed separately", "employees", "#e96fb7") : ""}
@@ -3216,7 +3216,7 @@
     try { pendingStock=pendingInventoryOperation(); } catch(error) { pendingStockError=error.message; }
     const replenishable = state.products.filter(product => product.warehouse !== "Digital" && product.status === "Active");
     const lowStock = replenishable.filter(product => Number.isFinite(Number(product.stock)) && Number.isFinite(Number(product.reorderAt)) && Number(product.stock) <= Number(product.reorderAt));
-    const stockValue = state.products.reduce((sum, product) => sum + Number(product.stock || 0) * Number(product.cost || 0), 0);
+    const stockValue = replenishable.reduce((sum, product) => sum + Number(product.stock || 0) * Number(product.cost || 0), 0);
     const physical = state.products.filter(product => product.warehouse !== "Digital" && product.status !== "Archived");
     const suggestedQuantity = product => product.warehouse === "Digital" || product.status !== "Active" ? 0 : Math.max(
       Number.isFinite(Number(product.suggestedOrder)) ? Math.max(0, Number(product.suggestedOrder)) : 0,
@@ -3301,7 +3301,7 @@
   }
 
   function renderSales() {
-    const receivables = state.invoices.filter(invoice => invoice.type === "Invoice" && ["Sent", "Overdue"].includes(invoice.status) && Number.isFinite(Number(invoice.total)));
+    const receivables = state.invoices.filter(invoice => invoice.type === "Invoice" && ["Sent", "Overdue"].includes(invoice.status) && Number.isFinite(Number(invoice.total)) && Number(invoice.total) >= 0);
     const outstanding = receivables.reduce((sum, invoice) => sum + Number(invoice.total || 0), 0);
     const paid = recordedPaidAmount();
     const overdue = receivables.filter(invoice => isOverdue(invoice.dueDate)).length;
