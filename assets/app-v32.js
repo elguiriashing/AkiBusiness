@@ -3337,21 +3337,21 @@
       acc.sent += Number(campaign.sent || 0); acc.opened += Number(campaign.opened || 0); acc.clicked += Number(campaign.clicked || 0); acc.conversions += Number(campaign.conversions || 0); return acc;
     }, { sent: 0, opened: 0, clicked: 0, conversions: 0 });
     const openRate = totals.sent ? Math.round(totals.opened / totals.sent * 100) : 0;
-    const clickRate = totals.opened ? Math.round(totals.clicked / totals.opened * 100) : 0;
+    const clickRate = totals.sent ? Math.round(totals.clicked / totals.sent * 100) : 0;
     return `<div class="page-grid">${!isPlatformWorkspace() ? getBusinessMail().render() : ""}${preview ? `<section class="panel"><div class="panel-header"><div><h2>${escapeHtml(preview.subject || preview.name)}</h2><p>${state.settings.locale === "es" ? "Revisa el contenido y un destinatario con consentimiento antes de enviar desde tu buzón conectado." : "Review the content and one consented recipient before sending from your connected mailbox."}</p></div><button class="action-btn" data-action="edit-entity" data-entity="campaign" data-id="${escapeHtml(preview.id)}">${t("edit")}</button></div><div class="business-mail-body">${escapeHtml(preview.content || "")}</div><form class="panel-body workflow-toolbar" data-form="campaign-send" data-id="${escapeHtml(preview.id)}"><label>${state.settings.locale === "es" ? "Correo del destinatario" : "Recipient email"}<input name="email" type="email" required autocomplete="off"></label><p>${state.settings.locale === "es" ? "El servidor comprueba consentimiento, bajas y remitente verificado. Añade la identidad de empresa y el enlace de baja automáticamente." : "The server checks consent, suppression and verified sender. Business identity and an unsubscribe link are added automatically."}</p><button class="action-btn primary" type="submit">${state.settings.locale === "es" ? "Enviar correo revisado" : "Send reviewed email"}</button></form>${ui.campaignSendStatus ? `<p class="mail-feedback" role="status">${escapeHtml(ui.campaignSendStatus)}</p>` : ""}</section>` : ""}
       <div class="page-grid grid-4">
         ${renderMetric("Recorded sends", totals.sent.toLocaleString(), "manually recorded campaign figures", "send", "#7c8cff")}
         ${renderMetric("Open rate", `${openRate}%`, "of recorded messages sent", "mail", "#52d9e9")}
-        ${renderMetric("Click rate", `${clickRate}%`, "of opened messages", "link", "#ffbd55")}
+        ${renderMetric("Recorded CTR", `${clickRate}%`, "recorded clicks / recorded sends", "link", "#ffbd55")}
         ${renderMetric("Recorded conversions", totals.conversions.toLocaleString(), "manually recorded outcomes", "check", "#49d7a0")}
       </div>
       <div class="cards-grid">
         ${state.campaigns.filter(campaign => workflowMatches(campaign, ["name", "audience", "channel"])).map(campaign => {
           const open = campaign.sent ? Math.round(campaign.opened / campaign.sent * 100) : 0;
-          const click = campaign.opened ? Math.round(campaign.clicked / campaign.opened * 100) : 0;
+          const click = campaign.sent ? Math.round(campaign.clicked / campaign.sent * 100) : 0;
           return `<article class="entity-card" data-action="view-entity" data-entity="campaign" data-id="${campaign.id}" role="button" tabindex="0">
             <div class="entity-card-top"><div class="entity-logo">${campaign.channel[0]}</div><div class="entity-card-copy"><h3>${escapeHtml(campaign.name)}</h3><p>${escapeHtml(campaign.channel)} · ${escapeHtml(campaign.audience)}</p></div><span class="status-pill info">Plan: ${escapeHtml(campaign.status)}</span></div>
-            <div class="entity-card-stats"><div class="entity-stat"><span>Sent</span><strong>${Number(campaign.sent).toLocaleString()}</strong></div><div class="entity-stat"><span>Conversions</span><strong>${Number(campaign.conversions).toLocaleString()}</strong></div><div class="entity-stat"><span>Open rate</span><strong>${open}%</strong></div><div class="entity-stat"><span>Click rate</span><strong>${click}%</strong></div></div>
+            <div class="entity-card-stats"><div class="entity-stat"><span>Sent</span><strong>${Number(campaign.sent).toLocaleString()}</strong></div><div class="entity-stat"><span>Conversions</span><strong>${Number(campaign.conversions).toLocaleString()}</strong></div><div class="entity-stat"><span>Open rate</span><strong>${open}%</strong></div><div class="entity-stat"><span>Recorded CTR</span><strong>${click}%</strong></div></div>
             ${campaign.channel === "Email" ? `<button class="action-btn" data-action="campaign-preview" data-id="${escapeHtml(campaign.id)}">${state.settings.locale === "es" ? "Revisar correo" : "Review email"}</button>` : ""}
           </article>`;
         }).join("")}
