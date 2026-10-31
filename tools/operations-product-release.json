@@ -13,14 +13,6 @@
       "to": "      return `<section class=\"panel settings-section\"><h2>Workspace profile</h2><p>Defaults used across AkiBusiness records, dates and documents.</p>\n"
     },
     {
-      "from": "        <div class=\"setting-row\"><div class=\"setting-copy\"><strong>Local device access</strong><span>Anyone with access to this browser profile can read local AkiHQ data. Use OS account security.</span></div><span class=\"status-pill warning\">Device-controlled</span></div>\n",
-      "to": "        <div class=\"setting-row\"><div class=\"setting-copy\"><strong>Local device access</strong><span>Anyone with access to this browser profile can read local AkiBusiness data. Use OS account security.</span></div><span class=\"status-pill warning\">Device-controlled</span></div>\n"
-    },
-    {
-      "from": "      return `<section class=\"panel settings-section\"><h2>AkiHQ ${APP_VERSION}</h2><p>An original, open-source business workspace built for Alex\u2014not a Bitrix24 source-code copy or branded skin.</p>\n",
-      "to": "      return `<section class=\"panel settings-section\"><h2>AkiBusiness ${APP_VERSION}</h2><p>An original, open-source business workspace built for Alex\u2014not a Bitrix24 source-code copy or branded skin.</p>\n"
-    },
-    {
       "from": "        <div class=\"dropdown-item\" data-action=\"crm-signout\"><div class=\"activity-icon\">${icon(\"lock\")}</div><div class=\"dropdown-copy\"><strong>Sign out</strong><br>Log out of AkiHQ CRM</div></div>\n",
       "to": "        <div class=\"dropdown-item\" data-action=\"crm-signout\"><div class=\"activity-icon\">${icon(\"lock\")}</div><div class=\"dropdown-copy\"><strong>Sign out</strong><br>Log out of AkiBusiness</div></div>\n"
     },
@@ -115,8 +107,8 @@
   ],
   "config.js": [
     {
-      "from": "// AkiHQ public configuration \u2014 Supabase anon key is safe to commit (public by design, protected by RLS).\n",
-      "to": "// AkiBusiness public configuration (legacy AKIHQ_CONFIG contract retained) \u2014 Supabase anon key is safe to commit (public by design, protected by RLS).\n"
+      "from": "// AkiHQ public configuration — Supabase anon key is safe to commit (public by design, protected by RLS).\n",
+      "to": "// AkiBusiness public configuration (legacy AKIHQ_CONFIG contract retained) — Supabase anon key is safe to commit (public by design, protected by RLS).\n"
     },
     {
       "from": "  CRM_URL:           \"https://akihq.app\",\n",
@@ -125,8 +117,8 @@
   ],
   "login.html": [
     {
-      "from": "  <meta name=\"description\" content=\"AkiHQ \u2014 AkiPasa's secure workspace for business operations.\" />\n  <title>AkiHQ</title>\n",
-      "to": "  <meta name=\"description\" content=\"AkiBusiness \u2014 secure operations for your company and locations.\" />\n  <title>AkiBusiness</title>\n"
+      "from": "  <meta name=\"description\" content=\"AkiHQ — AkiPasa's secure workspace for business operations.\" />\n  <title>AkiHQ</title>\n",
+      "to": "  <meta name=\"description\" content=\"AkiBusiness — secure operations for your company and locations.\" />\n  <title>AkiBusiness</title>\n"
     },
     {
       "from": "  <noscript>AkiHQ needs JavaScript enabled.</noscript>\n",
