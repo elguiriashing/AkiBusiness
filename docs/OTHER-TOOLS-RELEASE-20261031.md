@@ -37,3 +37,11 @@ This non-PoS work belongs to `elguiriashing/AkiBusiness`, independent of AkiHQ b
 8. Separately complete legal requirements for RGPD/LOPDGDD, LSSI, business invoices, Spanish working-time records, accessibility where applicable and processor contracts; product code alone does not certify compliance.
 
 **Do not merge automatically while PR #66 and #67 are active or a review/CI gate is unresolved.**
+
+## 2026-10-31 — Independent CRM and reporting release integration (#68)
+
+Integrates the reviewed non-fiscal tools candidate onto released main `534ec453887daa197f454ef20ee19d4b853d6ed7`, preserving privacy #56, account v5, printer #66 source and their release behavior. CRM CSV processing is bounded, previews accepted/skipped records, rechecks the acting user/workspace/CRM access and stages accepted records locally for existing workspace sync; it does not claim database durability before reload/verification. Calendar day actions create a valid one-hour event. Sales/reporting copy distinguishes manually marked operational documents from provider settlement, and directory/campaign/site/snapshot labels match their actual capabilities.
+
+Source app asset advances to46 and cache148; the paid output advances to app57 and cache161 with all five release/review cache assertions. The paid-product transformation removes obsolete exact-string rules for source copy already corrected in this candidate. No fiscal/refund migration or activation from #67 is included. That separate draft retains its shared-schema, provider, terminal, settlement and fiscal acceptance gates.
+
+Fresh full hosted checks and the actual account/selector browser matrix are required for this integrated head. This is an explicitly coordinated independent source release under the user's request to finish the open PRs, not permission to certify providers, mutate production customer records or bypass unresolved CI. Production import/customer writes are not performed during acceptance. Rollback is a source revert with a new asset/cache version.

@@ -160,3 +160,30 @@ only loss on the scene cancels its gesture. Mouse movement with no primary
 button held clears a pending gesture after an uncaptured outside release.
 Acceptance now uses real Chromium touch input originating on a card descendant,
 and covers outside vertical release followed by ordinary mouse hover.
+
+## 2026-10-31 | Complete public privacy and shared deletion access
+
+Integrate PR56 with current main after printer recovery PR66, preserving newer
+workspace/account behavior. Add the bilingual anonymous /privacy notice,
+shared account export/request links and no-login instructions at AkiPasa's
+public account-deletion alias. Human verified-request handling is distinct
+from completed deletion. Retention schedules and the unverified backup target
+do not certify provider cleanup. Central AkiPasa PR342 repairs the previously
+missing alias and must be live before this release. No deletion/customer data,
+email, billing, provider, SQL or permission mutation. Printer agent installation
+and physical acceptance remain separately recorded in PR66/issue24.
+
+Account asset advances to v5, paid cache160; retain current source cache147,
+all existing release transforms and exact cache assertions including production
+deployment. Existing EN/ES account tests check fixed shared links and absence
+of deletion calls; packaging must include the public notice. Full fresh CI
+gates merge and exact live-source verification gates rollout. Source revert
+and a new cache/asset version provide rollback; no data rollback.
+
+## 2026-10-31 — Independent CRM and reporting release integration (#68)
+
+Integrates the reviewed non-fiscal tools candidate onto released main `534ec453887daa197f454ef20ee19d4b853d6ed7`, preserving privacy #56, account v5, printer #66 source and their release behavior. CRM CSV processing is bounded, previews accepted/skipped records, rechecks the acting user/workspace/CRM access and stages accepted records locally for existing workspace sync; it does not claim database durability before reload/verification. Calendar day actions create a valid one-hour event. Sales/reporting copy distinguishes manually marked operational documents from provider settlement, and directory/campaign/site/snapshot labels match their actual capabilities.
+
+Source app asset advances to46 and cache148; the paid output advances to app57 and cache161 with all five release/review cache assertions. The paid-product transformation removes obsolete exact-string rules for source copy already corrected in this candidate. No fiscal/refund migration or activation from #67 is included. That separate draft retains its shared-schema, provider, terminal, settlement and fiscal acceptance gates.
+
+Fresh full hosted checks and the actual account/selector browser matrix are required for this integrated head. This is an explicitly coordinated independent source release under the user's request to finish the open PRs, not permission to certify providers, mutate production customer records or bypass unresolved CI. Production import/customer writes are not performed during acceptance. Rollback is a source revert with a new asset/cache version.

@@ -3858,7 +3858,7 @@
     const engagement = opens + Number(summary.saves || 0) + Number(summary.going || 0) + Number(summary.directions || 0) + Number(summary.verified_check_ins || 0);
     const maxDaily = Math.max(1, ...daily.map(item => Number(item.interactions || 0) + Number(item.analytics_events || 0) + Number(item.recommendations || 0)));
     const fallbackRate = percent(summary.fallback_requests, summary.recommendation_requests);
-    const paidRevenue = state.invoices.filter(invoice => invoice.status === "Paid").reduce((sum, invoice) => sum + Number(invoice.total || 0), 0);
+    const paidRevenue = recordedPaidAmount();
     const activeTasks = state.tasks.filter(task => !["done", "completed"].includes(String(task.status || "").toLowerCase())).length;
     const funnel = [
       ["Impressions", summary.impressions, "#7c8cff"],
@@ -8716,3 +8716,4 @@
 
   boot();
 })();
+

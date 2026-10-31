@@ -5,16 +5,16 @@ import {createRequire} from 'node:module';
 const require=createRequire(new URL('../cloudflare/package.json',import.meta.url));
 const {JSDOM}=require('jsdom');
 const source=await readFile(new URL('../assets/app-v32.js',import.meta.url),'utf8');
-async function fixture() {
+async function fixture({platform = false} = {}) {
   const dom=new JSDOM('<div id="app"></div><div id="portal"></div><input id="import-file"><input id="media-file">',{url:'https://fixture.invalid/',runScripts:'outside-only',pretendToBeVisual:true});
   const w=dom.window; w.scrollTo=()=>{};w.fetch=()=>{throw Error('No external network');};
   for(const name of ['suite-navigation','support-desk','company-manager','checkout-session','tool-guides','business-mail'])w.eval(await readFile(new URL(`../assets/${name}.js`,import.meta.url),'utf8'));
   w.eval(source.replace(/  boot\(\);\s*\}\)\(\);\s*$/,`
-    authUser={id:'operator',email:'operator@example.invalid'};authRole='user';state=seedState();
-    state.workspace={...state.workspace,id:'test-business',canOperate:true,canAdminister:true,toolKeys:['crm','inbox','tasks','calendar','inventory','pos','sales','marketing','automation','collaboration','employees','knowledge']};
+    authUser={id:'operator',email:'operator@example.invalid'};authRole='${platform ? "administrator" : "user"}';state=seedState();
+    state.workspace={...state.workspace,id:'${platform ? "ws_akipasa" : "test-business"}',canOperate:true,canAdminister:true,toolKeys:['crm','inbox','tasks','calendar','inventory','pos','sales','marketing','automation','collaboration','employees','knowledge']};
     state.currentUserId='operator';state.employees=[{id:'operator',name:'Operator'}];
     render=()=>{};renderPortal=()=>{};persist=()=>{};toast=()=>{};syncCloudWorkspacePushNow=async()=>{};addActivity=()=>{};addAudit=()=>{};
-    window.audit={state,ui,related:relatedRecords,controls:renderContextControls,config:entityFormConfig,validate:validateEntityRecord,save:saveEntityFromForm,preview:automationTaskPreview,action:handleAction,open:openEntityForm,parseCSV,planBitrixImport,commitBitrixImport,renderBitrixPreviewModal,calendarNewEventDefaults,recordedPaidDocuments,recordedPaidAmount,isUserOnline,render:{integrations:renderIntegrations,crm:renderCRM,tasks:renderTasks,calendar:renderCalendar,inventory:renderInventory,sales:renderSales,sites:renderSites,marketing:renderMarketing,knowledge:renderKnowledge,employees:renderEmployees,automation:renderAutomation,settings:renderSettingsPanel},setClient:c=>getSupabaseClient=()=>c};
+    window.audit={state,ui,related:relatedRecords,controls:renderContextControls,config:entityFormConfig,validate:validateEntityRecord,save:saveEntityFromForm,preview:automationTaskPreview,action:handleAction,open:openEntityForm,parseCSV,planBitrixImport,commitBitrixImport,renderBitrixPreviewModal,calendarNewEventDefaults,recordedPaidDocuments,recordedPaidAmount,isUserOnline,render:{integrations:renderIntegrations,crm:renderCRM,tasks:renderTasks,calendar:renderCalendar,inventory:renderInventory,sales:renderSales,sites:renderSites,marketing:renderMarketing,knowledge:renderKnowledge,employees:renderEmployees,automation:renderAutomation,settings:renderSettingsPanel,analytics:renderAnalytics},setClient:c=>getSupabaseClient=()=>c};
   })();`));
   return {dom,w,a:w.audit};
 }
@@ -242,6 +242,30 @@ test('paid legacy documents are not collected revenue and paid quotes cannot inf
   }finally{dom.window.close()}
 });
 
+test('platform analytics paid amount and document count exclude quotes, unpaid and invalid totals',async()=>{
+  const {dom,a}=await fixture({platform:true});try{
+    a.state.settings.locale='en';
+    a.state.invoices=[
+      {id:'paid',type:'Invoice',status:'Paid',total:100},
+      {id:'numeric-string',type:'Invoice',status:'Paid',total:'5.50'},
+      {id:'quote',type:'Quote',status:'Paid',total:9999},
+      {id:'draft',type:'Invoice',status:'Draft',total:4000},
+      {id:'negative',type:'Invoice',status:'Paid',total:-100},
+      {id:'invalid',type:'Invoice',status:'Paid',total:'not-a-number'},
+      {id:'infinite',type:'Invoice',status:'Paid',total:Infinity}
+    ];
+    const view=new JSDOM(a.render.analytics());try{
+      const metric=[...view.window.document.querySelectorAll('.analytics-business-grid > div')]
+        .find(card=>card.querySelector('span')?.textContent==='Marked paid (legacy)');
+      assert.ok(metric,'platform analytics must render the legacy paid metric');
+      const amount=metric.querySelector('strong').textContent;
+      assert.equal(Number(amount.replace(/[^0-9.-]/g,'')),105.50);
+      assert.doesNotMatch(amount,/NaN|Infinity/);
+      assert.match(metric.querySelector('small').textContent,/^2 editable documents/);
+    }finally{view.window.close();}
+  }finally{dom.window.close();}
+});
+
 test('marketing and sites are explicitly planning records rather than public promises',async()=>{
   const {dom,a}=await fixture();try{
     a.state.pages=[{id:'page',name:'Campaign',slug:'summer',status:'Published',visitors:120,conversions:12}];
@@ -336,3 +360,4 @@ test('marketing click-through rate uses recorded sends, not the inflated click-t
   }finally{view.window.close();}
  }finally{dom.window.close();}
 });
+

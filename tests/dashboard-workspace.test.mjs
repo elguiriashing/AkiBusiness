@@ -75,3 +75,4 @@ test('business dashboard counts the authorized operating workspace, never CRM cu
   assert.match(html, /<strong>Locations<\/strong><span data-metric-value>1<\/span>/);
   assert.doesNotMatch(html, /<strong>Locations<\/strong><span data-metric-value>2<\/span>/);
 });
+

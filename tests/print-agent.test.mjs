@@ -18,7 +18,7 @@ test('receipt encoding strips control commands and preserves revision and copy i
 test('agent sends exactly once only after durable attempt and server begin; unknown outcome retains hold',async()=>{
  const dir=await mkdtemp(join(tmpdir(),'akihq-printer-'));const journal=join(dir,'pending.json');let sends=0;
  try{
-  await assert.rejects(processTicket(job,{config,journal,rpc:async(_n,a)=>{if(a.p_action==='spooled')throw Error('Connection lost after printing')},send:async()=>{assert.equal(JSON.parse(await readFile(journal,'utf8')).ticket_id,job.id);sends++;}}),/Connection lost/);
+  await assert.rejects(processTicket(job,{config,journal,rpc:async(_n,a)=>{if(a.p_action==='spooled')throw Error('Connection lost after printing');return {status:'uncertain'};},send:async()=>{assert.equal(JSON.parse(await readFile(journal,'utf8')).ticket_id,job.id);sends++;}}),/Connection lost/);
   assert.equal(sends,1);
   await assert.rejects(processTicket(job,{config,journal,rpc:async()=>{},send:async()=>{sends++;}}),/EEXIST/);assert.equal(sends,1);
  }finally{await rm(dir,{recursive:true,force:true});}

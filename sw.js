@@ -1,4 +1,4 @@
-const CACHE = "akihq-v147";
+const CACHE = "akihq-v148";
 const ASSETS = [
   "./assets/rotas-core.js?v=1",
   "./assets/rotas.js?v=2",
@@ -36,7 +36,8 @@ const ASSETS = [
   "./assets/landing.js?v=4",
   "./membership.html",
   "./account.html",
-  "./assets/account.js?v=4",
+  "./privacy.html",
+  "./assets/account.js?v=5",
   "./assets/aki-selector.css?v=4",
   "./assets/fonts/aki-selector-poppins-semibold.woff2",
   "./assets/workspace-selector.css?v=4",
@@ -47,7 +48,7 @@ const ASSETS = [
   "./assets/styles.css?v=60",
   "./assets/account-eligibility.js?v=3",
   "./assets/toolbox-notifications.js?v=1",
-  "./assets/app-v32.js?v=45",
+  "./assets/app-v32.js?v=46",
   "./assets/commerce-export.js?v=3",
   "./assets/checkout-session.js?v=2",
   "./assets/fiscal-core.js?v=2",
@@ -114,3 +115,4 @@ self.addEventListener("fetch", event => {
     }).catch(() => Response.error()))
   );
 });
+
