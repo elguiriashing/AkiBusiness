@@ -21,7 +21,7 @@ function dashboard(tools, pipelines) {
     isPlatformWorkspace: () => false, canUseRoute: () => true,
     routeForActivity: () => 'dashboard', liveStats: null, authUser: { id: 'fixture' },
     tipBalance: () => 0, formatMoney: value => `EUR ${value}`, escapeHtml: value => String(value ?? ''),
-    icon: () => '', renderMetric: label => `<strong>${label}</strong>`
+    icon: () => '', renderMetric: (label, value) => `<strong>${label}</strong><span data-metric-value>${value}</span>`
   });
   vm.runInContext(functionSource('canUseTool', 'clearDeniedCollections').replace(/  const collectionTools = .*;\r?\n/, '')
     + functionSource('clearDeniedCollections', 'requireExport')
@@ -66,4 +66,12 @@ test('valid CRM dashboard retains pipeline stages and values without modifying r
   assert.match(html, /EUR 125/);
   assert.match(html, /New/);
   assert.equal(JSON.stringify(fixture.state), before);
+});
+
+test('business dashboard counts the authorized operating workspace, never CRM customers as locations', () => {
+  const fixture = dashboard(['pos'], []);
+  fixture.state.companies.push({id:'customer-1'},{id:'customer-2'});
+  const html = fixture.render();
+  assert.match(html, /<strong>Locations<\/strong><span data-metric-value>1<\/span>/);
+  assert.doesNotMatch(html, /<strong>Locations<\/strong><span data-metric-value>2<\/span>/);
 });
