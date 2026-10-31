@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {JSDOM} from '../cloudflare/node_modules/jsdom/lib/api.js';
-const names=['pos-v4.js','pos-v4-dialogs.js','pos-printer-station.js','pos-ledger.js','pos-settlement.js','hospitality-pos.js'];
+const names=['pos-v4.js','pos-v4-dialogs.js','pos-printer-station.js','pos-ledger.js','pos-settlement.js','commerce-export.js','hospitality-pos.js'];
 const scripts=names.map(n=>readFileSync(new URL('../assets/'+n,import.meta.url),'utf8'));
 const wait=ms=>new Promise(resolve=>setTimeout(resolve,ms));
 async function harness(can_manage=true,cashFault=null,refundFault=null){
@@ -30,6 +30,13 @@ async function harness(can_manage=true,cashFault=null,refundFault=null){
     if(args.p_action==='start'){if(!active){active={id:'day-1',label:'Saturday service',started_at:'2026-10-10T22:00:00Z',ended_at:null,started_by:'manager',total_cents:1250,bill_count:1};cash.active_shift={trading_day_id:'day-1',opening_float_cents:0,cash_sales_cents:1250,movement_cents:0,expected_cash_cents:1250,movements:[]};}}
     if(args.p_action==='end'){assert.equal(args.p_day,active.id);closed=[{...active,ended_at:'2026-10-11T04:00:00Z'}];active=null;}
     return{data:{day:active||closed[0],open_bills:0}};
+  }
+  if(name==='crm_pos_settlement_feed'){
+    if(!can_manage)return{error:{message:'Manager access required'}};
+    return{data:{workspace_id:'workspace',currency:'EUR',
+      payments:[{id:'payment-card-1',kind:'payment',method:'card',reference:'terminal-capture-1',amount_cents:650,status:'closed'}],
+      refunds:refunds.filter(x=>x.method!=='cash').map(x=>({...x,kind:'refund',reference:x.external_reference,status:'operator_attested'})),
+      provider_payment_verified:false,provider_refund_verified:false,bank_settlement_verified:false}};
   }
   if(name==='crm_pos_refund_overview'){
     if(!can_manage)return{error:{message:'Manager permission required'}};
@@ -212,6 +219,31 @@ test('ambiguous refund response retains the original payload and key until expli
     assert.deepEqual(calls[0].args.p_refund,calls[1].args.p_refund);
   }finally{h.close()}
 });
+
+test('manager compares a local provider CSV and reviews discrepancies without uploading it',async()=>{
+  const h=await harness();
+  try{
+    await h.ctrl.action({dataset:{action:'hp-switch-view',id:'ledger'}});
+    await h.ctrl.action({dataset:{action:'hp-settlement-open'}});
+    const dialog=h.w.document.querySelector('.hp-settlement-dialog');
+    assert.ok(dialog);
+    const form=h.w.document.querySelector('[data-form="hp-settlement-import"]');
+    assert.ok(form);
+    const statement='reference,kind,amount,currency,fee\nterminal-capture-1,payment,6.50,EUR,0.20\nunknown-outside,payment,10.00,EUR,0.00';
+    Object.defineProperty(form.querySelector('[name="statement"]'),'files',
+      {configurable:true,value:[{size:statement.length,text:async()=>statement}]});
+    await h.ctrl.submit(form);
+    const markup=h.w.document.body.textContent;
+    assert.match(markup,/Reference\/amount matches/);
+    assert.match(markup,/Items requiring review/);
+    assert.match(markup,/Provider statement entry not found in PoS/);
+    assert.match(markup,/bank deposit/i);
+    assert.ok(h.calls.some(x=>x.name==='crm_pos_settlement_feed'));
+    await h.ctrl.action({dataset:{action:'hp-settlement-close'}});
+    assert.equal(h.w.document.querySelector('.hp-settlement-dialog'),null);
+  }finally{h.close()}
+});
+
 test('staff can inspect bills but not submit refund evidence',async()=>{
   const h=await harness(false);
   try{
