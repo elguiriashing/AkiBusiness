@@ -3118,6 +3118,18 @@
     return state.events.filter(item => sameCalendarDate(item.start, value) && workflowMatches(item, ["title", "location", "notes"])).sort((a, b) => new Date(a.start) - new Date(b.start));
   }
 
+  // Calendar clicks use the actual selected date. Starting and ending at midnight
+  // made a brand-new event fail the form's own "end after start" validation.
+  function calendarNewEventDefaults(value) {
+    const day = new Date(value);
+    if (!Number.isFinite(day.getTime())) throw new Error("Choose a valid calendar date.");
+    day.setHours(9, 0, 0, 0);
+    const end = new Date(day);
+    end.setHours(10, 0, 0, 0);
+    if (end <= day) throw new Error("Unable to set a one-hour event in this timezone.");
+    return { start: day.toISOString(), end: end.toISOString() };
+  }
+
   function renderCalendar() {
     const year = ui.calendarDate.getFullYear();
     const month = ui.calendarDate.getMonth();
@@ -5873,13 +5885,13 @@
           ui.modal = { kind: "calendar-day", date: selectedDate };
           renderPortal();
         } else {
-          openEntityForm("event", null, { start: selectedDate, end: selectedDate });
+          openEntityForm("event", null, calendarNewEventDefaults(selectedDate));
         }
         break;
       }
       case "calendar-add-event":
         ui.modal = null;
-        openEntityForm("event", null, { start: target.dataset.date, end: target.dataset.date });
+        openEntityForm("event", null, calendarNewEventDefaults(target.dataset.date));
         break;
       case "select-conversation": {
         const threadId = target.dataset.id;
