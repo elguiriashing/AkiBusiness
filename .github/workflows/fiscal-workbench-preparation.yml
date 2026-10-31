@@ -1,0 +1,39 @@
+name: Fiscal isolated workbench preparation
+on:
+  push:
+    branches: ['feature/fiscal-refunds-reconciliation-20261031']
+    paths: ['.github/workflows/fiscal-workbench-preparation.yml']
+permissions:
+  contents: read
+jobs:
+  prepare:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install locked isolated test dependencies
+        working-directory: cloudflare
+        run: npm ci --ignore-scripts
+      - name: Capture reproducible source and test libraries
+        run: |
+          mkdir -p "$RUNNER_TEMP/fiscal-workbench"
+          git archive --format=tar HEAD > "$RUNNER_TEMP/fiscal-workbench/source.tar"
+          tar -czf "$RUNNER_TEMP/fiscal-workbench/test-libraries.tar.gz" -C cloudflare node_modules/@electric-sql/pglite node_modules/saxes node_modules/xmlchars
+          git rev-parse HEAD > "$RUNNER_TEMP/fiscal-workbench/source-commit.txt"
+      - name: Generate forward migration filename without a remote connection
+        run: |
+          npx --yes supabase@2.122.0 --version
+          npx --yes supabase@2.122.0 migration new --help
+          npx --yes supabase@2.122.0 migration new fiscal_dispatch_refunds
+          cp supabase/migrations/*_fiscal_dispatch_refunds.sql "$RUNNER_TEMP/fiscal-workbench/"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: fiscal-isolated-workbench
+          path: ${{ runner.temp }}/fiscal-workbench/
+          retention-days: 3
+          if-no-files-found: error
