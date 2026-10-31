@@ -1,4 +1,4 @@
-const CACHE = "akihq-v147";
+const CACHE = "akihq-v148";
 const ASSETS = [
   "./assets/rotas-core.js?v=1",
   "./assets/rotas.js?v=2",
@@ -50,6 +50,7 @@ const ASSETS = [
   "./assets/app-v32.js?v=45",
   "./assets/commerce-export.js?v=3",
   "./assets/checkout-session.js?v=2",
+  "./assets/fiscal-compliance.js?v=1",
   "./assets/fiscal-core.js?v=2",
   "./assets/inventory-ops.js?v=2",
   "./assets/suite-controls.js?v=2",
