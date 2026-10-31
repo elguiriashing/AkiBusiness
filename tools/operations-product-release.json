@@ -102,7 +102,7 @@
   "sw.js": [
     {
       "from": "const CACHE = \"akihq-v147\";\n",
-      "to": "const CACHE = \"akihq-v159\";\n"
+      "to": "const CACHE = \"akihq-v160\";\n"
     },
     {
       "from": "  \"./assets/app-v32.js?v=45\",\n",

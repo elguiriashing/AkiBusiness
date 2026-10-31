@@ -160,3 +160,22 @@ only loss on the scene cancels its gesture. Mouse movement with no primary
 button held clears a pending gesture after an uncaptured outside release.
 Acceptance now uses real Chromium touch input originating on a card descendant,
 and covers outside vertical release followed by ordinary mouse hover.
+
+## 2026-10-31 | Complete public privacy and shared deletion access
+
+Integrate PR56 with current main after printer recovery PR66, preserving newer
+workspace/account behavior. Add the bilingual anonymous /privacy notice,
+shared account export/request links and no-login instructions at AkiPasa's
+public account-deletion alias. Human verified-request handling is distinct
+from completed deletion. Retention schedules and the unverified backup target
+do not certify provider cleanup. Central AkiPasa PR342 repairs the previously
+missing alias and must be live before this release. No deletion/customer data,
+email, billing, provider, SQL or permission mutation. Printer agent installation
+and physical acceptance remain separately recorded in PR66/issue24.
+
+Account asset advances to v5, paid cache160; retain current source cache147,
+all existing release transforms and exact cache assertions including production
+deployment. Existing EN/ES account tests check fixed shared links and absence
+of deletion calls; packaging must include the public notice. Full fresh CI
+gates merge and exact live-source verification gates rollout. Source revert
+and a new cache/asset version provide rollback; no data rollback.
