@@ -13,7 +13,7 @@
   return `<!doctype html><html><head><meta charset="utf-8"><title>${esc(ticket.kind)} ${esc(ticket.id)}</title><style>@page{size:${width===58?58:80}mm auto;margin:3mm}body{font:13px monospace;color:#000;width:${width===58?50:72}mm}h1{font-size:18px}li{margin:8px 0}ul{padding-left:16px}.notice{border:2px solid;padding:5px}small{overflow-wrap:anywhere}</style></head><body><h1>${esc(workspace.name)}</h1><h2>${esc(ticket.station)} · ${esc(ticket.kind)}</h2>${p.copy_of?'<h2>COPY / DUPLICADO</h2>':''}<p class="notice">${esc(p.notice||'OPERATIONAL TICKET — NO ES FACTURA')}</p><p>${esc(p.instruction||'')}</p><strong>${esc(o.label)}</strong><p>${esc(o.note)}</p>${Array.isArray(p.released)?`<h3>NEWLY FIRED / RECIÉN MARCHADO · ${esc(p.course)}</h3>${list(p.released)}<p>PREVIOUS / CURRENT BELOW ARE REFERENCE ONLY</p>`:''}${ticket.kind==='preparation'?`<h3>Previous</h3>${list(p.previous)}<h3>Current required</h3>${list(p.current)}`:list(o.lines)}${p.destination?.id?`<h3>Destination ${esc(p.destination.table_id||'Walk-in')}</h3>${list(p.destination.lines)}`:''}${p.reason?`<p>${esc(p.reason)}</p>`:''}${p.total_cents!==undefined?`<p>Total ${esc(money(p.total_cents,currency))}<br>Recorded payments ${esc(money(p.paid_cents,currency))}<br>Balance ${esc(money(p.total_cents-p.paid_cents,currency))}</p>${(o.payments||[]).map(x=>`<p>${esc(x.method)} ${esc(money(x.amount_cents,currency))} ${esc(x.reference)}${x.change_cents?` · Change ${esc(money(x.change_cents,currency))}`:''}</p>`).join('')}`:''}<small>Order ${esc(o.id||ticket.order_id)}<br>Ticket ${esc(ticket.id)}<br>${esc(ticket.created_at)}${o.sale_id?`<br>Sale ${esc(o.sale_id)}`:''}</small><p>Keep with the final invoice where required.</p></body></html>`;
  }
  function create(ctx){
-  let view='terminal',category='All',designerCategory='All',panel='',panelLine='',paymentAmount=null,immersive=false,data=null,error='',selected='',page='',busy=false,cashSubmitting=false,disposed=false,started=false,timer=null,last='',printTicket=null,printAttempted=false,layoutDraft=null,layoutVersion=null,pairedDevice=null,printerDevices=[],printerFilter='kitchen',printerStation='all',printerSelected='',printerSettings=false,tapJobs=[],tapTimer=null,tapDrain=null,tapInFlight=0,ledger=null,ledgerLoading=false,ledgerError='',ledgerFilters={},ledgerMode='bills',ledgerSelected='',closingConfirm=false,refundOverview=null,refundError='',refundBusy=false,productQuery='',favouritesOnly=false,serviceFilters={},serviceSelected='',snapshotAt=0,lastServiceMinute=-1,courseReview=null,entryCourses={};
+  let view='terminal',category='All',designerCategory='All',panel='',panelLine='',paymentAmount=null,immersive=false,data=null,error='',selected='',page='',busy=false,cashSubmitting=false,disposed=false,started=false,timer=null,last='',printTicket=null,printAttempted=false,layoutDraft=null,layoutVersion=null,pairedDevice=null,printerDevices=[],printerFilter='kitchen',printerStation='all',printerSelected='',printerSettings=false,tapJobs=[],tapTimer=null,tapDrain=null,tapInFlight=0,ledger=null,ledgerLoading=false,ledgerError='',ledgerFilters={},ledgerMode='bills',ledgerSelected='',closingConfirm=false,refundOverview=null,refundError='',refundBusy=false,settlementOpen=false,settlementLoading=false,settlementResult=null,settlementError='',settlementFrom='',settlementThrough='',productQuery='',favouritesOnly=false,serviceFilters={},serviceSelected='',snapshotAt=0,lastServiceMinute=-1,courseReview=null,entryCourses={};
   const key=`akihq:hospitality:${ctx.actor}:${ctx.workspace.id}`;
   const cashKey=key+':cash';
   const refundKey=key+':refund';
@@ -43,6 +43,18 @@
   const markDirty=e=>{const f=e.target.closest?.('.hp-form, .hp-v4-form, .hp-v4-inline-form, .hp-v4-product-row, .hp-ps-copy form, .hp-ps-pair, .hp-ps-copy form, .hp-ps-pair');if(f)f.dataset.dirty='true';};
   root.document.addEventListener('input',markDirty);
   const escapePanel=e=>{
+   if(settlementOpen){
+    if(e.key==='Escape'){e.preventDefault();settlementOpen=false;settlementResult=null;refresh();return;}
+    if(e.key==='Tab'){
+     const dlg=root.document.querySelector('.hp-settlement-dialog'),
+       controls=dlg?[...dlg.querySelectorAll('button:not([disabled]),input:not([disabled])')]:[],
+       first=controls[0],last=controls.at(-1);
+     if(first&&(e.shiftKey&&root.document.activeElement===first||!e.shiftKey&&root.document.activeElement===last)){
+       e.preventDefault();(e.shiftKey?last:first).focus();return;
+     }
+    }
+   }
+
    if(panel==='courses'&&e.key==='Tab'){const d=root.document.querySelector('.hp-course-dialog');const items=d?[...d.querySelectorAll('button:not([disabled]),input:not([disabled])')]:[];const first=items[0],last=items.at(-1);if(first&&(e.shiftKey&&(root.document.activeElement===first||root.document.activeElement===d)||!e.shiftKey&&root.document.activeElement===last)){e.preventDefault();(e.shiftKey?last:first).focus();}}
    if(serviceSelected){
     if(e.key==='Escape'){e.preventDefault?.();closeServicePanel();return;}
@@ -126,7 +138,8 @@
     return root.AkiPosLedger.render({data:ledger,currency:ctx.workspace.currency,
       canManage:!!data?.can_manage,filters:ledgerFilters,loading:ledgerLoading,
       error:ledgerError,mode:ledgerMode,selected:ledgerSelected,confirmEnd:closingConfirm,
-      refundOverview,refundError,refundBusy,refundPending:!!refundPending()});
+      refundOverview,refundError,refundBusy,refundPending:!!refundPending(),
+      settlement:{open:settlementOpen,loading:settlementLoading,error:settlementError,result:settlementResult,from:settlementFrom,through:settlementThrough}});
   }
   async function changeTradingDay(action){
     if(!data?.can_manage)throw Error('Manager permission required to manage trading days.');
@@ -386,6 +399,18 @@
    if(a==='immersive'){immersive=!immersive;refresh();return;}
    if(a==='switch-view'){view=['designer','ledger','service','kitchen'].includes(target.dataset.id)?target.dataset.id:'terminal';panel='';serviceSelected='';if(!['terminal','service','kitchen'].includes(view))selected='';if(view==='ledger'){refresh();await loadLedger();}else refresh();return;}
 
+   if(a==='settlement-open'){
+    if(!data?.can_manage)throw Error('Manager access required for external statement reconciliation.');
+    const localDate=date=>{
+      const parts=Object.fromEntries(new Intl.DateTimeFormat('en-GB',{timeZone:ctx.workspace.timezone||'Europe/Madrid',year:'numeric',month:'2-digit',day:'2-digit'}).formatToParts(date).map(x=>[x.type,x.value]));
+      return parts.year+'-'+parts.month+'-'+parts.day;
+    };
+    settlementThrough=localDate(new Date());
+    settlementFrom=localDate(new Date(Date.now()-6*86400000));
+    settlementResult=null;settlementError='';settlementOpen=true;refresh();
+    root.document.querySelector('.hp-settlement-dialog')?.focus?.({preventScroll:true});return;
+   }
+   if(a==='settlement-close'){settlementOpen=false;settlementResult=null;settlementError='';refresh();return;}
    if(a==='ledger-refresh'){await loadLedger();return;}
    if(a==='ledger-mode'){ledgerMode=target.dataset.mode==='days'?'days':'bills';ledgerSelected='';refresh();return;}
    if(a==='ledger-reset'){ledgerFilters={};ledgerSelected='';await loadLedger();return;}
@@ -436,6 +461,29 @@
     if(min!==null&&max!==null&&min>max)throw Error('Minimum amount exceeds maximum.');
     ledgerFilters={...v,min_cents:min,max_cents:max,offset:0};
     ledgerSelected='';await loadLedger();return;
+   }
+   if(a==='settlement-import'){
+    if(!settlementOpen||!data?.can_manage)throw Error('Manager access required for provider statement comparison.');
+    if(settlementLoading)throw Error('A comparison is already in progress.');
+    if(!root.AkiPosSettlement?.parseProviderCSV||!root.AkiCommerceExport?.period)
+      throw Error('Statement comparison module unavailable; refresh the software.');
+    settlementLoading=true;settlementResult=null;settlementError='';
+    settlementFrom=String(v.from||'').trim();settlementThrough=String(v.through||'').trim();
+    try{
+      const file=f.querySelector('[name="statement"]')?.files?.[0];
+      if(!file||file.size===0||file.size>1048576||typeof file.text!=='function')
+        throw Error('Choose a CSV statement under 1 MB. Use a modern browser.');
+      const entries=root.AkiPosSettlement.parseProviderCSV(await file.text());
+      const period=root.AkiCommerceExport.period(settlementFrom,settlementThrough,ctx.workspace.timezone||'Europe/Madrid');
+      const feed=await rpc('crm_pos_settlement_feed',{p_from:period.from,p_until:period.until});
+      if(!active())return;
+      settlementResult=root.AkiPosSettlement.compare(feed,entries);
+    }catch(e){
+      if(!active())return;
+      settlementError=e.message||'Statement reconciliation failed. No records were changed.';
+      ctx.toast('Reconciliation needs review',settlementError,'warning');
+    }finally{settlementLoading=false;if(active())refresh();}
+    return;
    }
    if(a==='record-refund'){
     if(!data?.can_manage)throw Error('Manager permission is required to record refunds.');
