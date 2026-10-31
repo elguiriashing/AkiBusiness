@@ -2480,6 +2480,16 @@
       </article>`;
   }
 
+  // These legacy editable records are not issued fiscal invoices or provider receipts.
+  // A manually selected Paid status must never be labelled collected bank revenue.
+  function recordedPaidDocuments() {
+    return (state.invoices || []).filter(doc => doc && doc.type === "Invoice" &&
+      doc.status === "Paid" && Number.isFinite(Number(doc.total)) && Number(doc.total) >= 0);
+  }
+  function recordedPaidAmount() {
+    return recordedPaidDocuments().reduce((sum, doc) => sum + Number(doc.total || 0), 0);
+  }
+
   function renderDashboard() {
     const platform = isPlatformWorkspace();
     const workspaceActivities = state.activities.filter(activity =>
@@ -2488,7 +2498,6 @@
     );
     const openDeals = state.deals.filter(deal => !["won", "lost", "paying"].includes(deal.stageId));
     const pipelineValue = openDeals.reduce((sum, deal) => sum + Number(deal.value || 0), 0);
-    const paidRevenue = state.invoices.filter(invoice => invoice.status === "Paid").reduce((sum, invoice) => sum + Number(invoice.total || 0), 0);
     const dueTasks = state.tasks.filter(task => task.status !== "done" && new Date(task.dueDate).getTime() <= Date.now() + 86400000 * 3).length;
     const completedTasks = state.tasks.filter(task => task.status === "done").length;
     const completion = state.tasks.length ? Math.round(completedTasks / state.tasks.length * 100) : 0;
@@ -2507,11 +2516,11 @@
     return `
       <div class="page-grid">
         <div class="page-grid grid-4">
-          ${renderMetric(platform ? "Total venues" : "Locations", platform && liveStats ? String(liveStats.total_venues) : String(state.companies.length), platform && liveStats ? `${liveStats.verified_venues} verified` : "in this workspace", "building", "#7c8cff")}
+          ${renderMetric(platform ? "Total venues" : "Locations", platform && liveStats ? String(liveStats.total_venues) : "1", platform && liveStats ? `${liveStats.verified_venues} verified` : "current authorized operating workspace", "building", "#7c8cff")}
           ${canUseTool("crm") ? renderMetric(platform ? "Platform users" : "Customers", platform && liveStats ? String(liveStats.total_users) : String(state.contacts.length), platform && liveStats ? `${liveStats.new_users_30d} joined this month` : "in this workspace", "crm", "#49d7a0") : ""}
           ${canUseTool("tasks") ? renderMetric(platform ? "Pending claims" : "Open tasks", platform && liveStats ? String(liveStats.pending_claims) : String(dueTasks), platform ? "venue claims awaiting review" : "due within three days", "warning", "#ffbd55", platform && liveStats?.pending_claims > 0 ? "Needs review" : platform ? "Clear" : "") : ""}
-          ${canUseTool("employees") ? renderMetric(platform ? "Staff members" : "Team members", platform && liveStats ? String(liveStats.staff_users) : String(state.employees.length), platform ? "moderators and administrators" : "with workspace access", "employees", "#e96fb7") : ""}
-          ${!platform && canUseTool("pos") ? renderMetric("Your tips this month", formatMoney(tipBalance(authUser?.id, true) / 100), `${formatMoney(tipBalance(authUser?.id) / 100)} available balance`, "money", "#49d7a0") : ""}
+          ${canUseTool("employees") ? renderMetric(platform ? "Staff members" : "Team members", platform && liveStats ? String(liveStats.staff_users) : String(state.employees.length), platform ? "moderators and administrators" : "directory records · access managed separately", "employees", "#e96fb7") : ""}
+          ${!platform && canUseTool("pos") ? renderMetric("Your tips this month", formatMoney(tipBalance(authUser?.id, true) / 100), `${formatMoney(tipBalance(authUser?.id) / 100)} recorded balance`, "money", "#49d7a0") : ""}
         </div>
         <div class="page-grid grid-main">
           ${canUseTool("crm") && pipeline ? `<section class="panel">
@@ -3118,6 +3127,18 @@
     return state.events.filter(item => sameCalendarDate(item.start, value) && workflowMatches(item, ["title", "location", "notes"])).sort((a, b) => new Date(a.start) - new Date(b.start));
   }
 
+  // Calendar clicks use the actual selected date. Starting and ending at midnight
+  // made a brand-new event fail the form's own "end after start" validation.
+  function calendarNewEventDefaults(value) {
+    const day = new Date(value);
+    if (!Number.isFinite(day.getTime())) throw new Error("Choose a valid calendar date.");
+    day.setHours(9, 0, 0, 0);
+    const end = new Date(day);
+    end.setHours(10, 0, 0, 0);
+    if (end <= day) throw new Error("Unable to set a one-hour event in this timezone.");
+    return { start: day.toISOString(), end: end.toISOString() };
+  }
+
   function renderCalendar() {
     const year = ui.calendarDate.getFullYear();
     const month = ui.calendarDate.getMonth();
@@ -3193,16 +3214,17 @@
     if (!window.AkiHQInventoryOps?.renderPanel) return `<section class="panel"><div class="panel-header"><h2>Inventory</h2></div><p role="status">Inventory could not finish loading. Reload this page to retry. No stock changes have been made.</p><button class="action-btn" data-action="reload-inventory-page">Reload inventory</button></section>`;
     let pendingStock=null,pendingStockError="";
     try { pendingStock=pendingInventoryOperation(); } catch(error) { pendingStockError=error.message; }
-    const lowStock = state.products.filter(product => Number(product.stock) <= Number(product.reorderAt) && product.warehouse !== "Digital");
-    const stockValue = state.products.reduce((sum, product) => sum + Number(product.stock || 0) * Number(product.cost || 0), 0);
-    const physical = state.products.filter(product => product.warehouse !== "Digital");
-    const suggestedQuantity = product => Math.max(
-      Number(product.suggestedOrder || 0),
+    const replenishable = state.products.filter(product => product.warehouse !== "Digital" && product.status === "Active");
+    const lowStock = replenishable.filter(product => Number.isFinite(Number(product.stock)) && Number.isFinite(Number(product.reorderAt)) && Number(product.stock) <= Number(product.reorderAt));
+    const stockValue = replenishable.reduce((sum, product) => sum + Number(product.stock || 0) * Number(product.cost || 0), 0);
+    const physical = state.products.filter(product => product.warehouse !== "Digital" && product.status !== "Archived");
+    const suggestedQuantity = product => product.warehouse === "Digital" || product.status !== "Active" ? 0 : Math.max(
+      Number.isFinite(Number(product.suggestedOrder)) ? Math.max(0, Number(product.suggestedOrder)) : 0,
       Number(product.stock) <= Number(product.reorderAt)
         ? Math.max(1, Math.ceil(Number(product.reorderAt || 0) + Number(product.safetyStock || 0) - Number(product.stock || 0)))
         : 0
     );
-    const reorderSuggestions = state.products.filter(product => product.warehouse !== "Digital" && suggestedQuantity(product) > 0);
+    const reorderSuggestions = replenishable.filter(product => suggestedQuantity(product) > 0);
     const query = ui.inventorySearch.trim().toLowerCase();
     const visibleProducts = state.products.filter(product => {
       const matchesQuery = !query || `${product.name} ${product.sku} ${product.category}`.toLowerCase().includes(query);
@@ -3212,14 +3234,14 @@
     const movementName = movement => state.products.find(product => product.inventoryItemId === movement.item_id)?.name || "Inventory item";
     return `<div class="page-grid">
       <div class="page-grid grid-3">
-        ${renderMetric("Tracked items", String(state.products.length), `${physical.length} active stock lines`, "inventory", "#7c8cff")}
+        ${renderMetric("Catalogue items", String(state.products.length), `${replenishable.length} active physical SKUs`, "inventory", "#7c8cff")}
         ${renderMetric("Catalogue cost estimate", formatMoney(stockValue, true), "not historical accounting valuation", "money", "#49d7a0")}
         ${renderMetric("Needs attention", String(reorderSuggestions.length || lowStock.length), lowStock.length ? `${lowStock.length} at or below reorder point` : "stock looks healthy", "warning", "#ffbd55")}
       </div>
       ${pendingStock || pendingStockError ? `<section class="panel" role="alert" style="padding:16px"><h3>Stock operation awaiting confirmation</h3><p>${escapeHtml(pendingStockError || "Retry the saved operation before starting another one. The original reference prevents a duplicate receipt or movement.")}</p>${pendingStock ? `<p>${escapeHtml(pendingStock.operation.type)} · ${escapeHtml(pendingStock.operation.reason)}</p><button class="action-btn primary" data-action="inventory-retry">Retry pending operation</button> <button class="action-btn" data-action="inventory-reconcile">Check result / cancel if unrecorded</button>` : ""}</section>` : ""}
       ${window.AkiHQInventoryOps.renderPanel({locations:inventoryLocations})}
       <section class="panel inventory-command-panel">
-        <div class="panel-header"><div><h2>Smart replenishment</h2><p>Forecasts combine the stock ledger, 28-day usage, lead time, safety stock and upcoming demand.</p></div><span class="status-pill ${inventoryError ? "danger" : "success"}">${inventoryError ? "Unavailable" : "Live forecast"}</span></div>
+        <div class="panel-header"><div><h2>Smart replenishment suggestions</h2><p>Active physical products only. Quantities are planning estimates based on current stock and available usage signals; verify stock and supplier terms before ordering.</p></div><span class="status-pill ${inventoryError ? "danger" : "info"}">${inventoryError ? "Unavailable" : "Planning estimate"}</span></div>
         ${inventoryError ? `<div class="panel-empty compact"><div><strong>Forecast temporarily unavailable</strong><span>${escapeHtml(inventoryError)}</span></div></div>` : reorderSuggestions.length ? `<div class="inventory-recommendation-grid">${reorderSuggestions.slice(0, 8).map(product => `<article class="inventory-recommendation"><span class="status-pill warning">Reorder</span><strong>${escapeHtml(product.name)}</strong><span>Order ${suggestedQuantity(product).toLocaleString()} ${escapeHtml(product.unit || "units")}</span><small>${product.daysRemaining == null ? `At or below the ${Number(product.reorderAt).toLocaleString()} ${escapeHtml(product.unit || "unit")} reorder point` : `${Number(product.daysRemaining).toLocaleString()} days of stock remaining`} · ${Number(product.expectedDaily || 0).toLocaleString()} / day</small><button class="action-btn" data-action="adjust-stock" data-id="${product.id}">Receive stock</button></article>`).join("")}</div>` : `<div class="panel-empty compact"><div><strong>Stock looks healthy</strong><span>No purchase is suggested from current usage and upcoming demand.</span></div></div>`}
       </section>
       <section class="panel table-panel">
@@ -3279,18 +3301,18 @@
   }
 
   function renderSales() {
-    const receivables = state.invoices.filter(invoice => invoice.type === "Invoice" && ["Sent", "Overdue"].includes(invoice.status));
+    const receivables = state.invoices.filter(invoice => invoice.type === "Invoice" && ["Sent", "Overdue"].includes(invoice.status) && Number.isFinite(Number(invoice.total)) && Number(invoice.total) >= 0);
     const outstanding = receivables.reduce((sum, invoice) => sum + Number(invoice.total || 0), 0);
-    const paid = state.invoices.filter(invoice => invoice.type === "Invoice" && invoice.status === "Paid").reduce((sum, invoice) => sum + Number(invoice.total || 0), 0);
+    const paid = recordedPaidAmount();
     const overdue = receivables.filter(invoice => isOverdue(invoice.dueDate)).length;
     return `<div class="page-grid">
       <div class="page-grid grid-3">
-        ${renderMetric("Paid", formatMoney(paid, true), "collected across invoices", "check", "#49d7a0")}
-        ${renderMetric("Outstanding", formatMoney(outstanding, true), "sent and overdue", "sales", "#7c8cff")}
+        ${renderMetric("Marked paid", formatMoney(paid, true), "editable legacy records · not bank verified", "check", "#49d7a0")}
+        ${renderMetric("Marked outstanding", formatMoney(outstanding, true), "legacy sent and overdue documents", "sales", "#7c8cff")}
         ${renderMetric("Overdue", String(overdue), overdue ? "follow-up required" : "nothing overdue", "warning", "#ff6f85")}
       </div>
       <section class="panel table-panel">
-        <div class="panel-header"><div><h2>Legacy documents and quotes</h2><p>Operational documents. Fiscal issuance is currently disabled.</p><button class="action-btn" data-action="open-business-controls">Fiscal setup and records</button></div></div>
+        <div class="panel-header"><div><h2>Legacy documents and quotes</h2><p>Editable operational records only. Paid status is manual, not proof of collection; fiscal issuance is disabled.</p><button class="action-btn" data-action="open-business-controls">Fiscal setup and records</button></div></div>
         <div class="table-scroll"><table class="data-table">
           <thead><tr><th>Document</th><th>Customer</th><th>Type</th><th>Issue date</th><th>Due</th><th>Total</th><th>Status</th><th></th></tr></thead>
           <tbody>${state.invoices.filter(invoice => workflowMatches(invoice, ["number", "notes", "status"]) && (ui.salesFilter !== "due" || receivables.includes(invoice)) && (ui.salesFilter !== "overdue" || (receivables.includes(invoice) && isOverdue(invoice.dueDate)))).map(invoice => `<tr class="clickable" data-action="view-entity" data-entity="invoice" data-id="${invoice.id}">
@@ -3315,21 +3337,21 @@
       acc.sent += Number(campaign.sent || 0); acc.opened += Number(campaign.opened || 0); acc.clicked += Number(campaign.clicked || 0); acc.conversions += Number(campaign.conversions || 0); return acc;
     }, { sent: 0, opened: 0, clicked: 0, conversions: 0 });
     const openRate = totals.sent ? Math.round(totals.opened / totals.sent * 100) : 0;
-    const clickRate = totals.opened ? Math.round(totals.clicked / totals.opened * 100) : 0;
+    const clickRate = totals.sent ? Math.round(totals.clicked / totals.sent * 100) : 0;
     return `<div class="page-grid">${!isPlatformWorkspace() ? getBusinessMail().render() : ""}${preview ? `<section class="panel"><div class="panel-header"><div><h2>${escapeHtml(preview.subject || preview.name)}</h2><p>${state.settings.locale === "es" ? "Revisa el contenido y un destinatario con consentimiento antes de enviar desde tu buzón conectado." : "Review the content and one consented recipient before sending from your connected mailbox."}</p></div><button class="action-btn" data-action="edit-entity" data-entity="campaign" data-id="${escapeHtml(preview.id)}">${t("edit")}</button></div><div class="business-mail-body">${escapeHtml(preview.content || "")}</div><form class="panel-body workflow-toolbar" data-form="campaign-send" data-id="${escapeHtml(preview.id)}"><label>${state.settings.locale === "es" ? "Correo del destinatario" : "Recipient email"}<input name="email" type="email" required autocomplete="off"></label><p>${state.settings.locale === "es" ? "El servidor comprueba consentimiento, bajas y remitente verificado. Añade la identidad de empresa y el enlace de baja automáticamente." : "The server checks consent, suppression and verified sender. Business identity and an unsubscribe link are added automatically."}</p><button class="action-btn primary" type="submit">${state.settings.locale === "es" ? "Enviar correo revisado" : "Send reviewed email"}</button></form>${ui.campaignSendStatus ? `<p class="mail-feedback" role="status">${escapeHtml(ui.campaignSendStatus)}</p>` : ""}</section>` : ""}
       <div class="page-grid grid-4">
         ${renderMetric("Recorded sends", totals.sent.toLocaleString(), "manually recorded campaign figures", "send", "#7c8cff")}
         ${renderMetric("Open rate", `${openRate}%`, "of recorded messages sent", "mail", "#52d9e9")}
-        ${renderMetric("Click rate", `${clickRate}%`, "of opened messages", "link", "#ffbd55")}
+        ${renderMetric("Recorded CTR", `${clickRate}%`, "recorded clicks / recorded sends", "link", "#ffbd55")}
         ${renderMetric("Recorded conversions", totals.conversions.toLocaleString(), "manually recorded outcomes", "check", "#49d7a0")}
       </div>
       <div class="cards-grid">
         ${state.campaigns.filter(campaign => workflowMatches(campaign, ["name", "audience", "channel"])).map(campaign => {
           const open = campaign.sent ? Math.round(campaign.opened / campaign.sent * 100) : 0;
-          const click = campaign.opened ? Math.round(campaign.clicked / campaign.opened * 100) : 0;
+          const click = campaign.sent ? Math.round(campaign.clicked / campaign.sent * 100) : 0;
           return `<article class="entity-card" data-action="view-entity" data-entity="campaign" data-id="${campaign.id}" role="button" tabindex="0">
-            <div class="entity-card-top"><div class="entity-logo">${campaign.channel[0]}</div><div class="entity-card-copy"><h3>${escapeHtml(campaign.name)}</h3><p>${escapeHtml(campaign.channel)} · ${escapeHtml(campaign.audience)}</p></div><span class="status-pill ${campaign.status === "Running" ? "success" : campaign.status === "Scheduled" ? "info" : campaign.status === "Completed" ? "" : "warning"}">${escapeHtml(campaign.status)}</span></div>
-            <div class="entity-card-stats"><div class="entity-stat"><span>Sent</span><strong>${Number(campaign.sent).toLocaleString()}</strong></div><div class="entity-stat"><span>Conversions</span><strong>${Number(campaign.conversions).toLocaleString()}</strong></div><div class="entity-stat"><span>Open rate</span><strong>${open}%</strong></div><div class="entity-stat"><span>Click rate</span><strong>${click}%</strong></div></div>
+            <div class="entity-card-top"><div class="entity-logo">${campaign.channel[0]}</div><div class="entity-card-copy"><h3>${escapeHtml(campaign.name)}</h3><p>${escapeHtml(campaign.channel)} · ${escapeHtml(campaign.audience)}</p></div><span class="status-pill info">Plan: ${escapeHtml(campaign.status)}</span></div>
+            <div class="entity-card-stats"><div class="entity-stat"><span>Sent</span><strong>${Number(campaign.sent).toLocaleString()}</strong></div><div class="entity-stat"><span>Conversions</span><strong>${Number(campaign.conversions).toLocaleString()}</strong></div><div class="entity-stat"><span>Open rate</span><strong>${open}%</strong></div><div class="entity-stat"><span>Recorded CTR</span><strong>${click}%</strong></div></div>
             ${campaign.channel === "Email" ? `<button class="action-btn" data-action="campaign-preview" data-id="${escapeHtml(campaign.id)}">${state.settings.locale === "es" ? "Revisar correo" : "Review email"}</button>` : ""}
           </article>`;
         }).join("")}
@@ -3340,7 +3362,7 @@
           ["New this month", liveStats ? liveStats.new_users_30d : 0, "Signed up in the last 30 days"],
           ["Unverified venues", liveStats ? (liveStats.total_venues - liveStats.verified_venues) : 0, "Venue is registered but not yet verified"],
           ["Pending claim reviews", liveStats ? liveStats.pending_claims : 0, "Venue claim submitted and awaiting decision"]
-        ] : [["Workspace contacts",state.contacts.length,"Contacts visible in this workspace; not a marketing-consent list"]]).map(([name, count, rule]) => `<div class="entity-card"><div class="entity-card-top"><div class="entity-logo">${icon("filter")}</div><div class="entity-card-copy"><h3>${escapeHtml(name)}</h3><p>${escapeHtml(rule)}</p></div></div><div class="entity-card-stats"><div class="entity-stat"><span>Members</span><strong>${Number(count||0).toLocaleString()}</strong></div><div class="entity-stat"><span>Refresh</span><strong>Live</strong></div></div></div>`).join("")}
+        ] : [["Workspace contacts",state.contacts.length,"Contacts visible in this workspace; not a marketing-consent list"]]).map(([name, count, rule]) => `<div class="entity-card"><div class="entity-card-top"><div class="entity-logo">${icon("filter")}</div><div class="entity-card-copy"><h3>${escapeHtml(name)}</h3><p>${escapeHtml(rule)}</p></div></div><div class="entity-card-stats"><div class="entity-stat"><span>Members</span><strong>${Number(count||0).toLocaleString()}</strong></div><div class="entity-stat"><span>Source</span><strong>${isPlatformWorkspace() ? "Platform" : "Workspace"}</strong></div></div></div>`).join("")}
       </div></section>
     </div>`;
   }
@@ -3404,16 +3426,16 @@
 
   function renderSites() {
     return `<div class="page-grid"><section class="panel" style="padding:16px"><h3>Site and form planning</h3><p>These records describe planned pages and forms. Publishing, live collection, privacy notices and consent handling require a configured publishing service.</p></section>
-      <section class="panel"><div class="panel-header"><div><h2>Landing pages</h2><p>Original, lightweight pages for campaigns and onboarding</p></div></div><div class="panel-body cards-grid">
+      <section class="panel"><div class="panel-header"><div><h2>Landing page plans</h2><p>Draft metadata only. A Published label does not put a page on the public internet.</p></div></div><div class="panel-body cards-grid">
         ${state.pages.map(page => `<article class="entity-card" data-action="view-entity" data-entity="page" data-id="${page.id}" role="button" tabindex="0">
-          <div class="entity-card-top"><div class="entity-logo">${icon("sites")}</div><div class="entity-card-copy"><h3>${escapeHtml(page.name)}</h3><p>/${escapeHtml(page.slug)} · updated ${escapeHtml(relativeTime(page.updatedAt))}</p></div><span class="status-pill ${page.status === "Published" ? "success" : "warning"}">${escapeHtml(page.status)}</span></div>
-          <div class="entity-card-stats"><div class="entity-stat"><span>Visitors</span><strong>${Number(page.visitors || 0).toLocaleString()}</strong></div><div class="entity-stat"><span>Conversions</span><strong>${Number(page.conversions || 0).toLocaleString()}</strong></div></div>
+          <div class="entity-card-top"><div class="entity-logo">${icon("sites")}</div><div class="entity-card-copy"><h3>${escapeHtml(page.name)}</h3><p>/${escapeHtml(page.slug)} · updated ${escapeHtml(relativeTime(page.updatedAt))}</p></div><span class="status-pill info">Plan: ${escapeHtml(page.status)}</span></div>
+          <div class="entity-card-stats"><div class="entity-stat"><span>Recorded visitors</span><strong>${Number(page.visitors || 0).toLocaleString()}</strong></div><div class="entity-stat"><span>Recorded conversions</span><strong>${Number(page.conversions || 0).toLocaleString()}</strong></div></div>
         </article>`).join("")}
       </div></section>
-      <section class="panel"><div class="panel-header"><div><h2>Forms</h2><p>Capture leads, events and custom records</p></div></div><div class="panel-body cards-grid">
+      <section class="panel"><div class="panel-header"><div><h2>Form plans</h2><p>Live submissions and consent notices need a connected publishing/collection service.</p></div></div><div class="panel-body cards-grid">
         ${state.forms.map(form => `<article class="entity-card" data-action="view-entity" data-entity="form" data-id="${form.id}" role="button" tabindex="0">
-          <div class="entity-card-top"><div class="entity-logo">${icon("sales")}</div><div class="entity-card-copy"><h3>${escapeHtml(form.name)}</h3><p>${form.fields.length} fields · creates ${escapeHtml(form.destination)}</p></div><span class="status-pill ${form.status === "Live" ? "success" : "warning"}">${escapeHtml(form.status)}</span></div>
-          <div class="entity-card-stats"><div class="entity-stat"><span>Submissions</span><strong>${Number(form.submissions || 0).toLocaleString()}</strong></div><div class="entity-stat"><span>Conversion</span><strong>${Number(form.conversionRate || 0)}%</strong></div></div>
+          <div class="entity-card-top"><div class="entity-logo">${icon("sales")}</div><div class="entity-card-copy"><h3>${escapeHtml(form.name)}</h3><p>${form.fields.length} fields · creates ${escapeHtml(form.destination)}</p></div><span class="status-pill info">Plan: ${escapeHtml(form.status)}</span></div>
+          <div class="entity-card-stats"><div class="entity-stat"><span>Recorded submissions</span><strong>${Number(form.submissions || 0).toLocaleString()}</strong></div><div class="entity-stat"><span>Recorded conversion</span><strong>${Number(form.conversionRate || 0)}%</strong></div></div>
         </article>`).join("")}
       </div></section>
     </div>`;
@@ -3676,7 +3698,6 @@
     const myId = authUser?.id || state.currentUserId;
     const myEmail = (authUser?.email || "").toLowerCase();
     const empEmail = (employee.email || "").toLowerCase();
-    const empName = (employee.name || "").toLowerCase();
 
     // 1. Current logged in user is always online
     if (myId && (employee.id === myId || (empEmail && myEmail && empEmail === myEmail))) {
@@ -3689,25 +3710,21 @@
       const diffSec = (Date.now() - new Date(employee.lastActiveAt).getTime()) / 1000;
       if (diffSec < 120) return true;
     }
-    const contact = state.contacts.find(c => c.id === employee.id || (c.name && c.name.toLowerCase() === empName));
-    if (contact && contact.updatedAt) {
-      const diffSec = (Date.now() - new Date(contact.updatedAt).getTime()) / 1000;
-      if (diffSec < 120) return true;
-    }
-
+    // Contact record edits are not staff presence. Only authenticated sessions
+    // and independently scoped staff heartbeats can establish activity.
     return false;
   }
 
   function renderEmployees() {
     const departments = [...new Set(state.employees.map(employee => employee.department))];
-    const staffCount = liveStats ? liveStats.staff_users : state.employees.length;
-    const totalUsers = liveStats ? liveStats.total_users : state.contacts.length;
+    const staffCount = isPlatformWorkspace() && liveStats ? liveStats.staff_users : state.employees.length;
+    const totalUsers = isPlatformWorkspace() && liveStats ? liveStats.total_users : state.contacts.length;
     const onlineCount = state.employees.filter(isUserOnline).length;
 
     return `<div class="page-grid">
       <div class="page-grid grid-4">
-        ${renderMetric("Team members", String(staffCount), `${departments.length} departments · staff & admins`, "employees", "#7c8cff")}
-        ${renderMetric("Online now", String(onlineCount), "active CRM sessions", "activity", "#49d7a0")}
+        ${renderMetric(isPlatformWorkspace() ? "Team members" : "People records", String(staffCount), `${departments.length} departments · access is managed separately`, "employees", "#7c8cff")}
+        ${renderMetric("Recently active", String(onlineCount), "last activity within 2 minutes", "activity", "#49d7a0")}
         ${isPlatformWorkspace() ? renderMetric("AkiPasa Users", String(totalUsers), "registered database profiles", "user", "#52d9e9") : renderMetric("Workspace contacts", String(state.contacts.length), "visible in this location", "user", "#52d9e9")}
         ${renderMetric("Open assignments", String(state.tasks.filter(task => task.status !== "done").length), "tasks assigned", "tasks", "#ffbd55")}
       </div>
@@ -3743,7 +3760,7 @@
       </aside>
       <article class="knowledge-article">
         <div class="article-wrap">
-          <div class="flex items-center"><span class="status-pill info">${escapeHtml(article.category)}</span><div class="ml-auto flex gap-8"><button class="action-btn" data-action="edit-entity" data-entity="article" data-id="${article.id}">${icon("edit")} Edit</button><button class="action-btn ghost" aria-label="${state.settings.locale === 'es' ? 'Eliminar artículo' : 'Delete article'}" data-action="delete-entity" data-entity="article" data-id="${article.id}">${icon("trash")}</button></div></div>
+          <div class="flex items-center"><span class="status-pill info">${escapeHtml(article.category)}</span><div class="ml-auto flex gap-8">${canUseTool("tasks") && state.workspace.canOperate ? `<button class="action-btn" data-action="follow-up-record" data-entity="article" data-id="${escapeHtml(article.id)}">${icon("tasks")} Review task</button>` : ""}<button class="action-btn" data-action="edit-entity" data-entity="article" data-id="${article.id}">${icon("edit")} Edit</button><button class="action-btn ghost" aria-label="${state.settings.locale === 'es' ? 'Eliminar artículo' : 'Delete article'}" data-action="delete-entity" data-entity="article" data-id="${article.id}">${icon("trash")}</button></div></div>
           <h1>${escapeHtml(article.title)}</h1>
           <div class="article-meta">Written by ${escapeHtml(employeeName(article.authorId))} · updated ${escapeHtml(relativeTime(article.updatedAt))}</div>
           ${article.reviewDate ? `<p class="status-pill ${isOverdue(article.reviewDate) ? "warning" : "info"}">${state.settings.locale === "es" ? "Revisar antes de" : "Review by"} ${escapeHtml(formatDate(article.reviewDate))}</p>` : ""}
@@ -3841,7 +3858,7 @@
     const engagement = opens + Number(summary.saves || 0) + Number(summary.going || 0) + Number(summary.directions || 0) + Number(summary.verified_check_ins || 0);
     const maxDaily = Math.max(1, ...daily.map(item => Number(item.interactions || 0) + Number(item.analytics_events || 0) + Number(item.recommendations || 0)));
     const fallbackRate = percent(summary.fallback_requests, summary.recommendation_requests);
-    const paidRevenue = state.invoices.filter(invoice => invoice.status === "Paid").reduce((sum, invoice) => sum + Number(invoice.total || 0), 0);
+    const paidRevenue = recordedPaidAmount();
     const activeTasks = state.tasks.filter(task => !["done", "completed"].includes(String(task.status || "").toLowerCase())).length;
     const funnel = [
       ["Impressions", summary.impressions, "#7c8cff"],
@@ -3937,7 +3954,7 @@
         </div>
       </section>
 
-      <section class="panel analytics-business-panel"><div class="panel-header"><div><h2>CRM outcomes</h2><p>Operational records persisted in the shared database workspace</p></div></div><div class="analytics-business-grid"><div><span>Pipeline value</span><strong>${escapeHtml(formatMoney(state.deals.reduce((sum, deal) => sum + Number(deal.value || 0), 0)))}</strong><small>${number(state.deals.length)} deals</small></div><div><span>Collected revenue</span><strong>${escapeHtml(formatMoney(paidRevenue))}</strong><small>${number(state.invoices.filter(invoice => invoice.status === "Paid").length)} paid invoices</small></div><div><span>Active work</span><strong>${number(activeTasks)}</strong><small>${number(state.projects.length)} projects</small></div><div><span>Negative signals</span><strong>${number(summary.negative_signals)}</strong><small>skips, exits, dislikes and hidden venues</small></div></div></section>
+      <section class="panel analytics-business-panel"><div class="panel-header"><div><h2>CRM outcomes</h2><p>Operational records persisted in the shared database workspace</p></div></div><div class="analytics-business-grid"><div><span>Pipeline value</span><strong>${escapeHtml(formatMoney(state.deals.reduce((sum, deal) => sum + Number(deal.value || 0), 0)))}</strong><small>${number(state.deals.length)} deals</small></div><div><span>Marked paid (legacy)</span><strong>${escapeHtml(formatMoney(paidRevenue))}</strong><small>${number(recordedPaidDocuments().length)} editable documents · no bank settlement verified</small></div><div><span>Active work</span><strong>${number(activeTasks)}</strong><small>${number(state.projects.length)} projects</small></div><div><span>Negative signals</span><strong>${number(summary.negative_signals)}</strong><small>skips, exits, dislikes and hidden venues</small></div></div></section>
     </div>`;
   }
 
@@ -4247,7 +4264,7 @@
       return `<section class="panel settings-section"><h2>Security model</h2><p>The downloadable build deliberately avoids pretending browser storage is a secure place for provider credentials.</p>
         <div class="setting-row"><div class="setting-copy"><strong>Integration secrets</strong><span>Store OAuth client secrets, API secrets and webhook signing keys in Cloudflare Worker secrets.</span></div><span class="status-pill success">Protected design</span></div>
         <div class="setting-row"><div class="setting-copy"><strong>Cloud data access</strong><span>Workspace membership, module permissions and server-side checks restrict access to business data.</span></div><span class="status-pill success">RLS included</span></div>
-        <div class="setting-row"><div class="setting-copy"><strong>Local device access</strong><span>Anyone with access to this browser profile can read local AkiHQ data. Use OS account security.</span></div><span class="status-pill warning">Device-controlled</span></div>
+        <div class="setting-row"><div class="setting-copy"><strong>Local device access</strong><span>Anyone with access to this browser profile may view cached AkiBusiness records. Use separate OS profiles and device locks.</span></div><span class="status-pill warning">Device-controlled</span></div>
         <div class="setting-row"><div class="setting-copy"><strong>Audit log</strong><span>Browser activity is informational. Security-sensitive database changes have a separate protected audit trail.</span></div><button class="action-btn" data-action="export-audit">Export log</button></div>
       </section>
       <section class="panel settings-section"><h2>Privacy switches</h2><p>Local preferences for notification and motion behaviour.</p>
@@ -4256,12 +4273,26 @@
       </section>`;
     }
     if (ui.settingsTab === "about") {
-      return `<section class="panel settings-section"><h2>AkiHQ ${APP_VERSION}</h2><p>An original, open-source business workspace built for Alex—not a Bitrix24 source-code copy or branded skin.</p>
-        <div class="detail-grid"><div class="detail-block"><div class="detail-label">License</div><div class="detail-value">Apache License 2.0</div></div><div class="detail-block"><div class="detail-label">Runtime</div><div class="detail-value">Static PWA + optional Supabase + optional Cloudflare Worker</div></div><div class="detail-block full"><div class="detail-label">Modules in this build</div><div class="detail-value">Dashboard, CRM, inbox, projects, calendar, inventory, billing, marketing, sites/forms, automation, collaboration, people, knowledge, analytics, integrations and settings.</div></div></div>
-      </section>
-      <section class="panel settings-section"><h2>Honest status</h2><p>This package is a working database-backed alpha, not finished parity with every feature of a mature commercial suite.</p>
-        <div class="page-grid grid-3"><div class="detail-block"><div class="detail-label">Working now</div><div class="detail-value">Persistent CRUD, boards, drag-and-drop, search, activity, messages, exports, PWA shell and optional personal cloud sync.</div></div><div class="detail-block"><div class="detail-label">Adapter UI included</div><div class="detail-value">Major integration catalogue with configuration states and serverless architecture.</div></div><div class="detail-block"><div class="detail-label">Requires implementation</div><div class="detail-value">Production OAuth flows, provider webhooks, relational multi-tenant backend, files, payments and true realtime collaboration.</div></div></div>
-      </section>`;
+      const es = state.settings.locale === "es";
+      return '<section class="panel settings-section"><h2>AkiBusiness ' + escapeHtml(APP_VERSION) + '</h2>'+
+        '<p>'+escapeHtml(es ?
+          "Herramientas de operaciones para negocios. El acceso, los pagos y las obligaciones fiscales dependen del módulo y las integraciones activadas." :
+          "Business operations software with guarded modules. Access, real payments and fiscal obligations depend on the enabled integration and verified business scope.")+'</p>'+
+        '<div class="detail-grid"><div class="detail-block"><div class="detail-label">'+(es?"Licencia":"License")+'</div><div class="detail-value">Apache License 2.0</div></div>'+
+        '<div class="detail-block"><div class="detail-label">'+(es?"Tecnología":"Runtime")+'</div><div class="detail-value">PWA · Supabase · Cloudflare</div></div>'+
+        '<div class="detail-block full"><div class="detail-label">'+(es?"Áreas de trabajo":"Work areas")+'</div><div class="detail-value">'+
+        escapeHtml(es?"CRM, correo empresarial, proyectos, calendario, inventario, punto de venta, ventas, marketing, automatización, chat, personal, conocimiento, cuadrantes y análisis.":
+          "CRM, business inbox, projects, calendar, inventory, PoS, sales records, marketing, automation, chat, people, knowledge, rotas and analytics.")+
+        '</div></div></div></section>'+
+        '<section class="panel settings-section"><h2>'+(es?"Estado de funciones":"Feature readiness")+'</h2>'+
+        '<p>'+escapeHtml(es?"Los registros operativos no sustituyen documentos fiscales ni pagos bancarios confirmados.":"Operational records are not certified fiscal invoices or independently verified bank settlements.")+'</p>'+
+        '<div class="page-grid grid-3"><div class="detail-block"><div class="detail-label">'+(es?"Flujos operativos":"Daily workflows")+'</div><div class="detail-value">'+
+        escapeHtml(es?"Registros y colaboración por espacio de trabajo, tareas, calendario y herramientas de gestión de inventario.":"Workspace-scoped records, tasks, calendar, collaboration and inventory management.")+
+        '</div></div><div class="detail-block"><div class="detail-label">'+(es?"Servicios externos":"External services")+'</div><div class="detail-value">'+
+        escapeHtml(es?"Google/Microsoft requieren autorización de la empresa y configuración del operador. El envío de marketing no está disponible sin verificaciones.":"Google/Microsoft require business authorization and operator setup. Marketing sending stays gated until verified.")+
+        '</div></div><div class="detail-block"><div class="detail-label">'+(es?"Pendiente de validación":"Not yet accepted")+'</div><div class="detail-value">'+
+        escapeHtml(es?"Emisión fiscal y AEAT, cobros/devoluciones reales por terminal, conciliación bancaria, hardware y ámbitos fiscales especiales.":"Fiscal issuance/AEAT, live terminal payments and refunds, bank settlement, physical devices and special tax territories.")+
+        '</div></div></div></section>';
     }
     return `<section class="panel settings-section"><h2>Appearance</h2><p>Choose a look and information density. Changes are saved instantly.</p>
       <div class="setting-row"><div class="setting-copy"><strong>Theme</strong><span>Dark and light themes use the same original aurora-map visual system.</span></div><div class="theme-options">
@@ -4953,6 +4984,35 @@
     </section>`;
   }
 
+  function renderBitrixPreviewModal() {
+    const preview = ui.modal, plan = preview?.plan;
+    if (!plan || preview.kind !== "bitrix-preview") return "";
+    const es = state.settings.locale === "es";
+    const label = es ? "Previsualización de importación CRM" : "CRM import preview";
+    const sample = plan.additions.slice(0, 8);
+    return '<div class="modal-backdrop" data-action="close-modal"></div><section class="modal wide" role="dialog" aria-modal="true" aria-labelledby="bitrix-preview-title">'+
+      '<header class="modal-head"><div class="entity-logo">'+icon("crm")+'</div><div><h2 id="bitrix-preview-title">'+label+'</h2><p>'+
+        escapeHtml(es ? "Revisa los registros antes de escribir en este espacio de trabajo." : "Review records before updating this workspace.")+
+        '</p></div><button class="icon-btn close-btn" data-action="close-modal" aria-label="'+escapeHtml(t("close"))+'">'+icon("close")+'</button></header>'+
+      '<div class="modal-body"><div class="page-grid grid-3">'+
+        renderMetric(es?"Filas leídas":"CSV rows",String(plan.sourceCount),"CSV", "crm","#7c8cff")+
+        renderMetric(es?"Nuevos":"New records",String(plan.additions.length),escapeHtml(plan.type),"check","#49d7a0")+
+        renderMetric(es?"Omitidos":"Skipped",String(plan.skipped.length),es?"Duplicados o inválidos":"Duplicate or invalid","warning","#ffbd55")+
+      '</div><p class="muted">'+escapeHtml(es ? "Sin cambios todavía. Solo se importan las columnas admitidas; se omiten duplicados y entradas inválidas." : "No records have changed yet. Only supported columns are used; duplicate and invalid rows are skipped.")+'</p>'+
+      (plan.type === "contacts" ? '<p class="muted">'+escapeHtml(es ? "Importar contactos no concede consentimiento para campañas ni autoriza envíos comerciales." : "Importing contacts does not grant marketing consent or authorize commercial email.")+'</p>' : "")+
+      '<div class="table-scroll"><table class="data-table"><thead><tr><th>'+escapeHtml(es?"Fila":"Row")+'</th><th>'+escapeHtml(es?"Registro":"Record")+'</th><th>'+escapeHtml(es?"Identificador":"Identifier")+'</th></tr></thead><tbody>'+
+        sample.map(entry=>'<tr><td>'+entry.row+'</td><td>'+escapeHtml(entry.record.name||entry.record.title)+'</td><td>'+escapeHtml(entry.record.email||entry.record.companyId||entry.record.city||"-")+'</td></tr>').join('')+
+      '</tbody></table></div>'+
+      (plan.additions.length>8?'<p class="muted">'+escapeHtml(es ? "Solo se muestran los primeros ocho registros." : "Showing the first eight records.")+'</p>':'')+
+      (plan.skipped.length?'<details><summary>'+escapeHtml(es?"Ver filas omitidas":"Review skipped rows")+'</summary><ul>'+
+        plan.skipped.slice(0, 15).map(item=>'<li>'+escapeHtml((es?"Fila ":"Row ")+item.row+": "+item.reason)+'</li>').join('')+
+        '</ul></details>':'')+
+      '<p class="muted">'+escapeHtml(es ? "Los cambios se guardan mediante la sincronización del espacio de trabajo. Comprueba los registros tras recargar; no es una importación fiscal." : "Records enter the workspace sync process. Verify them after a fresh reload. This is not a fiscal or official accounting import.")+'</p></div>'+
+      '<footer class="modal-foot"><button type="button" class="action-btn" data-action="close-modal">'+escapeHtml(t("cancel"))+'</button>'+
+        '<button type="button" class="action-btn primary" data-action="commit-bitrix-import" '+(!plan.additions.length?"disabled":"")+'>'+
+        escapeHtml((es?"Importar ":"Import ")+plan.additions.length+(es?" registros":" records"))+'</button></footer></section>';
+  }
+
   function renderModal() {
     if (ui.modal.kind === "inventory-operation") return `<div class="modal-backdrop" data-action="close-modal"></div><section class="modal" role="dialog" aria-modal="true" aria-label="Stock operation">${window.AkiHQInventoryOps.renderForm({type:ui.modal.type,products:state.products,locations:inventoryLocations,balances:ui.modal.balances || [],itemId:ui.modal.itemId,key:ui.modal.key})}</section>`;
     if (ui.modal.kind === "inventory-location") return `<div class="modal-backdrop" data-action="close-modal"></div><section class="modal" role="dialog" aria-modal="true" aria-label="New stock location"><form data-form="inventory-location"><div class="modal-body"><h2>Add stock location</h2><div class="form-field"><label>Name<input name="name" maxlength="120" required></label></div><div class="form-field"><label>Unique code<input name="code" pattern="[A-Za-z0-9_-]{1,32}" required></label></div></div><footer class="modal-foot"><button type="button" class="action-btn" data-action="close-modal">Cancel</button><button class="action-btn primary">Create location</button></footer></form></section>`;
@@ -4962,6 +5022,7 @@
     if (ui.modal.kind === "media-folder") return renderMediaFolderModal();
     if (ui.modal.kind === "media-asset") return renderMediaAssetModal();
     if (ui.modal.kind === "prospect-import") return renderProspectImportModal();
+    if (ui.modal.kind === "bitrix-preview") return renderBitrixPreviewModal();
     if (ui.modal.kind === "form") return renderEntityFormModal();
     if (ui.modal.kind === "calendar-day") return renderCalendarDayModal();
     if (ui.modal.kind === "integration") return renderIntegrationModal();
@@ -5333,7 +5394,7 @@
         <div class="dropdown-item" data-action="navigate" data-route="employees"><div class="activity-icon">${icon("user")}</div><div class="dropdown-copy"><strong>My profile</strong><br>${escapeHtml(user.role)} · ${escapeHtml(user.department || "Staff")}</div></div>
         <div class="dropdown-item" data-action="set-theme" data-theme="${state.settings.theme === "dark" ? "light" : "dark"}"><div class="activity-icon">${icon("sparkles")}</div><div class="dropdown-copy"><strong>Switch to ${state.settings.theme === "dark" ? "light" : "dark"} theme</strong><br>Change appearance instantly</div></div>
         <div class="dropdown-item" data-action="navigate" data-route="settings"><div class="activity-icon">${icon("settings")}</div><div class="dropdown-copy"><strong>Settings</strong><br>Workspace, data and cloud sync</div></div>
-        <div class="dropdown-item" data-action="export-data"><div class="activity-icon">${icon("download")}</div><div class="dropdown-copy"><strong>Download backup</strong><br>Export the complete workspace</div></div>
+        <div class="dropdown-item" data-action="export-data"><div class="activity-icon">${icon("download")}</div><div class="dropdown-copy"><strong>Download workspace snapshot</strong><br>Cached records only · not a database backup</div></div>
         <div class="dropdown-item" data-action="crm-signout"><div class="activity-icon">${icon("lock")}</div><div class="dropdown-copy"><strong>Sign out</strong><br>Log out of AkiHQ CRM</div></div>
       </div>`;
     }
@@ -5838,19 +5899,19 @@
         ui.calendarDate = new Date(new Date().getFullYear(), new Date().getMonth(), 1); render();
         break;
       case "calendar-day": {
-        if (event.target.closest(".calendar-event")) break;
+        if (event?.target?.closest?.(".calendar-event")) break;
         const selectedDate = target.dataset.date;
         if (calendarEventsForDate(selectedDate).length) {
           ui.modal = { kind: "calendar-day", date: selectedDate };
           renderPortal();
         } else {
-          openEntityForm("event", null, { start: selectedDate, end: selectedDate });
+          openEntityForm("event", null, calendarNewEventDefaults(selectedDate));
         }
         break;
       }
       case "calendar-add-event":
         ui.modal = null;
-        openEntityForm("event", null, { start: target.dataset.date, end: target.dataset.date });
+        openEntityForm("event", null, calendarNewEventDefaults(target.dataset.date));
         break;
       case "select-conversation": {
         const threadId = target.dataset.id;
@@ -6288,6 +6349,10 @@
         break;
       case "bitrix-import":
         beginBitrixImport();
+        break;
+      case "commit-bitrix-import":
+        try { await commitBitrixImport(); }
+        catch (error) { toast("Import not committed", error.message || "Review the CSV and workspace permissions.", "danger"); }
         break;
       case "select-picker-user": {
         const { name, email, role, id: pickedId } = target.dataset;
@@ -7545,7 +7610,7 @@
     if (!state.workspace.canAdminister) throw new Error("Workspace owner or administrator access required for a snapshot export.");
     clearDeniedCollections();
     downloadBlob(`akihq-${state.workspace.slug || "workspace"}-${new Date().toISOString().slice(0, 10)}.json`, JSON.stringify(state, null, 2), "application/json");
-    toast("Backup downloaded", "Keep it somewhere safer than your Downloads graveyard.");
+    toast("Workspace snapshot downloaded", "This is a browser workspace snapshot, not a verified database backup. Keep it secure and use module-specific fiscal/inventory exports as needed.", "info");
   }
 
   function csvCell(value) {
@@ -7567,28 +7632,53 @@
     toast("CSV exported", `${collection.length} ${entityName}`);
   }
 
+  // Legacy CSVs are untrusted input. Reject malformed quotes, duplicate headers,
+  // wide files and oversized imports before touching any workspace collection.
   function parseCSV(text) {
-    const rows = [];
-    let row = [];
-    let cell = "";
-    let quoted = false;
-    for (let index = 0; index < text.length; index += 1) {
-      const char = text[index];
-      const next = text[index + 1];
-      if (char === '"' && quoted && next === '"') { cell += '"'; index += 1; }
-      else if (char === '"') quoted = !quoted;
-      else if (char === "," && !quoted) { row.push(cell); cell = ""; }
-      else if ((char === "\n" || char === "\r") && !quoted) {
-        if (char === "\r" && next === "\n") index += 1;
-        row.push(cell); cell = "";
-        if (row.some(value => value.trim() !== "")) rows.push(row);
-        row = [];
-      } else cell += char;
+    if (typeof text !== "string" || !text.trim() || text.length > 1048576) throw new Error("Import a nonempty UTF-8 CSV smaller than 1 MB.");
+    const rows = [], row = [];
+    let cell = "", quoted = false, closedQuote = false;
+    const finishCell = () => {
+      if (cell.length > 2000 || row.length >= 40) throw new Error("CSV cell or column limit exceeded.");
+      row.push(cell); cell = ""; closedQuote = false;
+    };
+    const finishRow = () => {
+      finishCell();
+      if (row.some(value => value.trim())) rows.push(row.slice());
+      row.length = 0;
+      if (rows.length > 1001) throw new Error("Maximum 1000 imported records per file. Split the CSV and try again.");
+    };
+    text = text.replace(/^\uFEFF/, "");
+    for (let i = 0; i < text.length; i += 1) {
+      const char = text[i], next = text[i + 1];
+      if (quoted) {
+        if (char === '"') {
+          if (next === '"') { cell += '"'; i += 1; }
+          else { quoted = false; closedQuote = true; }
+        } else cell += char;
+      } else if (char === '"') {
+        if (cell.length || closedQuote) throw new Error("Malformed quoted CSV field.");
+        quoted = true;
+      } else if (char === ",") finishCell();
+      else if (char === "\r" || char === "\n") {
+        if (char === "\r" && next === "\n") i += 1;
+        finishRow();
+      } else {
+        if (closedQuote) throw new Error("Unexpected text after a quoted CSV value.");
+        cell += char;
+      }
+      if (cell.length > 2000) throw new Error("CSV cell exceeds 2000 characters.");
     }
-    if (cell.length || row.length) { row.push(cell); if (row.some(value => value.trim() !== "")) rows.push(row); }
-    if (!rows.length) return [];
-    const headers = rows[0].map(header => header.trim().replace(/^\uFEFF/, ""));
-    return rows.slice(1).map(values => Object.fromEntries(headers.map((header, index) => [header, values[index] ?? ""])));
+    if (quoted) throw new Error("Unclosed CSV quote.");
+    if (cell.length || row.length || closedQuote) finishRow();
+    if (rows.length < 2) throw new Error("CSV needs a header and at least one record.");
+    const headers = rows.shift().map(header => header.trim().replace(/^\uFEFF/, ""));
+    if (headers.some(header => !header || header.length > 100)) throw new Error("CSV headers must be 1–100 characters.");
+    if (new Set(headers.map(header => header.toLowerCase())).size !== headers.length) throw new Error("CSV contains duplicate headers.");
+    return rows.map((values, index) => {
+      if (values.length !== headers.length) throw new Error("CSV row " + (index + 2) + " has the wrong number of columns.");
+      return Object.fromEntries(headers.map((header, i) => [header, values[i]]));
+    });
   }
 
   function normaliseRow(row) {
@@ -7602,63 +7692,129 @@
     return "";
   }
 
-  function beginBitrixImport() {
-    const type = $("[data-form='integration'] select[name='importType']")?.value || window.prompt("Import which records? Enter contacts, companies or deals", "contacts");
-    if (!type || !["contacts", "companies", "deals"].includes(type.toLowerCase())) {
-      toast("Choose a valid type", "contacts, companies or deals", "danger");
-      return;
+  const bitrixImportCollections = Object.freeze({ contacts: "contacts", companies: "companies", deals: "deals" });
+  const importIdentity = value => String(value ?? "").trim().toLowerCase().replace(/\s+/g, " ");
+  function planBitrixImport(type, rows) {
+    if (!Object.hasOwn(bitrixImportCollections, type)) throw new Error("Choose contacts, companies or deals.");
+    if (!Array.isArray(rows) || !rows.length || rows.length > 1000) throw new Error("Import 1–1000 CSV rows at a time.");
+    if (!authUser || !state.workspace.canOperate || !canUseTool("crm")) throw new Error("Workspace CRM editing permission is required.");
+    const pipeline = state.pipelines.find(item => item.id === ui.pipelineId && Array.isArray(item.stages) && item.stages.length)
+      || state.pipelines.find(item => Array.isArray(item.stages) && item.stages.length);
+    if (type === "deals" && !pipeline) throw new Error("Create a CRM pipeline and first stage before importing deals. No records have been changed.");
+    const collection = bitrixImportCollections[type], existing = Array.isArray(state[collection]) ? state[collection] : [];
+    const seen = new Set(), additions = [], skipped = [];
+    const companyByName = new Map(state.companies.map(row => [importIdentity(row.name), row.id]));
+    const contactByName = new Map(state.contacts.map(row => [importIdentity(row.name), row.id]));
+    for (const [index, original] of rows.entries()) {
+      const row = normaliseRow(original), rowNumber = index + 2;
+      if (Object.values(row).every(value => !value)) { skipped.push({ row: rowNumber, reason: "Empty record" }); continue; }
+      let record, duplicate, key;
+      if (type === "contacts") {
+        const name = pick(row, "name", "full_name", "contact", "first_name").trim();
+        const email = pick(row, "email", "email_work", "work_email").trim();
+        const phone = pick(row, "phone", "phone_work", "mobile").trim();
+        if (!name || name.length > 150 || email.length > 250 || phone.length > 40 ||
+          (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email))) {
+          skipped.push({ row: rowNumber, reason: "Invalid contact name, email or phone" }); continue;
+        }
+        key = email ? "email:" + importIdentity(email) : phone ? "phone:" + importIdentity(name) + ":" + phone : "name:" + importIdentity(name);
+        duplicate = existing.some(item => email ? importIdentity(item.email) === importIdentity(email) :
+          phone ? importIdentity(item.name) === importIdentity(name) && String(item.phone || "").trim() === phone :
+          importIdentity(item.name) === importIdentity(name));
+        const companyName = pick(row, "company", "company_name");
+        record = { name, email, phone, companyId: companyByName.get(importIdentity(companyName)) || "",
+          role: pick(row, "position", "role", "job_title").slice(0, 120), source: "Bitrix24 CSV", tags: ["Imported"] };
+      } else if (type === "companies") {
+        const name = pick(row, "company", "company_name", "title", "name").trim();
+        if (!name || name.length > 150) { skipped.push({ row: rowNumber, reason: "Company name missing or too long" }); continue; }
+        key = importIdentity(name);
+        duplicate = existing.some(item => importIdentity(item.name) === key);
+        record = { name, type: pick(row, "company_type", "type").slice(0, 80) || "Company",
+          city: pick(row, "city", "address_city").slice(0, 120),
+          website: pick(row, "website", "web").slice(0, 250),
+          phone: pick(row, "phone", "phone_work").slice(0, 40),
+          email: pick(row, "email", "email_work").slice(0, 250),
+          ownerId: state.currentUserId, employees: 0, status: "Prospect" };
+        const count = pick(row, "employees", "employee_count");
+        if (count) {
+          if (!/^\d{1,7}$/.test(count)) { skipped.push({ row: rowNumber, reason: "Invalid employee count" }); continue; }
+          record.employees = Number(count);
+        }
+      } else {
+        const title = pick(row, "deal", "deal_name", "title", "name").trim();
+        const rawAmount = pick(row, "amount", "opportunity", "value").trim();
+        const rawProbability = pick(row, "probability").trim();
+        if (!title || title.length > 150 || (rawAmount && !/^\d{1,9}(?:\.\d{1,2})?$/.test(rawAmount)) ||
+          (rawProbability && !/^\d{1,3}$/.test(rawProbability)) ||
+          (rawProbability && Number(rawProbability) > 100)) {
+          skipped.push({ row: rowNumber, reason: "Invalid deal title, amount or probability. Use dot-decimal EUR, no separators." }); continue;
+        }
+        const companyName = pick(row, "company", "company_name"),contactText = pick(row, "contact", "contact_name");
+        const value = Number(rawAmount || 0);
+        key = importIdentity(title) + ":" + importIdentity(companyName) + ":" + value;
+        duplicate = existing.some(item => importIdentity(item.title) === importIdentity(title) &&
+          Number(item.value || 0) === value && (item.companyId || "") === (companyByName.get(importIdentity(companyName)) || ""));
+        record = { title, companyId: companyByName.get(importIdentity(companyName)) || "",
+          contactId: contactByName.get(importIdentity(contactText)) || "",
+          pipelineId: pipeline.id, stageId: pipeline.stages[0].id, value,
+          probability: rawProbability ? Number(rawProbability) : 20,
+          ownerId: state.currentUserId, dueDate: dateOffset(14), source: "Bitrix24 CSV", tags: ["Imported"],
+          notes: ("Imported stage: " + (pick(row, "stage", "stage_name") || "unknown")).slice(0, 500) };
+      }
+      if (duplicate || seen.has(key)) {
+        skipped.push({ row: rowNumber, reason: "Duplicate record or reference" }); continue;
+      }
+      seen.add(key); additions.push({ row: rowNumber, record });
     }
+    return { type, collection, sourceCount: rows.length, additions, skipped };
+  }
+
+  function beginBitrixImport() {
+    if (!authUser || !state.workspace.canOperate || !canUseTool("crm")) {
+      toast("Import unavailable", "CRM editing permission is required.", "danger"); return;
+    }
+    const type = window.prompt("Import which CSV records? contacts, companies or deals", "contacts");
+    if (!type || !Object.hasOwn(bitrixImportCollections, String(type).trim().toLowerCase())) {
+      toast("Choose a valid type", "Use contacts, companies or deals.", "warning"); return;
+    }
+    const normalizedType = String(type).trim().toLowerCase();
+    const actor = authUser.id, workspace = state.workspace.id;
     const input = document.createElement("input");
-    input.type = "file";
-    input.accept = ".csv,text/csv";
+    input.type = "file"; input.accept = ".csv,text/csv";
     input.addEventListener("change", async () => {
-      const file = input.files?.[0];
-      if (!file) return;
+      const file = input.files?.[0]; if (!file) return;
       try {
-        const rows = parseCSV(await file.text());
-        const count = importBitrixRows(type.toLowerCase(), rows);
-        ui.modal = null;
-        persist();
-        toast("Import complete", `${count} ${type.toLowerCase()} imported.`);
+        if (file.size < 1 || file.size > 1048576) throw new Error("Maximum CSV file size is 1 MB.");
+        const text = await file.text();
+        if (authUser?.id !== actor || state.workspace.id !== workspace) throw new Error("Workspace changed during file selection; start again.");
+        const rows = parseCSV(text), plan = planBitrixImport(normalizedType, rows);
+        ui.modal = { kind: "bitrix-preview", actor, workspace, type: normalizedType, rows, plan };
+        renderPortal();
       } catch (error) {
-        console.error(error);
-        toast("Import failed", error.message || "Could not read that CSV.", "danger");
+        toast("CSV import not started", error.message || "Could not prepare a safe import.", "danger");
       }
     }, { once: true });
     input.click();
   }
 
-  function importBitrixRows(type, rows) {
-    let count = 0;
-    for (const original of rows) {
-      const row = normaliseRow(original);
-      if (type === "contacts") {
-        const name = pick(row, "name", "full_name", "contact", "first_name") || "Imported contact";
-        const email = pick(row, "email", "email_work", "work_email");
-        if (email && state.contacts.some(contact => contact.email?.toLowerCase() === email.toLowerCase())) continue;
-        const companyText = pick(row, "company", "company_name");
-        const company = state.companies.find(item => item.name.toLowerCase() === companyText.toLowerCase());
-        state.contacts.unshift({ id: uid("ct"), name, email, phone: pick(row, "phone", "phone_work", "mobile"), companyId: company?.id || "", role: pick(row, "position", "role", "job_title"), source: "Bitrix24 CSV", tags: ["Imported"], createdAt: isoNow(), updatedAt: isoNow() });
-        count += 1;
-      } else if (type === "companies") {
-        const name = pick(row, "company", "company_name", "title", "name") || "Imported company";
-        if (state.companies.some(company => company.name.toLowerCase() === name.toLowerCase())) continue;
-        state.companies.unshift({ id: uid("co"), name, type: pick(row, "company_type", "type") || "Company", city: pick(row, "city", "address_city"), website: pick(row, "website", "web"), phone: pick(row, "phone", "phone_work"), email: pick(row, "email", "email_work"), ownerId: state.currentUserId, employees: Number(pick(row, "employees", "employee_count") || 0), status: "Prospect", createdAt: isoNow(), updatedAt: isoNow() });
-        count += 1;
-      } else if (type === "deals") {
-        const title = pick(row, "deal", "deal_name", "title", "name") || "Imported deal";
-        const companyText = pick(row, "company", "company_name");
-        const contactText = pick(row, "contact", "contact_name");
-        const company = state.companies.find(item => item.name.toLowerCase() === companyText.toLowerCase());
-        const contact = state.contacts.find(item => item.name.toLowerCase() === contactText.toLowerCase());
-        const pipeline = state.pipelines.find(item => item.id === ui.pipelineId) || state.pipelines[0];
-        state.deals.unshift({ id: uid("dl"), title, companyId: company?.id || "", contactId: contact?.id || "", pipelineId: pipeline.id, stageId: pipeline.stages[0].id, value: Number(String(pick(row, "amount", "opportunity", "value")).replace(/[^0-9.-]/g, "")) || 0, probability: Number(pick(row, "probability") || 20), ownerId: state.currentUserId, dueDate: dateOffset(14), source: "Bitrix24 CSV", tags: ["Imported"], notes: `Imported stage: ${pick(row, "stage", "stage_name") || "unknown"}`, createdAt: isoNow(), updatedAt: isoNow() });
-        count += 1;
-      }
-    }
-    addAudit("bitrix.csv_imported", { type, count });
-    addActivity("integration", "bitrix-import", "imported Bitrix24 CSV records", `${count} ${type}`, "integrations");
-    return count;
+  async function commitBitrixImport() {
+    const preview = ui.modal;
+    if (preview?.kind !== "bitrix-preview" || !authUser || preview.actor !== authUser.id ||
+        preview.workspace !== state.workspace.id || !state.workspace.canOperate || !canUseTool("crm"))
+      throw new Error("Import permission or workspace changed. Start again.");
+    const plan = planBitrixImport(preview.type, preview.rows);
+    if (JSON.stringify(plan) !== JSON.stringify(preview.plan))
+      throw new Error("Workspace records changed since the import preview. Close and recheck the CSV before committing.");
+    if (!plan.additions.length) throw new Error("No new valid records to import.");
+    const now = isoNow(), prefix = {contacts:"ct",companies:"co",deals:"dl"}[plan.collection];
+    const records = plan.additions.map(({record}) => ({...record,id:uid(prefix),createdAt:now,updatedAt:now}));
+    state[plan.collection] = [...records,...state[plan.collection]];
+    addAudit("bitrix.csv_import_staged", {type:preview.type,count:records.length,skipped:plan.skipped.length});
+    addActivity("integration", "bitrix-import", "staged Bitrix24 CSV records",
+      records.length + " " + preview.type, "integrations");
+    ui.modal = null;
+    persist();
+    toast("CRM records imported locally", records.length + " staged for workspace sync. Verify after reload before relying on the import.", "info");
   }
 
   async function supabaseRequest(path, options = {}) {
@@ -8560,3 +8716,4 @@
 
   boot();
 })();
+
