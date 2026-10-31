@@ -5,6 +5,7 @@ import {dirname,resolve} from 'node:path';
 import {pathToFileURL} from 'node:url';
 import {createConnection,isIP} from 'node:net';
 import {spawn} from 'node:child_process';
+import {withAgentLock,acknowledgeRecovery} from './recovery.mjs';
 export function validateConfig(c){
  const u=new URL(c.supabase_url);
  if(u.protocol!=='https:'||!u.hostname.endsWith('.supabase.co')||u.username||u.password||u.pathname!=='/'||u.search||u.hash)throw Error('Use the HTTPS Supabase project URL');
@@ -58,7 +59,7 @@ export async function durableWrite(path,value){
  const f=await open(path,'wx',0o600);try{await f.writeFile(JSON.stringify(value));await f.sync();}finally{await f.close();}
 }
 export function rpcClient(config,fetcher=fetch){return async(name,args={})=>{
- const r=await fetcher(`${config.supabase_url.replace(/\/$/,'')}/rest/v1/rpc/${name}`,{method:'POST',redirect:'error',headers:{apikey:config.publishable_key,'Content-Type':'application/json'},body:JSON.stringify({p_device:config.device_id,p_token:config.token,...args}),signal:AbortSignal.timeout(15000)});
+ const r=await fetcher(`${config.supabase_url.replace(/\/$/,'')}/rest/v1/rpc/${name}`,{method:'POST',redirect:'error',headers:{apikey:config.publishable_key,'Content-Type':'application/json'},body:JSON.stringify({...args,p_device:config.device_id,p_token:config.token}),signal:AbortSignal.timeout(15000)});
  if(!r.ok){const e=Error(`Printer service refused request (${r.status}); inspect queue and pairing`);e.status=r.status;throw e;}
  return r.json();
 };}
@@ -66,26 +67,36 @@ export async function processTicket(ticket,{config,rpc,journal,send=sendToPrinte
  const route=config.routes[ticket.station];if(!route)throw Error('No configured route for claimed ticket; inspect queue');
  // The durable file is created before authorizing a print. An existing file stops
  // startup; a crash or lost response never automatically repeats physical output.
- await write(journal,{ticket_id:ticket.id,device_id:config.device_id,attempted_at:new Date().toISOString()});
- await rpc('crm_printer_report',{p_ticket:ticket.id,p_action:'begin'});
+ await write(journal,{ticket_id:ticket.id,device_id:config.device_id,project_origin:new URL(config.supabase_url).origin,attempted_at:new Date().toISOString()});
+ const started=await rpc('crm_printer_report',{p_ticket:ticket.id,p_action:'begin'});
+ if(started?.status!=='uncertain')throw Error('Print attempt was not acknowledged; retain the pending journal');
  await send(escpos(ticket,route),route);
  // "spooled" means bytes accepted, not proof that paper left the printer.
- await rpc('crm_printer_report',{p_ticket:ticket.id,p_action:'spooled'});
+ const spooled=await rpc('crm_printer_report',{p_ticket:ticket.id,p_action:'spooled'});
+ if(spooled?.status!=='spooled')throw Error('Print spool was not acknowledged; retain the pending journal');
  await remove(journal);
 }
 async function main(){
- const [, ,configPath,flag,ticketId]=process.argv;
+ const args=process.argv.slice(2),[configPath,flag,ticketId]=args;
  if(!configPath||configPath==='--help'){console.log('Usage: node agent.mjs /protected/path/printer.json\nRecovery after inspecting the printer and queue: add --acknowledge-uncertain TICKET_ID\nNo automatic reprints. Pairing configuration is a secret; do not commit it.');return;}
+ if(args.length!==1&&(args.length!==3||flag!=='--acknowledge-uncertain'))throw Error('Unknown arguments. Use --help; recovery requires --acknowledge-uncertain TICKET_ID.');
  const config=validateConfig(JSON.parse(await readFile(configPath,'utf8'))),journal=resolve(configPath)+'.pending.json',lock=resolve(configPath)+'.lock';
- let pending;try{pending=JSON.parse(await readFile(journal,'utf8'));}catch(e){if(e.code!=='ENOENT')throw e;}
- if(flag==='--acknowledge-uncertain'){if(!pending||pending.ticket_id!==ticketId)throw Error('Ticket ID does not match pending journal');await rpcClient(config)('crm_printer_report',{p_ticket:ticketId,p_action:'uncertain'});await unlink(journal);console.log('Local hold cleared. Request a marked copy in AkiHQ if needed; the original will not be reprinted.');return;}
- if(pending)throw Error(`Uncertain ticket ${pending.ticket_id}. Inspect printer and queue; acknowledge it before restarting.`);
- let lockFile;try{lockFile=await open(lock,'wx',0o600);await lockFile.writeFile(String(process.pid));await lockFile.sync();}catch{throw Error('Agent lock exists. Stop the other agent; after an unclean exit inspect pending ticket before removing the stale lock.');}
- const rpc=rpcClient(config);let stop=false;process.once('SIGINT',()=>{stop=true});process.once('SIGTERM',()=>{stop=true});
- try{
-  console.log('AkiHQ print agent connected. Keep this process running on the printer network.');
-  let failures=0;
-  while(!stop){let ticket;try{ticket=await rpc('crm_printer_next');failures=0;}catch(e){if(e.status&&e.status<500&&e.status!==429)throw e;failures++;console.error('Printer service temporarily unreachable; waiting to reconnect. Check any claimed jobs in AkiHQ.');await new Promise(r=>setTimeout(r,Math.min(30000,2500*failures)));continue;}if(ticket){await processTicket(ticket,{config,rpc,journal});console.log(`Spooled ${ticket.id} (${ticket.station}); physical output is not automatically verified.`);}await new Promise(r=>setTimeout(r,2500));}
- }finally{await lockFile.close();await unlink(lock).catch(()=>{});}
+ await withAgentLock(lock,async()=>{
+  const rpc=rpcClient(config);
+  if(flag==='--acknowledge-uncertain'){
+   const result=await acknowledgeRecovery(ticketId,{config,journal,rpc});
+   console.log(`Local hold cleared; server state: ${result.status}. Physical output is not verified. Request a marked copy in AkiBusiness if needed; the original will not be reprinted.`);
+   return;
+  }
+  // Inspect the journal only after taking the lock, never before a competing run.
+  let pending,hasPending=false;try{pending=JSON.parse(await readFile(journal,'utf8'));hasPending=true;}catch(e){if(e.code!=='ENOENT')throw e;}
+  if(hasPending)throw Error(`Uncertain ticket ${pending?.ticket_id||'(invalid journal)'}. Inspect printer and queue; acknowledge it before restarting.`);
+  let stop=false;const stopAgent=()=>{stop=true};process.once('SIGINT',stopAgent);process.once('SIGTERM',stopAgent);
+  try{
+   console.log('AkiBusiness print agent connected. Keep this process running on the printer network.');
+   let failures=0;
+   while(!stop){let ticket;try{ticket=await rpc('crm_printer_next');failures=0;}catch(e){if(e.status&&e.status<500&&e.status!==429)throw e;failures++;console.error('Printer service temporarily unreachable; waiting to reconnect. Check any claimed jobs in AkiBusiness.');await new Promise(r=>setTimeout(r,Math.min(30000,2500*failures)));continue;}if(ticket){await processTicket(ticket,{config,rpc,journal});console.log(`Spooled ${ticket.id} (${ticket.station}); physical output is not automatically verified.`);}await new Promise(r=>setTimeout(r,2500));}
+  }finally{process.removeListener('SIGINT',stopAgent);process.removeListener('SIGTERM',stopAgent);}
+ });
 }
 if(process.argv[1]&&import.meta.url===pathToFileURL(resolve(process.argv[1])).href)main().catch(e=>{console.error(e.message);process.exitCode=1});
