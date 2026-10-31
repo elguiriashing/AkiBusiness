@@ -14,7 +14,7 @@ async function fixture() {
     state.workspace={...state.workspace,id:'test-business',canOperate:true,canAdminister:true,toolKeys:['crm','inbox','tasks','calendar','inventory','pos','sales','marketing','automation','collaboration','employees','knowledge']};
     state.currentUserId='operator';state.employees=[{id:'operator',name:'Operator'}];
     render=()=>{};renderPortal=()=>{};persist=()=>{};toast=()=>{};syncCloudWorkspacePushNow=async()=>{};addActivity=()=>{};addAudit=()=>{};
-    window.audit={state,ui,related:relatedRecords,controls:renderContextControls,config:entityFormConfig,validate:validateEntityRecord,save:saveEntityFromForm,preview:automationTaskPreview,action:handleAction,open:openEntityForm,parseCSV,planBitrixImport,commitBitrixImport,renderBitrixPreviewModal,calendarNewEventDefaults,recordedPaidDocuments,recordedPaidAmount,isUserOnline,render:{integrations:renderIntegrations,crm:renderCRM,tasks:renderTasks,calendar:renderCalendar,sales:renderSales,sites:renderSites,marketing:renderMarketing,knowledge:renderKnowledge,employees:renderEmployees,automation:renderAutomation,settings:renderSettingsPanel},setClient:c=>getSupabaseClient=()=>c};
+    window.audit={state,ui,related:relatedRecords,controls:renderContextControls,config:entityFormConfig,validate:validateEntityRecord,save:saveEntityFromForm,preview:automationTaskPreview,action:handleAction,open:openEntityForm,parseCSV,planBitrixImport,commitBitrixImport,renderBitrixPreviewModal,calendarNewEventDefaults,recordedPaidDocuments,recordedPaidAmount,isUserOnline,render:{integrations:renderIntegrations,crm:renderCRM,tasks:renderTasks,calendar:renderCalendar,inventory:renderInventory,sales:renderSales,sites:renderSites,marketing:renderMarketing,knowledge:renderKnowledge,employees:renderEmployees,automation:renderAutomation,settings:renderSettingsPanel},setClient:c=>getSupabaseClient=()=>c};
   })();`));
   return {dom,w,a:w.audit};
 }
@@ -276,5 +276,42 @@ test('business About and snapshot UI describe the real commercial product and it
     assert.match(html,/AkiBusiness/);
     assert.match(html,/Not yet accepted|Feature readiness/);
     assert.doesNotMatch(html,/built for Alex|Bitrix24 source-code copy|adapter UI included|true realtime collaboration/);
+  }finally{dom.window.close()}
+});
+
+
+test('inactive, archived and digital products cannot generate manual replenishment prompts',async()=>{
+  const {dom,w,a}=await fixture();try{
+    w.AkiHQInventoryOps={renderPanel:()=>'<div>Inventory controls</div>',readPending:()=>null};
+    a.state.products=[
+      {id:'active',name:'Active Coffee',sku:'AC',status:'Active',warehouse:'Main',stock:0,reorderAt:6,safetyStock:2,cost:1,price:2,unit:'bag'},
+      {id:'archived',name:'Archived stock',sku:'AR',status:'Archived',warehouse:'Main',stock:0,reorderAt:100,safetyStock:5,cost:1,price:2},
+      {id:'digital',name:'Digital voucher',sku:'DG',status:'Active',warehouse:'Digital',stock:0,reorderAt:10,safetyStock:5,cost:0,price:5}
+    ];
+    const html=a.render.inventory(),view=new JSDOM(html);
+    try{
+      const cards=[...view.window.document.querySelectorAll('.inventory-recommendation')];
+      assert.equal(cards.length,1);
+      assert.match(cards[0].textContent,/Active Coffee/);
+      assert.doesNotMatch(cards[0].textContent,/Archived stock|Digital voucher/);
+      assert.match(html,/Planning estimate|Stock replenishment suggestions/);
+      assert.match(html,/1 active physical SKUs/);
+    }finally{view.window.close();}
+  }finally{dom.window.close();}
+});
+
+test('Knowledge review task preserves an article source link instead of creating an orphan reminder',async()=>{
+  const {dom,w,a}=await fixture();try{
+    a.state.knowledge=[{id:'article',title:'Opening checklist',category:'Operations',authorId:'operator',content:'Check premises',reviewDate:'2026-11-02'}];
+    a.ui.selectedArticleId='article';a.ui.route='knowledge';
+    assert.match(a.render.knowledge(),/Review task/);
+    await a.action({dataset:{action:'follow-up-record',entity:'article',id:'article'}});
+    assert.equal(a.ui.modal.kind,'form');
+    assert.equal(a.ui.formDefaults.sourceRecord.id,'article');
+    await a.save(form(w,a,'task',{title:'Review opening checklist',status:'todo',priority:'medium',assigneeId:'operator'}));
+    assert.equal(a.state.tasks[0].sourceRecord.type,'article');
+    assert.equal(a.state.tasks[0].sourceRecord.id,'article');
+    a.state.workspace.toolKeys=['knowledge'];a.ui.modal=null;
+    assert.doesNotMatch(a.render.knowledge(),/Review task/);
   }finally{dom.window.close()}
 });
